@@ -1,0 +1,25 @@
+[package]
+name = "kaccy"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "Kaccy Protocol - Complete platform for fractional Bitcoin transactions (meta crate)"
+keywords = ["bitcoin", "cryptocurrency", "token", "reputation", "fractional"]
+categories = ["cryptography::cryptocurrencies", "web-programming", "api-bindings"]
+
+[dependencies]
+kaccy-core.workspace = true
+kaccy-db.workspace = true
+kaccy-bitcoin.workspace = true
+kaccy-reputation.workspace = true
+kaccy-ai.workspace = true
+kaccy-api.workspace = true
+
+# Common dependencies for prelude
+uuid.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true

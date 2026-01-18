@@ -1,0 +1,75 @@
+[package]
+name = "kaccy-api"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "REST API and WebSocket server for Kaccy Protocol - comprehensive backend service"
+categories = ["web-programming::http-server", "api-bindings"]
+keywords = ["api", "rest", "websocket", "graphql", "axum"]
+
+[[bin]]
+name = "kaccy-api"
+path = "src/main.rs"
+
+[dependencies]
+kaccy-core.workspace = true
+kaccy-db.workspace = true
+kaccy-bitcoin.workspace = true
+kaccy-reputation.workspace = true
+
+axum.workspace = true
+tokio.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+sqlx.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+jsonwebtoken.workspace = true
+argon2.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+dotenvy.workspace = true
+dashmap.workspace = true
+utoipa.workspace = true
+utoipa-swagger-ui.workspace = true
+futures.workspace = true
+tokio-stream.workspace = true
+bytes.workspace = true
+http-body-util.workspace = true
+totp-rs.workspace = true
+qrcode.workspace = true
+rand.workspace = true
+sha2.workspace = true
+hex.workspace = true
+prometheus.workspace = true
+lazy_static.workspace = true
+opentelemetry.workspace = true
+opentelemetry_sdk.workspace = true
+opentelemetry-otlp.workspace = true
+opentelemetry-semantic-conventions.workspace = true
+tracing-opentelemetry.workspace = true
+async-trait.workspace = true
+async-graphql = "7.0"
+async-graphql-axum = "7.2"
+oauth2 = { version = "5.0", features = ["reqwest"] }
+reqwest.workspace = true
+sys-info = "0.9"
+hmac = "0.12"
+lettre = { version = "0.11", features = ["tokio1-native-tls", "builder", "hostname"] }
+
+[dev-dependencies]
+tokio-test.workspace = true
+criterion.workspace = true
+
+[[bench]]
+name = "load_tests"
+harness = false

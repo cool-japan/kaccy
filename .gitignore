@@ -1,0 +1,47 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+
+# Node (frontend)
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+
+# Build artifacts
+dist/
+build/
+
+# Test coverage
+coverage/
+*.lcov
+
+# CLAUDE
+**/CLAUDE.md
+**/claude_config.json
+**/.claude/

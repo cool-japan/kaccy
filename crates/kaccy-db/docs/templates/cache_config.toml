@@ -1,0 +1,130 @@
+# Cache Configuration Template
+# Multi-tier caching with Redis
+
+[cache]
+# Enable caching
+enabled = true
+
+# Cache strategy: "multi_tier", "redis_only", "memory_only"
+strategy = "multi_tier"
+
+[cache.l1]
+# In-memory L1 cache (per-instance)
+enabled = true
+
+# Maximum number of items in L1 cache
+capacity = 10000
+
+# L1 cache TTL (seconds)
+# Shorter TTL = fresher data, lower hit rate
+ttl_seconds = 300
+
+# LRU eviction when capacity is reached
+eviction_policy = "lru"
+
+[cache.l2]
+# Distributed L2 cache (Redis)
+enabled = true
+
+# Redis connection URL
+url = "redis://localhost:6379"
+
+# Redis database number (0-15)
+database = 0
+
+# Redis password (if required)
+# password = "your_redis_password"
+
+# L2 cache TTL (seconds)
+# Should be longer than L1 TTL
+ttl_seconds = 3600
+
+# Connection pool size
+pool_size = 20
+
+# Connection timeout (seconds)
+connection_timeout = 5
+
+[cache.promotion]
+# Automatic promotion from L2 to L1 for hot data
+enabled = true
+
+# Number of L2 hits before promoting to L1
+threshold = 3
+
+# Track access patterns
+track_access = true
+
+[cache.invalidation]
+# Cache invalidation strategy
+enabled = true
+
+# Use Redis pub/sub for cross-instance invalidation
+use_pubsub = true
+
+# Pub/sub channel name
+channel = "kaccy:cache:invalidate"
+
+# Tag-based invalidation
+enable_tags = true
+
+# Cascade invalidation (invalidate related data)
+enable_cascade = true
+
+# Maximum cascade depth (prevent infinite loops)
+max_cascade_depth = 3
+
+[cache.warming]
+# Pre-load cache on startup
+enabled = true
+
+# Warming strategy: "preload", "background_refresh", "predictive", "all"
+strategy = "preload"
+
+# Keys to preload on startup
+preload_keys = [
+    "popular_tokens",
+    "active_users",
+    "platform_config",
+]
+
+# Background refresh interval (seconds)
+# Periodically refresh expiring keys
+refresh_interval = 300
+
+[cache.circuit_breaker]
+# Protect database when cache fails
+enabled = true
+
+# Number of consecutive failures before opening circuit
+failure_threshold = 5
+
+# Number of successful requests to close circuit
+success_threshold = 2
+
+# How long to wait before trying again after circuit opens (seconds)
+timeout = 60
+
+# Maximum number of requests to allow in half-open state
+half_open_max_calls = 3
+
+[monitoring]
+# Enable cache metrics
+enabled = true
+
+# Metrics to collect
+collect_hit_rate = true
+collect_latency = true
+collect_evictions = true
+collect_memory_usage = true
+
+# Alert thresholds
+[monitoring.alerts]
+# Alert if hit rate falls below this percentage
+min_hit_rate = 70.0
+
+# Alert if L1 eviction rate exceeds this (evictions/second)
+max_eviction_rate = 100.0
+
+# Alert if cache latency exceeds this (milliseconds)
+max_latency_ms = 10.0

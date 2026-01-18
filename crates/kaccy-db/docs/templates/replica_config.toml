@@ -1,0 +1,114 @@
+# Read Replica Configuration Template
+# For scaling read-heavy workloads
+
+[primary]
+# Primary database (handles all writes and consistent reads)
+url = "postgres://postgres:password@primary.example.com:5432/kaccy_production"
+region = "us-west-1"
+
+[replicas]
+# Read replicas (handle read queries only)
+
+[[replicas.instances]]
+id = "replica-us-west-1a"
+url = "postgres://postgres:password@replica-us-west-1a.example.com:5432/kaccy_production"
+region = "us-west-1"
+# Geographic location for proximity-based routing
+latitude = 37.7749
+longitude = -122.4194
+
+[[replicas.instances]]
+id = "replica-us-west-1b"
+url = "postgres://postgres:password@replica-us-west-1b.example.com:5432/kaccy_production"
+region = "us-west-1"
+latitude = 37.7749
+longitude = -122.4194
+
+[[replicas.instances]]
+id = "replica-us-east-1a"
+url = "postgres://postgres:password@replica-us-east-1a.example.com:5432/kaccy_production"
+region = "us-east-1"
+latitude = 40.7128
+longitude = -74.0060
+
+[[replicas.instances]]
+id = "replica-eu-west-1a"
+url = "postgres://postgres:password@replica-eu-west-1a.example.com:5432/kaccy_production"
+region = "eu-west-1"
+latitude = 51.5074
+longitude = -0.1278
+
+[load_balancing]
+# Load balancing strategy: "round_robin", "least_connections", "random", "first_available"
+strategy = "least_connections"
+
+# Enable geographic routing (route to nearest replica)
+enable_geo_routing = true
+
+# Fallback to primary if all replicas are unhealthy
+fallback_to_primary = true
+
+[health_checks]
+# Enable replica health monitoring
+enabled = true
+
+# Health check interval (seconds)
+interval = 10
+
+# Maximum acceptable replication lag (milliseconds)
+# Replicas exceeding this lag will be marked unhealthy
+max_lag_ms = 5000
+
+# Consecutive health check failures before marking replica unhealthy
+failure_threshold = 3
+
+# Consecutive health check successes before marking replica healthy
+success_threshold = 2
+
+[failover]
+# Automatic failover configuration
+enabled = true
+
+# Failover strategy: "automatic", "manual"
+strategy = "automatic"
+
+# Time to wait before failing over to another replica (seconds)
+failover_delay = 5
+
+# Notify on failover
+enable_notifications = true
+
+# Notification webhook URL
+notification_webhook = "https://your-app.com/webhooks/replica-failover"
+
+[read_after_write]
+# Handle read-after-write consistency
+
+# Always read from primary immediately after writes
+# Prevents reading stale data from lagging replicas
+enforce_primary_read_after_write = true
+
+# Duration to enforce primary reads after write (seconds)
+# After this period, can use replicas again
+primary_read_window = 1
+
+[monitoring]
+# Replica monitoring and metrics
+enabled = true
+
+# Metrics to collect
+collect_lag = true
+collect_query_count = true
+collect_error_rate = true
+collect_latency = true
+
+# Alert thresholds
+[monitoring.alerts]
+# Alert if replication lag exceeds this (milliseconds)
+max_lag_ms = 10000
+
+# Alert if replica error rate exceeds this percentage
+max_error_rate = 5.0
+
+# Alert if a replica is unhealthy
+alert_on_unhealthy = true

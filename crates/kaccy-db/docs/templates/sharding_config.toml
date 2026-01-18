@@ -1,0 +1,135 @@
+# Database Sharding Configuration Template
+# For horizontal scalability with very large datasets
+
+[sharding]
+# Enable sharding
+enabled = true
+
+# Sharding strategy: "hash", "range", "geographic"
+strategy = "hash"
+
+# Number of shards
+num_shards = 4
+
+# Shard key: "user_id", "token_id", "custom"
+shard_key = "user_id"
+
+[sharding.hash]
+# Hash-based sharding configuration
+# Distributes data evenly using consistent hashing
+
+# Hash algorithm: "murmur3", "fnv1a", "xxhash"
+algorithm = "murmur3"
+
+# Number of virtual nodes per shard (for consistent hashing)
+# Higher number = better distribution, more memory
+virtual_nodes = 3
+
+[sharding.range]
+# Range-based sharding configuration
+# Useful for sequential IDs or time-based data
+
+# Define ranges for each shard
+[[sharding.range.partitions]]
+shard_id = 0
+min = 1
+max = 1000000
+
+[[sharding.range.partitions]]
+shard_id = 1
+min = 1000001
+max = 2000000
+
+[[sharding.range.partitions]]
+shard_id = 2
+min = 2000001
+max = 3000000
+
+[[sharding.range.partitions]]
+shard_id = 3
+min = 3000001
+max = 9999999999
+
+[shards]
+# Shard database connections
+
+[[shards.instances]]
+id = 0
+url = "postgres://postgres:password@shard0.example.com:5432/kaccy_shard0"
+region = "us-west-1"
+# Optional: Read replicas for this shard
+replicas = ["shard0-replica1", "shard0-replica2"]
+
+[[shards.instances]]
+id = 1
+url = "postgres://postgres:password@shard1.example.com:5432/kaccy_shard1"
+region = "us-west-1"
+replicas = ["shard1-replica1", "shard1-replica2"]
+
+[[shards.instances]]
+id = 2
+url = "postgres://postgres:password@shard2.example.com:5432/kaccy_shard2"
+region = "us-east-1"
+replicas = ["shard2-replica1", "shard2-replica2"]
+
+[[shards.instances]]
+id = 3
+url = "postgres://postgres:password@shard3.example.com:5432/kaccy_shard3"
+region = "eu-west-1"
+replicas = ["shard3-replica1", "shard3-replica2"]
+
+[cross_shard]
+# Cross-shard query configuration
+
+# Enable cross-shard queries
+# WARNING: Can be expensive, use sparingly
+allow_cross_shard_queries = true
+
+# Maximum number of shards to query in parallel
+max_parallel_shards = 4
+
+# Timeout for cross-shard queries (seconds)
+timeout = 30
+
+# Result aggregation strategy: "merge", "union", "custom"
+aggregation_strategy = "merge"
+
+[rebalancing]
+# Shard rebalancing configuration
+
+# Enable automatic rebalancing
+enabled = false
+
+# Trigger rebalancing if imbalance exceeds this percentage
+imbalance_threshold = 30.0
+
+# Rebalancing strategy: "consistent_hash", "manual"
+strategy = "consistent_hash"
+
+# Rebalancing schedule (cron format)
+# Run during low-traffic periods
+schedule = "0 2 * * *"  # 2 AM daily
+
+# Dry run mode (analyze without moving data)
+dry_run = true
+
+[monitoring]
+# Shard monitoring
+enabled = true
+
+# Metrics to collect
+collect_distribution = true
+collect_query_count = true
+collect_latency = true
+collect_error_rate = true
+
+# Alert thresholds
+[monitoring.alerts]
+# Alert if shard imbalance exceeds this percentage
+max_imbalance = 50.0
+
+# Alert if any shard is unhealthy
+alert_on_unhealthy_shard = true
+
+# Alert if cross-shard query rate is too high
+max_cross_shard_query_rate = 10.0  # queries/second

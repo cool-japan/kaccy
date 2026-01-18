@@ -1,0 +1,86 @@
+# Database Connection Pool Configuration Template
+# Copy this file and customize for your environment
+
+[database]
+# Primary database connection URL
+# Format: postgres://username:password@host:port/database
+url = "postgres://postgres:password@localhost:5432/kaccy_production"
+
+# Optional: SSL mode (disable, allow, prefer, require, verify-ca, verify-full)
+ssl_mode = "require"
+
+[pool]
+# Maximum number of connections in the pool
+# Recommended: (core_count * 2) + effective_spindle_count
+# For cloud databases, consider the max_connections limit
+max_connections = 50
+
+# Minimum number of idle connections to maintain
+# Helps with cold start performance
+min_connections = 10
+
+# Maximum time to wait for a connection from the pool (seconds)
+acquire_timeout = 10
+
+# Maximum lifetime of a connection (seconds)
+# Set to prevent connection leaks and refresh connections periodically
+# Recommended: 1800 (30 minutes)
+max_lifetime = 1800
+
+# Maximum time a connection can be idle before being closed (seconds)
+# Helps free up resources during low traffic periods
+# Recommended: 300-600 (5-10 minutes)
+idle_timeout = 600
+
+# Connection warm-up strategy on startup
+# Options: "none", "min_connections", "half_capacity", "full_capacity"
+warmup_strategy = "min_connections"
+
+[pool.health_checks]
+# Enable periodic connection validation
+enabled = true
+
+# Interval between health checks (seconds)
+interval = 60
+
+# Maximum acceptable connection latency (milliseconds)
+max_latency_ms = 100
+
+[retry]
+# Enable automatic retry on transient failures
+enabled = true
+
+# Retry strategy: "fixed", "exponential", "linear"
+strategy = "exponential"
+
+# Initial delay between retries (milliseconds)
+initial_delay_ms = 100
+
+# Maximum delay between retries (seconds)
+max_delay_s = 5
+
+# Maximum number of retry attempts
+max_retries = 3
+
+[logging]
+# Enable query logging
+enabled = true
+
+# Log level: "trace", "debug", "info", "warn", "error"
+level = "info"
+
+# Log slow queries (queries slower than this threshold in milliseconds)
+slow_query_threshold_ms = 100
+
+# Include query parameters in logs (may contain sensitive data!)
+log_parameters = false
+
+[metrics]
+# Enable Prometheus metrics
+enabled = true
+
+# Metrics endpoint (if using built-in metrics server)
+endpoint = "0.0.0.0:9090"
+
+# Metric label prefix
+prefix = "kaccy_db"

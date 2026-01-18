@@ -1,0 +1,34 @@
+[package]
+name = "kaccy-ai"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "AI-powered intelligence for Kaccy Protocol - forecasting, optimization, and insights"
+categories = ["api-bindings", "asynchronous"]
+keywords = ["ai", "machine-learning", "oracle", "fraud-detection", "llm"]
+
+[dependencies]
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+async-trait.workspace = true
+reqwest.workspace = true
+urlencoding.workspace = true
+futures.workspace = true
+lopdf.workspace = true
+image.workspace = true
+base64.workspace = true
+regex.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+rust_decimal.workspace = true
+rand.workspace = true
+
+[dev-dependencies]
+tokio-test.workspace = true

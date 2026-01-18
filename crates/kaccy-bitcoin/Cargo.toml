@@ -1,0 +1,54 @@
+[package]
+name = "kaccy-bitcoin"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "Bitcoin integration for Kaccy Protocol - HD wallets, UTXO management, and transaction building"
+categories = ["cryptography::cryptocurrencies"]
+keywords = ["bitcoin", "wallet", "lightning", "utxo", "cryptocurrency"]
+
+[dependencies]
+bitcoin.workspace = true
+bitcoincore-rpc.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+async-trait.workspace = true
+reqwest.workspace = true
+base64.workspace = true
+hex.workspace = true
+rand.workspace = true
+chacha20poly1305.workspace = true
+bs58.workspace = true
+urlencoding.workspace = true
+bip39.workspace = true
+secp256k1.workspace = true
+
+[dev-dependencies]
+tokio-test.workspace = true
+tracing-subscriber = "0.3"
+criterion = { version = "0.7", features = ["html_reports"] }
+
+[[bench]]
+name = "address_derivation"
+harness = false
+
+[[bench]]
+name = "transaction_parsing"
+harness = false
+
+[[bench]]
+name = "utxo_selection"
+harness = false
+
+[[bench]]
+name = "batch_optimization"
+harness = false
