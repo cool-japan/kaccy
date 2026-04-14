@@ -42,9 +42,13 @@
 /// });
 /// bus.publish(event).await?;
 /// ```
+/// Event handler trait and built-in handlers
 pub mod handlers;
+/// Event publisher for dispatching events
 pub mod publisher;
+/// Event subscriber for receiving events
 pub mod subscriber;
+/// Event type definitions and metadata
 pub mod types;
 
 pub use handlers::EventHandler;

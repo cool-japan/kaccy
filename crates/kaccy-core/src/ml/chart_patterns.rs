@@ -8,11 +8,17 @@ use rust_decimal_macros::dec;
 /// Price point with OHLC data
 #[derive(Debug, Clone, Copy)]
 pub struct Candle {
+    /// Opening price for this period
     pub open: Decimal,
+    /// Highest price reached during this period
     pub high: Decimal,
+    /// Lowest price reached during this period
     pub low: Decimal,
+    /// Closing price for this period
     pub close: Decimal,
+    /// Trading volume during this period
     pub volume: Decimal,
+    /// Unix timestamp (seconds) for the start of this period
     pub timestamp: i64,
 }
 
@@ -23,32 +29,44 @@ pub enum ChartPattern {
     HeadAndShoulders,
     /// Bullish reversal pattern
     InverseHeadAndShoulders,
-    /// Continuation patterns
+    /// Bullish continuation triangle pattern
     AscendingTriangle,
+    /// Bearish continuation triangle pattern
     DescendingTriangle,
+    /// Neutral continuation triangle pattern
     SymmetricalTriangle,
-    /// Reversal patterns
+    /// Bearish reversal pattern with two similar highs
     DoubleTop,
+    /// Bullish reversal pattern with two similar lows
     DoubleBottom,
-    /// Short-term patterns
+    /// Bullish continuation flag pattern
     BullFlag,
+    /// Bearish continuation flag pattern
     BearFlag,
+    /// Short-term continuation pattern
     Pennant,
 }
 
 /// Pattern detection result
 #[derive(Debug, Clone)]
 pub struct PatternMatch {
+    /// Type of chart pattern detected
     pub pattern: ChartPattern,
+    /// Index of the first candle in the pattern
     pub start_index: usize,
+    /// Index of the last candle in the pattern
     pub end_index: usize,
+    /// Detection confidence score (0–1)
     pub confidence: Decimal,
+    /// Projected price target if the pattern plays out, if applicable
     pub target_price: Option<Decimal>,
 }
 
 /// Chart pattern detector
 pub struct ChartPatternDetector {
+    /// Minimum confidence threshold for pattern reporting
     min_confidence: Decimal,
+    /// Number of candles to look back when scanning for patterns
     lookback_periods: usize,
 }
 

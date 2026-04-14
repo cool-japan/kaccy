@@ -373,12 +373,17 @@ pub async fn verify_database_integrity(pool: &PgPool) -> Result<bool> {
 /// Get database statistics
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct DatabaseStats {
+    /// Name of the database.
     pub database_name: String,
+    /// Total size of the database in bytes.
     pub size_bytes: i64,
+    /// Number of tables in the public schema.
     pub table_count: i64,
+    /// Number of indexes in the public schema.
     pub index_count: i64,
 }
 
+/// Retrieve current database size and object counts.
 pub async fn get_database_stats(pool: &PgPool, db_name: &str) -> Result<DatabaseStats> {
     let size: (i64,) = sqlx::query_as("SELECT pg_database_size(current_database())")
         .fetch_one(pool)

@@ -20,10 +20,15 @@ use crate::state::AppState;
 /// Response for paginated token list
 #[derive(Debug, Serialize)]
 pub struct TokenListResponse {
+    /// List of tokens with issuer info
     pub tokens: Vec<TokenWithIssuer>,
+    /// Total number of tokens
     pub total: i64,
+    /// Current page number
     pub page: u32,
+    /// Items per page
     pub limit: u32,
+    /// Total number of pages
     pub total_pages: u32,
 }
 
@@ -48,6 +53,7 @@ struct TokenWithIssuerRow {
     pub issuer_reputation_score: Decimal,
 }
 
+/// List all tokens with optional filters and pagination
 pub async fn list_tokens(
     State(state): State<AppState>,
     Query(query): Query<TokenListQuery>,
@@ -168,6 +174,7 @@ pub async fn list_tokens(
     }))
 }
 
+/// Create a new creator token
 pub async fn create_token(
     State(state): State<AppState>,
     Extension(user_id): Extension<Uuid>,
@@ -240,6 +247,7 @@ pub async fn create_token(
     Ok(Json(token))
 }
 
+/// Get a specific token by ID with issuer information
 pub async fn get_token(
     State(state): State<AppState>,
     Path(token_id): Path<Uuid>,

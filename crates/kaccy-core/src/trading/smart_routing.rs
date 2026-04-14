@@ -13,16 +13,24 @@ use uuid::Uuid;
 /// Trading venue information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Venue {
+    /// Unique identifier for this venue
     pub id: Uuid,
+    /// Human-readable venue name
     pub name: String,
+    /// Fee rate charged by this venue as a fraction
     pub fee_rate: Decimal,
+    /// Liquidity available for trading on this venue
     pub available_liquidity: Decimal,
+    /// Current mid price on this venue
     pub current_price: Decimal,
+    /// Estimated slippage fraction for a typical order
     pub estimated_slippage: Decimal,
+    /// Network round-trip latency to this venue in milliseconds
     pub latency_ms: u64,
 }
 
 impl Venue {
+    /// Create a new venue with the given name and fee rate
     pub fn new(name: impl Into<String>, fee_rate: Decimal) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -35,21 +43,25 @@ impl Venue {
         }
     }
 
+    /// Set available liquidity on this venue
     pub fn with_liquidity(mut self, liquidity: Decimal) -> Self {
         self.available_liquidity = liquidity;
         self
     }
 
+    /// Set current price on this venue
     pub fn with_price(mut self, price: Decimal) -> Self {
         self.current_price = price;
         self
     }
 
+    /// Set estimated slippage for this venue
     pub fn with_slippage(mut self, slippage: Decimal) -> Self {
         self.estimated_slippage = slippage;
         self
     }
 
+    /// Set network latency for this venue
     pub fn with_latency(mut self, latency_ms: u64) -> Self {
         self.latency_ms = latency_ms;
         self
@@ -83,10 +95,15 @@ impl Venue {
 /// Route allocation for an order
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouteAllocation {
+    /// Venue this allocation is routed to
     pub venue_id: Uuid,
+    /// Human-readable name of the venue
     pub venue_name: String,
+    /// Quantity allocated to this venue
     pub amount: Decimal,
+    /// Estimated execution price at this venue
     pub estimated_price: Decimal,
+    /// Estimated total cost at this venue including fees and slippage
     pub estimated_cost: Decimal,
 }
 
@@ -108,11 +125,14 @@ pub enum RoutingStrategy {
 /// Smart order router
 #[derive(Debug, Clone)]
 pub struct SmartOrderRouter {
+    /// Available trading venues
     venues: Vec<Venue>,
+    /// Routing strategy to apply
     strategy: RoutingStrategy,
 }
 
 impl SmartOrderRouter {
+    /// Create a new smart order router with the given strategy
     pub fn new(strategy: RoutingStrategy) -> Self {
         Self {
             venues: Vec::new(),
@@ -120,10 +140,12 @@ impl SmartOrderRouter {
         }
     }
 
+    /// Register a venue with the router
     pub fn add_venue(&mut self, venue: Venue) {
         self.venues.push(venue);
     }
 
+    /// Change the routing strategy
     pub fn set_strategy(&mut self, strategy: RoutingStrategy) {
         self.strategy = strategy;
     }

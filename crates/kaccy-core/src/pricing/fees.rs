@@ -169,11 +169,14 @@ impl VolumeTier {
 /// Fee calculator with volume and maker/taker differentiation
 #[derive(Debug, Clone)]
 pub struct AdvancedFeeCalculator {
+    /// Base fee schedule before any volume discounts.
     pub base_schedule: FeeSchedule,
+    /// Volume tiers defining discount thresholds.
     pub volume_tiers: Vec<VolumeTier>,
 }
 
 impl AdvancedFeeCalculator {
+    /// Creates a new `AdvancedFeeCalculator` with standard volume tiers.
     pub fn new(base_schedule: FeeSchedule) -> Self {
         Self {
             base_schedule,
@@ -252,9 +255,13 @@ impl AdvancedFeeCalculator {
 /// User tier information
 #[derive(Debug, Clone, Serialize)]
 pub struct UserTierInfo {
+    /// User's 30-day trading volume in BTC.
     pub current_volume_btc: Decimal,
+    /// Volume tier the user currently qualifies for.
     pub current_tier: VolumeTier,
+    /// Next higher volume tier, if any exists.
     pub next_tier: Option<VolumeTier>,
+    /// Additional BTC volume required to reach the next tier.
     pub volume_to_next_tier: Option<Decimal>,
 }
 

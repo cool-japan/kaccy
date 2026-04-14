@@ -27,11 +27,17 @@ pub enum DLModelType {
 /// LSTM configuration for time series
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LSTMConfig {
+    /// Number of input features per time step
     pub input_size: usize,
+    /// Number of hidden units per LSTM layer
     pub hidden_size: usize,
+    /// Number of stacked LSTM layers
     pub num_layers: usize,
+    /// Number of output values to predict
     pub output_size: usize,
+    /// Dropout rate applied between layers (0.0–1.0)
     pub dropout: f64,
+    /// Whether to use a bidirectional LSTM
     pub bidirectional: bool,
 }
 
@@ -50,12 +56,16 @@ impl Default for LSTMConfig {
 
 /// LSTM model for time series prediction
 pub struct LSTMModel {
+    /// Configuration parameters for this model
     pub config: LSTMConfig,
+    /// Whether the model has been trained
     pub is_trained: bool,
+    /// Training loss recorded at each epoch
     pub training_loss: Vec<f64>,
 }
 
 impl LSTMModel {
+    /// Create a new untrained LSTM model with the given configuration
     pub fn new(config: LSTMConfig) -> Self {
         Self {
             config,
@@ -104,12 +114,19 @@ impl LSTMModel {
 /// Transformer configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransformerConfig {
-    pub d_model: usize, // Model dimension
-    pub nhead: usize,   // Number of attention heads
+    /// Model embedding dimension
+    pub d_model: usize,
+    /// Number of parallel attention heads
+    pub nhead: usize,
+    /// Number of encoder layers
     pub num_encoder_layers: usize,
+    /// Number of decoder layers
     pub num_decoder_layers: usize,
+    /// Dimension of the feed-forward sub-layer
     pub dim_feedforward: usize,
+    /// Dropout rate applied within the transformer (0.0–1.0)
     pub dropout: f64,
+    /// Maximum supported input sequence length
     pub max_seq_length: usize,
 }
 
@@ -129,11 +146,14 @@ impl Default for TransformerConfig {
 
 /// Transformer model for sequence-to-sequence tasks
 pub struct TransformerModel {
+    /// Configuration parameters for this model
     pub config: TransformerConfig,
+    /// Whether the model has been trained
     pub is_trained: bool,
 }
 
 impl TransformerModel {
+    /// Create a new untrained transformer with the given configuration
     pub fn new(config: TransformerConfig) -> Self {
         Self {
             config,
@@ -166,7 +186,9 @@ impl TransformerModel {
 /// Attention mechanism
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AttentionMechanism {
+    /// Which variant of attention to compute
     pub attention_type: AttentionType,
+    /// Number of parallel attention heads (for multi-head variants)
     pub num_heads: usize,
 }
 
@@ -184,6 +206,7 @@ pub enum AttentionType {
 }
 
 impl AttentionMechanism {
+    /// Create a new attention mechanism of the given type
     pub fn new(attention_type: AttentionType, num_heads: usize) -> Self {
         Self {
             attention_type,
@@ -236,10 +259,15 @@ impl AttentionMechanism {
 /// GAN configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GANConfig {
+    /// Dimensionality of the random latent input to the generator
     pub latent_dim: usize,
+    /// Hidden layer sizes for the generator network
     pub generator_layers: Vec<usize>,
+    /// Hidden layer sizes for the discriminator network
     pub discriminator_layers: Vec<usize>,
+    /// Learning rate for the generator optimizer
     pub learning_rate_g: f64,
+    /// Learning rate for the discriminator optimizer
     pub learning_rate_d: f64,
 }
 
@@ -257,13 +285,18 @@ impl Default for GANConfig {
 
 /// GAN for synthetic data generation
 pub struct GANModel {
+    /// Configuration parameters for this GAN
     pub config: GANConfig,
+    /// Whether the GAN has been trained
     pub is_trained: bool,
+    /// Generator loss at each training epoch
     pub generator_loss: Vec<f64>,
+    /// Discriminator loss at each training epoch
     pub discriminator_loss: Vec<f64>,
 }
 
 impl GANModel {
+    /// Create a new untrained GAN with the given configuration
     pub fn new(config: GANConfig) -> Self {
         Self {
             config,
@@ -312,13 +345,16 @@ impl GANModel {
     }
 }
 
-/// Feature importance via attention
+/// Feature importance selector backed by an attention mechanism
 pub struct AttentionFeatureSelector {
+    /// Underlying attention mechanism used to score features
     pub attention: AttentionMechanism,
+    /// Most recently computed importance scores, one per feature
     pub importance_scores: Vec<f64>,
 }
 
 impl AttentionFeatureSelector {
+    /// Create a new feature selector with the given number of attention heads
     pub fn new(num_heads: usize) -> Self {
         Self {
             attention: AttentionMechanism::new(AttentionType::MultiHead, num_heads),

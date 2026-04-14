@@ -21,7 +21,9 @@ use tokio::sync::Mutex;
 /// JWT claims
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: String, // user_id
+    /// Subject (user ID)
+    pub sub: String,
+    /// Expiration time (Unix timestamp)
     pub exp: usize,
 }
 

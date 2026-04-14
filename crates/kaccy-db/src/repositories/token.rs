@@ -10,35 +10,60 @@ use crate::helpers::calculate_offset;
 /// Token data from database
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct TokenRow {
+    /// Unique identifier of the token.
     pub token_id: Uuid,
+    /// User ID of the token issuer.
     pub issuer_user_id: Uuid,
+    /// Short ticker symbol for the token (e.g. "BTC").
     pub symbol: String,
+    /// Full descriptive name of the token.
     pub name: String,
+    /// Optional human-readable description of the token.
     pub description: Option<String>,
+    /// Maximum number of tokens that can ever exist.
     pub total_supply: Decimal,
+    /// Number of tokens currently in circulation.
     pub circulating_supply: Decimal,
+    /// Starting price denominated in BTC.
     pub initial_price_btc: Decimal,
+    /// Price step increase per unit sold, denominated in BTC.
     pub price_increment_btc: Decimal,
+    /// Timestamp when the token was created.
     pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Lifecycle status (e.g. "active", "inactive", "deleted").
     pub status: String,
 }
 
 /// Token with issuer information
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct TokenWithIssuerRow {
+    /// Unique identifier of the token.
     pub token_id: Uuid,
+    /// User ID of the token issuer.
     pub issuer_user_id: Uuid,
+    /// Short ticker symbol for the token.
     pub symbol: String,
+    /// Full descriptive name of the token.
     pub name: String,
+    /// Optional human-readable description of the token.
     pub description: Option<String>,
+    /// Maximum number of tokens that can ever exist.
     pub total_supply: Decimal,
+    /// Number of tokens currently in circulation.
     pub circulating_supply: Decimal,
+    /// Starting price denominated in BTC.
     pub initial_price_btc: Decimal,
+    /// Price step increase per unit sold, denominated in BTC.
     pub price_increment_btc: Decimal,
+    /// Timestamp when the token was created.
     pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Lifecycle status of the token.
     pub status: String,
+    /// Username of the issuer (joined from users table).
     pub issuer_username: String,
+    /// Optional display name of the issuer.
     pub issuer_display_name: Option<String>,
+    /// Reputation score of the issuer.
     pub issuer_reputation_score: Decimal,
 }
 
@@ -48,6 +73,7 @@ pub struct TokenRepository {
 }
 
 impl TokenRepository {
+    /// Create a new `TokenRepository` backed by the given connection pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -576,11 +602,17 @@ impl TokenRepository {
 /// Token statistics summary
 #[derive(Debug, Clone)]
 pub struct TokenStatistics {
+    /// Total number of non-deleted tokens.
     pub total_active: i64,
+    /// Number of tokens with "active" status.
     pub total_active_status: i64,
+    /// Number of tokens with "inactive" status.
     pub total_inactive: i64,
+    /// Number of soft-deleted tokens.
     pub total_deleted: i64,
+    /// Sum of total_supply across all non-deleted tokens.
     pub total_supply_sum: Decimal,
+    /// Sum of circulating_supply across all non-deleted tokens.
     pub circulating_supply_sum: Decimal,
 }
 

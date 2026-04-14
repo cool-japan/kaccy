@@ -1,7 +1,7 @@
 //! Testing utilities for model factories, fixtures, and mock data generation
 
 use chrono::{DateTime, Utc};
-use rand::Rng;
+use rand::RngExt;
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -378,10 +378,15 @@ impl Default for FixtureBuilder {
 
 /// Test fixture
 pub struct Fixture {
+    /// Sample users created for the test.
     pub users: Vec<User>,
+    /// Sample tokens created for the test.
     pub tokens: Vec<Token>,
+    /// Sample orders created for the test.
     pub orders: Vec<Order>,
+    /// Sample trades recorded for the test.
     pub trades: Vec<Trade>,
+    /// Sample balances set up for the test.
     pub balances: Vec<Balance>,
 }
 

@@ -170,7 +170,7 @@ impl MnemonicGenerator {
         word_count: WordCount,
         language: MnemonicLanguage,
     ) -> Result<Mnemonic, BitcoinError> {
-        use rand::Rng;
+        use rand::RngExt;
         let mut rng = rand::rng();
         let entropy_bytes = word_count.entropy_bytes();
         let mut entropy = vec![0u8; entropy_bytes];

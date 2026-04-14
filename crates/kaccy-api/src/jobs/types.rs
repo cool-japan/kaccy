@@ -29,34 +29,65 @@ pub enum JobStatus {
 pub enum JobType {
     /// Send email notification
     SendEmail {
+        /// Recipient email address
         to: String,
+        /// Email subject line
         subject: String,
+        /// Email body content
         body: String,
     },
     /// Send SMS notification
-    SendSms { to: String, message: String },
+    SendSms {
+        /// Recipient phone number
+        to: String,
+        /// SMS message text
+        message: String,
+    },
     /// Send push notification
     SendPush {
+        /// Target user ID
         user_id: Uuid,
+        /// Notification title
         title: String,
+        /// Notification body text
         body: String,
     },
     /// Process order confirmation
-    ProcessOrderConfirmation { order_id: Uuid },
+    ProcessOrderConfirmation {
+        /// Order ID to confirm
+        order_id: Uuid,
+    },
     /// Process trade settlement
-    ProcessTradeSettlement { trade_id: Uuid },
+    ProcessTradeSettlement {
+        /// Trade ID to settle
+        trade_id: Uuid,
+    },
     /// Process KYC verification reminder
-    KycVerificationReminder { user_id: Uuid },
+    KycVerificationReminder {
+        /// User ID to remind
+        user_id: Uuid,
+    },
     /// Clean up expired sessions
     CleanupExpiredSessions,
     /// Generate analytics report
-    GenerateAnalyticsReport { report_type: String },
+    GenerateAnalyticsReport {
+        /// Type of report to generate
+        report_type: String,
+    },
     /// Archive old data
-    ArchiveOldData { before_date: DateTime<Utc> },
+    ArchiveOldData {
+        /// Archive data before this date
+        before_date: DateTime<Utc>,
+    },
     /// Refresh materialized views (if using)
     RefreshMaterializedViews,
     /// Custom job type with JSON payload
-    Custom { name: String, payload: String },
+    Custom {
+        /// Job name
+        name: String,
+        /// Job payload as JSON string
+        payload: String,
+    },
 }
 
 /// Job definition
@@ -149,11 +180,22 @@ impl Job {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum JobResult {
     /// Job succeeded with optional result data
-    Success { data: Option<String> },
+    Success {
+        /// Optional result data as JSON string
+        data: Option<String>,
+    },
     /// Job failed with error message
-    Failure { error: String },
+    Failure {
+        /// Error description
+        error: String,
+    },
     /// Job should be retried later
-    Retry { reason: String, delay_seconds: u64 },
+    Retry {
+        /// Reason for retry
+        reason: String,
+        /// Delay before retry in seconds
+        delay_seconds: u64,
+    },
 }
 
 impl JobResult {

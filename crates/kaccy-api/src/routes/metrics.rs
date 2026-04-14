@@ -11,40 +11,60 @@ use crate::{error::ApiError, state::AppState};
 /// System metrics response
 #[derive(Debug, Serialize)]
 pub struct SystemMetrics {
+    /// Current Unix timestamp in seconds
     pub timestamp: u64,
+    /// Application uptime in seconds
     pub uptime_seconds: u64,
+    /// Database connection pool metrics
     pub database: DatabaseMetrics,
+    /// Application-level business metrics
     pub application: ApplicationMetrics,
+    /// Infrastructure resource metrics
     pub resources: ResourceMetrics,
 }
 
 /// Database metrics
 #[derive(Debug, Serialize)]
 pub struct DatabaseMetrics {
+    /// Total connection pool size
     pub pool_size: u32,
+    /// Number of active connections
     pub active_connections: usize,
+    /// Number of idle connections
     pub idle_connections: usize,
+    /// Maximum configured connections
     pub max_connections: u32,
+    /// Minimum configured connections
     pub min_connections: u32,
 }
 
 /// Application metrics
 #[derive(Debug, Serialize)]
 pub struct ApplicationMetrics {
+    /// Total registered users
     pub total_users: i64,
+    /// Total created tokens
     pub total_tokens: i64,
+    /// Total placed orders
     pub total_orders: i64,
+    /// Total executed trades
     pub total_trades: i64,
+    /// Currently pending orders
     pub pending_orders: i64,
+    /// Currently active commitments
     pub active_commitments: i64,
 }
 
 /// Resource metrics
 #[derive(Debug, Serialize)]
 pub struct ResourceMetrics {
+    /// Whether event bus is configured
     pub event_bus_configured: bool,
+    /// Whether job processor is configured
     pub job_processor_configured: bool,
+    /// Whether Redis is configured
     pub redis_configured: bool,
+    /// Whether Bitcoin RPC is configured
     pub bitcoin_configured: bool,
 }
 
@@ -52,25 +72,35 @@ pub struct ResourceMetrics {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum ServiceStatus {
+    /// Service is fully operational
     Healthy,
+    /// Service is operational but with reduced capacity or increased latency
     Degraded,
+    /// Service is not operational
     Unhealthy,
 }
 
 /// Service health details
 #[derive(Debug, Serialize)]
 pub struct ServiceHealth {
+    /// Service name
     pub service: String,
+    /// Current health status
     pub status: ServiceStatus,
+    /// Optional status message
     pub message: Option<String>,
+    /// Latency in milliseconds
     pub latency_ms: Option<u64>,
 }
 
 /// Comprehensive health check response
 #[derive(Debug, Serialize)]
 pub struct ComprehensiveHealthResponse {
+    /// Overall system health status
     pub overall_status: ServiceStatus,
+    /// Current Unix timestamp in seconds
     pub timestamp: u64,
+    /// Per-service health details
     pub services: Vec<ServiceHealth>,
 }
 

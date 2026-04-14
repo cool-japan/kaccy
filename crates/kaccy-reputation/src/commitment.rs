@@ -10,19 +10,32 @@ use uuid::Uuid;
 
 use crate::error::{ReputationError, Result};
 
+/// A commitment record as returned from the database.
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct OutputCommitment {
+    /// Unique identifier for this commitment.
     pub commitment_id: Uuid,
+    /// User who created the commitment.
     pub user_id: Uuid,
+    /// Token associated with the commitment.
     pub token_id: Uuid,
+    /// Short descriptive title.
     pub title: String,
+    /// Optional extended description.
     pub description: Option<String>,
+    /// Deadline by which the commitment must be fulfilled.
     pub deadline: DateTime<Utc>,
+    /// Current lifecycle status.
     pub status: CommitmentStatus,
+    /// HTTPS URL to the submitted evidence, if any.
     pub evidence_url: Option<String>,
+    /// Description of the submitted evidence, if any.
     pub evidence_description: Option<String>,
+    /// Timestamp when the commitment was verified.
     pub verified_at: Option<DateTime<Utc>>,
+    /// User who performed the verification.
     pub verified_by: Option<Uuid>,
+    /// Timestamp when the commitment was created.
     pub created_at: DateTime<Utc>,
 }
 
@@ -36,15 +49,21 @@ impl fmt::Display for OutputCommitment {
     }
 }
 
+/// Lifecycle status of a commitment.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "lowercase")]
 #[derive(Default)]
 pub enum CommitmentStatus {
+    /// Commitment created but not yet submitted for verification.
     #[default]
     Pending,
+    /// Evidence has been submitted; awaiting verification.
     Completed,
+    /// Commitment has been verified as fulfilled.
     Verified,
+    /// Commitment was not fulfilled before the deadline.
     Failed,
+    /// Deadline passed without a submission.
     Expired,
 }
 
@@ -164,15 +183,21 @@ impl std::str::FromStr for CommitmentStatus {
     }
 }
 
+/// Request payload for creating a new commitment.
 #[derive(Debug, Deserialize)]
 pub struct CreateCommitmentRequest {
+    /// Token that this commitment is associated with.
     pub token_id: Uuid,
+    /// Short descriptive title for the commitment.
     pub title: String,
+    /// Optional extended description.
     pub description: Option<String>,
+    /// Deadline by which the commitment must be fulfilled.
     pub deadline: DateTime<Utc>,
 }
 
 impl CreateCommitmentRequest {
+    /// Validate the request, returning an error if any field is invalid.
     pub fn validate(&self) -> Result<()> {
         if self.title.is_empty() {
             return Err(ReputationError::Validation("Title is required".to_string()));
@@ -258,13 +283,17 @@ impl CreateCommitmentRequestBuilder {
     }
 }
 
+/// Request payload for submitting evidence for a commitment.
 #[derive(Debug, Deserialize)]
 pub struct SubmitEvidenceRequest {
+    /// HTTPS URL pointing to the evidence artifact.
     pub evidence_url: String,
+    /// Optional human-readable description of the evidence.
     pub evidence_description: Option<String>,
 }
 
 impl SubmitEvidenceRequest {
+    /// Validate the request, returning an error if any field is invalid.
     pub fn validate(&self) -> Result<()> {
         if self.evidence_url.is_empty() {
             return Err(ReputationError::Validation(
@@ -280,10 +309,14 @@ impl SubmitEvidenceRequest {
     }
 }
 
+/// Request payload for verifying a commitment.
 #[derive(Debug, Deserialize)]
 pub struct VerifyCommitmentRequest {
+    /// Whether the commitment was fulfilled.
     pub fulfilled: bool,
+    /// Optional quality score assigned by the verifier (0–100).
     pub quality_score: Option<Decimal>,
+    /// Optional notes from the verifier.
     pub notes: Option<String>,
 }
 
@@ -293,6 +326,7 @@ pub struct CommitmentService {
 }
 
 impl CommitmentService {
+    /// Create a new [`CommitmentService`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }

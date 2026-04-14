@@ -916,8 +916,11 @@ pub struct QualityIssue {
 /// Issue severity levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum IssueSeverity {
+    /// Informational note.
     Info,
+    /// Non-critical issue that should be addressed.
     Warning,
+    /// Critical issue that must be resolved.
     Error,
 }
 

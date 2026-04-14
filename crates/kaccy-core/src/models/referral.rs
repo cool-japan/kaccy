@@ -29,6 +29,7 @@ use crate::error::{CoreError, Result};
 /// Referral code information
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ReferralCode {
+    /// Unique identifier for this referral code record
     pub code_id: Uuid,
     /// User who owns this referral code
     pub owner_user_id: Uuid,
@@ -40,7 +41,9 @@ pub struct ReferralCode {
     pub total_commission_earned: Decimal,
     /// Whether the code is active
     pub is_active: bool,
+    /// Timestamp when this code was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp when this code was deactivated, if applicable
     pub deactivated_at: Option<DateTime<Utc>>,
 }
 
@@ -79,6 +82,7 @@ impl ReferralCode {
 /// Referral relationship
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ReferralRelationship {
+    /// Unique identifier for this referral relationship
     pub relationship_id: Uuid,
     /// User who was referred
     pub referred_user_id: Uuid,
@@ -130,6 +134,7 @@ impl ReferralRelationship {
 /// Commission distribution record
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CommissionDistribution {
+    /// Unique identifier for this commission distribution
     pub distribution_id: Uuid,
     /// User receiving the commission
     pub recipient_user_id: Uuid,
@@ -209,20 +214,31 @@ impl Default for ReferralConfig {
 /// Referral leaderboard entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReferralLeaderboardEntry {
+    /// User this entry belongs to
     pub user_id: Uuid,
+    /// Display username (populated from user service if available)
     pub username: Option<String>,
+    /// Total number of users referred
     pub total_referrals: u64,
+    /// Number of referrals that met the eligibility threshold
     pub eligible_referrals: u64,
+    /// Total commission earned across all referrals
     pub total_commission_earned: Decimal,
+    /// Position on the leaderboard (1-based)
     pub rank: u64,
 }
 
 /// Referral manager
 pub struct ReferralManager {
+    /// Active referral codes indexed by code string
     codes: HashMap<String, ReferralCode>,
+    /// Referral relationships indexed by referred user ID
     relationships: HashMap<Uuid, ReferralRelationship>,
+    /// Mapping from user ID to their referral code string
     user_codes: HashMap<Uuid, String>,
-    user_referrals: HashMap<Uuid, Vec<Uuid>>, // referrer -> list of referred users
+    /// Mapping from referrer ID to the list of referred user IDs
+    user_referrals: HashMap<Uuid, Vec<Uuid>>,
+    /// Referral program configuration
     config: ReferralConfig,
 }
 
@@ -536,10 +552,15 @@ impl Default for ReferralManager {
 /// Referral statistics for a user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReferralStats {
+    /// User this stats summary belongs to
     pub user_id: Uuid,
+    /// Referral code owned by this user, if any
     pub referral_code: Option<String>,
+    /// Total number of users referred by this user
     pub total_referrals: u64,
+    /// Number of referrals that met the eligibility threshold
     pub eligible_referrals: u64,
+    /// Total commission earned across all referrals
     pub total_commission_earned: Decimal,
 }
 

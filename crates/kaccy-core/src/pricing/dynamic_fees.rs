@@ -161,9 +161,19 @@ pub enum FeeCondition {
     /// Trade size threshold
     TradeSizeAbove(Decimal),
     /// User holding specific token
-    HoldsToken { token_id: Uuid, min_amount: Decimal },
+    HoldsToken {
+        /// Token the user must hold.
+        token_id: Uuid,
+        /// Minimum amount of the token required.
+        min_amount: Decimal,
+    },
     /// Time-based condition
-    TimeRange { start_hour: u32, end_hour: u32 },
+    TimeRange {
+        /// UTC hour at which the range begins (0–23).
+        start_hour: u32,
+        /// UTC hour at which the range ends (0–23).
+        end_hour: u32,
+    },
     /// User is market maker
     IsMarketMaker,
     /// Specific user

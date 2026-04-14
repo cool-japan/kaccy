@@ -21,13 +21,21 @@ use crate::state::AppState;
 /// OAuth2 provider configuration
 #[derive(Clone, Debug)]
 pub struct OAuth2Provider {
+    /// Provider name (e.g. "google", "github")
     pub name: String,
+    /// OAuth2 application client ID
     pub client_id: String,
+    /// OAuth2 application client secret
     pub client_secret: String,
+    /// Authorization endpoint URL
     pub auth_url: String,
+    /// Token exchange endpoint URL
     pub token_url: String,
+    /// Redirect URI registered with the provider
     pub redirect_uri: String,
+    /// OAuth2 scopes to request
     pub scopes: Vec<String>,
+    /// Endpoint to fetch the authenticated user's info
     pub user_info_url: String,
 }
 
@@ -68,29 +76,39 @@ impl OAuth2Provider {
 /// OAuth2 state stored in session
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OAuth2State {
+    /// CSRF token to validate the callback matches the initiated flow
     pub csrf_token: String,
+    /// PKCE code verifier for the authorization code flow
     pub pkce_verifier: String,
+    /// Provider name used in the initial request
     pub provider: String,
 }
 
 /// OAuth2 callback query parameters
 #[derive(Debug, Deserialize)]
 pub struct OAuth2Callback {
+    /// Authorization code returned by the provider
     pub code: String,
+    /// State token to verify CSRF protection
     pub state: String,
 }
 
 /// OAuth2 user info from provider
 #[derive(Debug, Deserialize)]
 pub struct OAuth2UserInfo {
+    /// Provider-assigned user identifier
     #[serde(default)]
     pub id: String,
+    /// User's email address
     #[serde(default)]
     pub email: Option<String>,
+    /// User's display name
     #[serde(default)]
     pub name: Option<String>,
+    /// Username or login handle (e.g. GitHub username)
     #[serde(default)]
     pub login: Option<String>,
+    /// URL to the user's avatar image
     #[serde(default)]
     pub avatar_url: Option<String>,
 }
@@ -98,8 +116,11 @@ pub struct OAuth2UserInfo {
 /// OAuth2 login response
 #[derive(Debug, Serialize)]
 pub struct OAuth2LoginResponse {
+    /// JWT token for the authenticated session
     pub token: String,
+    /// Kaccy user ID for the authenticated user
     pub user_id: Uuid,
+    /// True if the account was created during this OAuth2 login
     pub is_new_user: bool,
 }
 

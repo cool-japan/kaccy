@@ -7,6 +7,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+readme = "README.md"
 description = "REST API and WebSocket server for Kaccy Protocol - comprehensive backend service"
 categories = ["web-programming::http-server", "api-bindings"]
 keywords = ["api", "rest", "websocket", "graphql", "axum"]
@@ -58,12 +59,12 @@ opentelemetry-otlp.workspace = true
 opentelemetry-semantic-conventions.workspace = true
 tracing-opentelemetry.workspace = true
 async-trait.workspace = true
-async-graphql = "7.0"
+async-graphql = "7.2"
 async-graphql-axum = "7.2"
 oauth2 = { version = "5.0", features = ["reqwest"] }
 reqwest.workspace = true
 sys-info = "0.9"
-hmac = "0.12"
+hmac = "0.13"
 lettre = { version = "0.11", features = ["tokio1-native-tls", "builder", "hostname"] }
 
 [dev-dependencies]

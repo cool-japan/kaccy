@@ -27,15 +27,22 @@ pub enum ConsensusAlgorithm {
 /// Node in distributed system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Node {
+    /// Unique identifier for this node
     pub id: Uuid,
+    /// Network address of the node (host:port)
     pub address: String,
+    /// Whether this node is currently the leader
     pub is_leader: bool,
+    /// Current consensus term number
     pub term: u64,
+    /// Timestamp of the last heartbeat received from this node
     pub last_heartbeat: DateTime<Utc>,
+    /// Number of votes received in the current election
     pub vote_count: u32,
 }
 
 impl Node {
+    /// Create a new node at the given address
     pub fn new(address: String) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -50,13 +57,18 @@ impl Node {
 
 /// Leader election coordinator
 pub struct LeaderElection {
+    /// All nodes in the cluster, keyed by node ID
     pub nodes: HashMap<Uuid, Node>,
+    /// Currently elected leader, if any
     pub current_leader: Option<Uuid>,
+    /// Milliseconds to wait before starting a new election
     pub election_timeout_ms: u64,
+    /// Consensus algorithm to use for elections
     pub algorithm: ConsensusAlgorithm,
 }
 
 impl LeaderElection {
+    /// Create a new leader election coordinator using the given algorithm
     pub fn new(algorithm: ConsensusAlgorithm) -> Self {
         Self {
             nodes: HashMap::new(),
@@ -149,19 +161,27 @@ impl LeaderElection {
 
 /// State synchronization manager
 pub struct StateSynchronization {
+    /// Local key-value state store
     pub local_state: HashMap<String, Vec<u8>>,
+    /// Monotonically increasing state version number
     pub version: u64,
+    /// Current synchronization status
     pub sync_status: SyncStatus,
 }
 
+/// Synchronization status of a node's state
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SyncStatus {
+    /// Node state is fully in sync with the cluster
     Synced,
+    /// Node is currently synchronizing with the cluster
     Syncing,
+    /// Node state is behind or diverged from the cluster
     OutOfSync,
 }
 
 impl StateSynchronization {
+    /// Create a new state synchronization manager with empty state
     pub fn new() -> Self {
         Self {
             local_state: HashMap::new(),
@@ -226,10 +246,12 @@ pub enum ConflictResolution {
 
 /// Conflict resolver
 pub struct ConflictResolver {
+    /// Strategy used to resolve conflicts between concurrent writes
     pub strategy: ConflictResolution,
 }
 
 impl ConflictResolver {
+    /// Create a new conflict resolver with the given strategy
     pub fn new(strategy: ConflictResolution) -> Self {
         Self { strategy }
     }

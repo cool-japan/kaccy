@@ -11,7 +11,9 @@ use crate::error::{CoreError, Result};
 /// Price point with timestamp
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PricePoint {
+    /// Time of this price observation.
     pub timestamp: DateTime<Utc>,
+    /// Observed price value.
     pub price: Decimal,
 }
 

@@ -24,8 +24,11 @@ pub enum RebasePolicy {
 /// Direction of supply change
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SupplyChangeDirection {
+    /// Supply is increasing
     Expansion,
+    /// Supply is decreasing
     Contraction,
+    /// No change to supply
     NoChange,
 }
 
@@ -62,15 +65,25 @@ impl Default for RebaseConfig {
 /// Rebase event record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RebaseEvent {
+    /// Unique identifier for this rebase event
     pub event_id: String,
+    /// Token that was rebased
     pub token_id: String,
+    /// When this rebase occurred
     pub timestamp: SystemTime,
+    /// Total supply before the rebase
     pub old_supply: Decimal,
+    /// Total supply after the rebase
     pub new_supply: Decimal,
+    /// Absolute change in supply
     pub supply_change: Decimal,
+    /// Percentage change in supply
     pub supply_change_percentage: Decimal,
+    /// Whether supply expanded, contracted, or stayed the same
     pub direction: SupplyChangeDirection,
+    /// Market price at the time of the rebase
     pub current_price: Decimal,
+    /// Target price used for the rebase calculation
     pub target_price: Decimal,
 }
 
@@ -78,13 +91,18 @@ pub struct RebaseEvent {
 ///
 /// Manages tokens with dynamic supply that adjusts based on market conditions
 pub struct ElasticSupplyManager {
+    /// Rebase configuration
     config: RebaseConfig,
+    /// Timestamp of the last executed rebase
     last_rebase_time: SystemTime,
+    /// History of all executed rebase events
     rebase_history: Vec<RebaseEvent>,
+    /// Monotonic counter used to generate unique event IDs
     event_counter: u64,
 }
 
 impl ElasticSupplyManager {
+    /// Create a new elastic supply manager with the given configuration
     pub fn new(config: RebaseConfig) -> Self {
         Self {
             config,
@@ -94,6 +112,7 @@ impl ElasticSupplyManager {
         }
     }
 
+    /// Create a new elastic supply manager with default configuration
     pub fn with_defaults() -> Self {
         Self::new(RebaseConfig::default())
     }
@@ -229,11 +248,17 @@ impl ElasticSupplyManager {
 /// Result of a rebase calculation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RebaseCalculation {
+    /// Supply before the rebase
     pub old_supply: Decimal,
+    /// Proposed supply after the rebase
     pub new_supply: Decimal,
+    /// Absolute change in supply
     pub supply_change: Decimal,
+    /// Percentage change in supply
     pub supply_change_percentage: Decimal,
+    /// Whether supply would expand, contract, or stay the same
     pub direction: SupplyChangeDirection,
+    /// Relative deviation of current price from target
     pub price_deviation: Decimal,
 }
 
@@ -248,16 +273,29 @@ pub struct SupplyExpansionRules {
     pub max_expansion_per_day: Decimal,
 }
 
+/// Condition that causes a supply expansion
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ExpansionTrigger {
     /// Expand when price exceeds threshold
-    PriceThreshold { threshold: Decimal },
+    PriceThreshold {
+        /// Price level that triggers expansion
+        threshold: Decimal,
+    },
     /// Expand when trading volume exceeds threshold
-    VolumeThreshold { threshold: Decimal },
+    VolumeThreshold {
+        /// Volume level that triggers expansion
+        threshold: Decimal,
+    },
     /// Expand when liquidity ratio falls below threshold
-    LiquidityRatio { min_ratio: Decimal },
+    LiquidityRatio {
+        /// Minimum acceptable liquidity ratio
+        min_ratio: Decimal,
+    },
     /// Scheduled expansion
-    Scheduled { interval: Duration },
+    Scheduled {
+        /// How often to expand supply
+        interval: Duration,
+    },
 }
 
 /// Supply contraction rules
@@ -271,14 +309,24 @@ pub struct SupplyContractionRules {
     pub max_contraction_per_day: Decimal,
 }
 
+/// Condition that causes a supply contraction
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ContractionTrigger {
     /// Contract when price falls below threshold
-    PriceThreshold { threshold: Decimal },
+    PriceThreshold {
+        /// Price level below which contraction triggers
+        threshold: Decimal,
+    },
     /// Contract when trading volume falls below threshold
-    VolumeThreshold { threshold: Decimal },
+    VolumeThreshold {
+        /// Volume level below which contraction triggers
+        threshold: Decimal,
+    },
     /// Burn mechanism on transactions
-    TransactionBurn { burn_rate: Decimal },
+    TransactionBurn {
+        /// Fraction of each transaction amount to burn
+        burn_rate: Decimal,
+    },
 }
 
 #[cfg(test)]

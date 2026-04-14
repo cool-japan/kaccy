@@ -348,6 +348,7 @@ pub struct OpenChannelRequest {
 }
 
 impl OpenChannelRequest {
+    /// Create a new channel open request with the given peer and funding amount
     pub fn new(node_pubkey: impl Into<String>, local_funding_sats: u64) -> Self {
         Self {
             node_pubkey: node_pubkey.into(),

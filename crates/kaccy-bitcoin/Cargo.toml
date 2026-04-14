@@ -7,6 +7,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+readme = "README.md"
 description = "Bitcoin integration for Kaccy Protocol - HD wallets, UTXO management, and transaction building"
 categories = ["cryptography::cryptocurrencies"]
 keywords = ["bitcoin", "wallet", "lightning", "utxo", "cryptocurrency"]
@@ -31,11 +32,13 @@ bs58.workspace = true
 urlencoding.workspace = true
 bip39.workspace = true
 secp256k1.workspace = true
+dashmap.workspace = true
 
 [dev-dependencies]
 tokio-test.workspace = true
 tracing-subscriber = "0.3"
-criterion = { version = "0.7", features = ["html_reports"] }
+criterion = { version = "0.8", features = ["html_reports"] }
+proptest.workspace = true
 
 [[bench]]
 name = "address_derivation"

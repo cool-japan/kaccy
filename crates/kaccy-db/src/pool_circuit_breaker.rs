@@ -53,12 +53,19 @@ impl Default for PoolCircuitBreakerConfig {
 /// Statistics for pool circuit breaker
 #[derive(Debug, Clone, Default)]
 pub struct PoolCircuitStats {
+    /// Current circuit state as a string (e.g., "Closed", "Open", "HalfOpen").
     pub state: String,
+    /// Number of consecutive failures recorded.
     pub failure_count: usize,
+    /// Number of consecutive successes recorded.
     pub success_count: usize,
+    /// Total number of execution attempts.
     pub total_attempts: usize,
+    /// Number of times the circuit has opened.
     pub circuit_opens: usize,
+    /// Current backoff duration before the next attempt.
     pub current_backoff: Duration,
+    /// Timestamp of the most recent failure, if any.
     pub last_failure_time: Option<Instant>,
 }
 

@@ -9,62 +9,96 @@ use crate::error::Result;
 /// Notification preferences data from database
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct NotificationPreferences {
+    /// User these preferences belong to.
     pub user_id: Uuid,
 
     // Email preferences
+    /// Whether email notifications are enabled.
     pub email_enabled: bool,
+    /// Whether to send email notifications for order updates.
     pub email_order_updates: bool,
+    /// Whether to send email notifications for trade events.
     pub email_trade_notifications: bool,
+    /// Whether to send email notifications for commitment updates.
     pub email_commitment_updates: bool,
+    /// Whether to send email notifications for KYC status changes.
     pub email_kyc_updates: bool,
+    /// Whether to send marketing emails.
     pub email_marketing: bool,
 
     // SMS preferences
+    /// Whether SMS notifications are enabled.
     pub sms_enabled: bool,
+    /// Whether to send SMS for order updates.
     pub sms_order_updates: bool,
+    /// Whether to send SMS for trade events.
     pub sms_trade_notifications: bool,
+    /// Whether to send SMS security alerts.
     pub sms_security_alerts: bool,
 
     // Push notification preferences
+    /// Whether push notifications are enabled.
     pub push_enabled: bool,
+    /// Whether to send push notifications for order updates.
     pub push_order_updates: bool,
+    /// Whether to send push notifications for trade events.
     pub push_trade_notifications: bool,
+    /// Whether to send push notifications for price alerts.
     pub push_price_alerts: bool,
 
     // In-app notification preferences
+    /// Whether in-app notifications are enabled.
     pub inapp_enabled: bool,
 
     // Metadata
+    /// Timestamp when preferences were first created.
     pub created_at: DateTime<Utc>,
+    /// Timestamp when preferences were last updated.
     pub updated_at: DateTime<Utc>,
 }
 
 /// Input for creating notification preferences
 #[derive(Debug, Clone)]
 pub struct CreateNotificationPreferences {
+    /// User to create preferences for.
     pub user_id: Uuid,
 
     // Email preferences (optional, defaults to true/false per migration)
+    /// Override for email_enabled; `None` uses the database default.
     pub email_enabled: Option<bool>,
+    /// Override for email_order_updates.
     pub email_order_updates: Option<bool>,
+    /// Override for email_trade_notifications.
     pub email_trade_notifications: Option<bool>,
+    /// Override for email_commitment_updates.
     pub email_commitment_updates: Option<bool>,
+    /// Override for email_kyc_updates.
     pub email_kyc_updates: Option<bool>,
+    /// Override for email_marketing.
     pub email_marketing: Option<bool>,
 
     // SMS preferences (optional)
+    /// Override for sms_enabled.
     pub sms_enabled: Option<bool>,
+    /// Override for sms_order_updates.
     pub sms_order_updates: Option<bool>,
+    /// Override for sms_trade_notifications.
     pub sms_trade_notifications: Option<bool>,
+    /// Override for sms_security_alerts.
     pub sms_security_alerts: Option<bool>,
 
     // Push notification preferences (optional)
+    /// Override for push_enabled.
     pub push_enabled: Option<bool>,
+    /// Override for push_order_updates.
     pub push_order_updates: Option<bool>,
+    /// Override for push_trade_notifications.
     pub push_trade_notifications: Option<bool>,
+    /// Override for push_price_alerts.
     pub push_price_alerts: Option<bool>,
 
     // In-app notification preferences (optional)
+    /// Override for inapp_enabled.
     pub inapp_enabled: Option<bool>,
 }
 
@@ -72,26 +106,41 @@ pub struct CreateNotificationPreferences {
 #[derive(Debug, Clone, Default)]
 pub struct UpdateNotificationPreferences {
     // Email preferences
+    /// New value for email_enabled, or `None` to leave unchanged.
     pub email_enabled: Option<bool>,
+    /// New value for email_order_updates.
     pub email_order_updates: Option<bool>,
+    /// New value for email_trade_notifications.
     pub email_trade_notifications: Option<bool>,
+    /// New value for email_commitment_updates.
     pub email_commitment_updates: Option<bool>,
+    /// New value for email_kyc_updates.
     pub email_kyc_updates: Option<bool>,
+    /// New value for email_marketing.
     pub email_marketing: Option<bool>,
 
     // SMS preferences
+    /// New value for sms_enabled.
     pub sms_enabled: Option<bool>,
+    /// New value for sms_order_updates.
     pub sms_order_updates: Option<bool>,
+    /// New value for sms_trade_notifications.
     pub sms_trade_notifications: Option<bool>,
+    /// New value for sms_security_alerts.
     pub sms_security_alerts: Option<bool>,
 
     // Push notification preferences
+    /// New value for push_enabled.
     pub push_enabled: Option<bool>,
+    /// New value for push_order_updates.
     pub push_order_updates: Option<bool>,
+    /// New value for push_trade_notifications.
     pub push_trade_notifications: Option<bool>,
+    /// New value for push_price_alerts.
     pub push_price_alerts: Option<bool>,
 
     // In-app notification preferences
+    /// New value for inapp_enabled.
     pub inapp_enabled: Option<bool>,
 }
 
@@ -101,6 +150,7 @@ pub struct NotificationPreferencesRepository {
 }
 
 impl NotificationPreferencesRepository {
+    /// Create a new notification preferences repository.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -513,26 +563,37 @@ impl NotificationPreferencesRepository {
 /// Email notification types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EmailNotificationType {
+    /// Email sent when an order is updated.
     OrderUpdate,
+    /// Email sent when a trade is executed.
     TradeNotification,
+    /// Email sent when a commitment status changes.
     CommitmentUpdate,
+    /// Email sent when KYC status changes.
     KycUpdate,
+    /// Marketing or promotional email.
     Marketing,
 }
 
 /// SMS notification types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SmsNotificationType {
+    /// SMS sent when an order is updated.
     OrderUpdate,
+    /// SMS sent when a trade is executed.
     TradeNotification,
+    /// SMS sent for security-related alerts.
     SecurityAlert,
 }
 
 /// Push notification types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PushNotificationType {
+    /// Push notification for order updates.
     OrderUpdate,
+    /// Push notification for trade events.
     TradeNotification,
+    /// Push notification for price alerts.
     PriceAlert,
 }
 

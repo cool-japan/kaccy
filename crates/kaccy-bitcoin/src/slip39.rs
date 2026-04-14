@@ -100,6 +100,7 @@ pub struct GroupConfig {
 }
 
 impl GroupConfig {
+    /// Create a new group configuration with the given ID and signing threshold
     pub fn new(group_id: u8, threshold: ShareThreshold) -> Result<Self> {
         if group_id > 15 {
             return Err(BitcoinError::InvalidInput(
@@ -113,6 +114,7 @@ impl GroupConfig {
         })
     }
 
+    /// Set a human-readable description for this group
     pub fn with_description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
@@ -258,7 +260,7 @@ impl Slip39Generator {
 
     /// Generate a random identifier
     fn generate_identifier() -> u16 {
-        use rand::Rng;
+        use rand::RngExt;
         let mut rng = rand::rng();
         rng.random_range(0..=0x7FFF)
     }
@@ -487,10 +489,10 @@ impl Slip39Generator {
 
     /// Generate random bytes
     fn random_bytes(buf: &mut [u8]) {
-        use rand::Rng;
+        use rand::RngExt;
         let mut rng = rand::rng();
         for byte in buf.iter_mut() {
-            *byte = rng.random_range(0..=255);
+            *byte = rng.random_range(0..=255u8);
         }
     }
 

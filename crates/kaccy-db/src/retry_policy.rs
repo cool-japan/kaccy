@@ -25,20 +25,29 @@ pub enum RetryStrategy {
     None,
     /// Fixed delay between retries
     Fixed {
+        /// Maximum number of attempts before giving up.
         max_attempts: usize,
+        /// Fixed delay between each attempt.
         delay: Duration,
     },
     /// Exponential backoff
     Exponential {
+        /// Maximum number of attempts before giving up.
         max_attempts: usize,
+        /// Delay before the first retry.
         initial_delay: Duration,
+        /// Upper bound on the computed delay.
         max_delay: Duration,
+        /// Factor by which the delay grows each attempt.
         multiplier: f64,
     },
     /// Linear backoff
     Linear {
+        /// Maximum number of attempts before giving up.
         max_attempts: usize,
+        /// Delay before the first retry.
         initial_delay: Duration,
+        /// Amount added to the delay after each attempt.
         increment: Duration,
     },
 }

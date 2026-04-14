@@ -324,14 +324,23 @@ impl Default for AddressBatchAnalyzer {
 /// Statistics from batch address analysis
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AddressBatchStatistics {
+    /// Total number of addresses analyzed
     pub total_count: usize,
+    /// Number of P2PKH (legacy) addresses
     pub p2pkh_count: usize,
+    /// Number of P2SH addresses
     pub p2sh_count: usize,
+    /// Number of P2WPKH (native SegWit) addresses
     pub p2wpkh_count: usize,
+    /// Number of P2WSH addresses
     pub p2wsh_count: usize,
+    /// Number of P2TR (Taproot) addresses
     pub p2tr_count: usize,
+    /// Number of SegWit addresses (P2WPKH + P2WSH + P2TR)
     pub segwit_count: usize,
+    /// Number of legacy addresses (P2PKH + P2SH)
     pub legacy_count: usize,
+    /// Average privacy score across all addresses
     pub average_privacy_score: u32,
 }
 

@@ -44,9 +44,13 @@ pub enum PegType {
 pub enum AdvancedExecutionType {
     /// Pegged order that tracks a reference price
     Pegged {
+        /// Token being traded
         token_id: Uuid,
+        /// Whether this is a buy or sell
         side: OrderSide,
+        /// Total quantity to trade
         quantity: Decimal,
+        /// Peg reference type and offset
         peg_type: PegType,
         /// Optional limit price (worst acceptable price)
         limit_price: Option<Decimal>,
@@ -64,6 +68,7 @@ pub enum AdvancedExecutionType {
     },
     /// Discretionary order with price improvement range
     Discretionary {
+        /// The underlying limit order
         order: Box<LimitOrder>,
         /// Discretion amount (how much price can be improved)
         discretion_amount: Decimal,
@@ -72,14 +77,21 @@ pub enum AdvancedExecutionType {
     },
     /// Minimum quantity order (only execute if min quantity available)
     MinimumQuantity {
+        /// The underlying limit order
         order: Box<LimitOrder>,
         /// Minimum quantity that must be filled
         minimum_quantity: Decimal,
     },
     /// Fill-or-Kill: Execute entire order immediately or cancel
-    FillOrKill { order: Box<LimitOrder> },
+    FillOrKill {
+        /// The underlying limit order
+        order: Box<LimitOrder>,
+    },
     /// Immediate-or-Cancel: Execute available quantity immediately, cancel rest
-    ImmediateOrCancel { order: Box<LimitOrder> },
+    ImmediateOrCancel {
+        /// The underlying limit order
+        order: Box<LimitOrder>,
+    },
 }
 
 /// Direction of discretion for discretionary orders
@@ -113,13 +125,21 @@ pub enum AdvancedExecutionStatus {
 /// Advanced execution order with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdvancedExecutionOrder {
+    /// Unique identifier for this order
     pub id: Uuid,
+    /// User who submitted the order
     pub user_id: Uuid,
+    /// Specific advanced execution type and parameters
     pub order_type: AdvancedExecutionType,
+    /// Current lifecycle status of the order
     pub status: AdvancedExecutionStatus,
+    /// Unix timestamp (seconds) when the order was created
     pub created_at: i64,
+    /// Unix timestamp (seconds) when the order was last updated
     pub updated_at: i64,
+    /// Amount of the order that has been filled so far
     pub filled_quantity: Decimal,
+    /// Arbitrary key-value metadata attached to the order
     pub metadata: HashMap<String, String>,
 }
 
@@ -390,6 +410,7 @@ pub struct AdvancedExecutionManager {
 }
 
 impl AdvancedExecutionManager {
+    /// Create a new advanced execution order manager
     pub fn new() -> Self {
         Self {
             orders: Arc::new(RwLock::new(HashMap::new())),

@@ -33,6 +33,7 @@ pub enum KycStatus {
 }
 
 impl KycStatus {
+    /// Convert a database string representation to a KycStatus
     pub fn from_db_string(s: &str) -> Self {
         match s {
             "not_started" => KycStatus::NotStarted,
@@ -45,6 +46,7 @@ impl KycStatus {
         }
     }
 
+    /// Convert this KycStatus to its database string representation
     pub fn to_db_string(&self) -> &'static str {
         match self {
             KycStatus::NotStarted => "not_started",
@@ -72,6 +74,7 @@ pub enum KycLevel {
 }
 
 impl KycLevel {
+    /// Convert a database string representation to a KycLevel
     pub fn from_db_string(s: &str) -> Self {
         match s {
             "none" => KycLevel::None,
@@ -82,6 +85,7 @@ impl KycLevel {
         }
     }
 
+    /// Convert this KycLevel to its database string representation
     pub fn to_db_string(&self) -> &'static str {
         match self {
             KycLevel::None => "none",
@@ -105,41 +109,72 @@ impl KycLevel {
 /// KYC application record
 #[derive(Debug, Clone, Serialize, FromRow)]
 pub struct KycApplication {
+    /// Unique KYC application ID
     pub kyc_id: Uuid,
+    /// ID of the user who submitted the application
     pub user_id: Uuid,
+    /// Current status (pending, in_review, verified, rejected, expired)
     pub status: String,
+    /// KYC verification level (none, basic, standard, enhanced)
     pub level: String,
+    /// Full legal name of the applicant
     pub full_name: Option<String>,
+    /// Date of birth (YYYY-MM-DD)
     pub date_of_birth: Option<String>,
+    /// ISO 2-letter country code
     pub country: Option<String>,
+    /// Type of identity document (passport, drivers_license, national_id)
     pub document_type: Option<String>,
+    /// Document number
     pub document_number: Option<String>,
+    /// Document expiry date
     pub document_expiry: Option<String>,
+    /// HTTPS URL to selfie photo
     pub selfie_url: Option<String>,
+    /// HTTPS URL to front of identity document
     pub document_front_url: Option<String>,
+    /// HTTPS URL to back of identity document
     pub document_back_url: Option<String>,
+    /// HTTPS URL to proof of address document
     pub proof_of_address_url: Option<String>,
+    /// Reason for rejection (if rejected)
     pub rejection_reason: Option<String>,
+    /// ID of admin who reviewed the application
     pub reviewed_by: Option<Uuid>,
+    /// Timestamp when application was reviewed
     pub reviewed_at: Option<DateTime<Utc>>,
+    /// Timestamp when verification was confirmed
     pub verified_at: Option<DateTime<Utc>>,
+    /// Timestamp when verification expires
     pub expires_at: Option<DateTime<Utc>>,
+    /// Timestamp when application was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp of last update
     pub updated_at: DateTime<Utc>,
 }
 
 /// KYC application response (public-safe version)
 #[derive(Debug, Clone, Serialize)]
 pub struct KycApplicationResponse {
+    /// Unique KYC application ID
     pub kyc_id: Uuid,
+    /// ID of the user who submitted the application
     pub user_id: Uuid,
+    /// Current KYC verification status
     pub status: KycStatus,
+    /// KYC verification level
     pub level: KycLevel,
+    /// Full legal name
     pub full_name: Option<String>,
+    /// ISO 2-letter country code
     pub country: Option<String>,
+    /// Reason for rejection (if rejected)
     pub rejection_reason: Option<String>,
+    /// Timestamp when verification was confirmed
     pub verified_at: Option<DateTime<Utc>>,
+    /// Timestamp when verification expires
     pub expires_at: Option<DateTime<Utc>>,
+    /// Timestamp when application was created
     pub created_at: DateTime<Utc>,
 }
 
@@ -163,19 +198,30 @@ impl From<KycApplication> for KycApplicationResponse {
 /// Request to submit KYC application
 #[derive(Debug, Clone, Deserialize)]
 pub struct SubmitKycRequest {
+    /// Full legal name of the applicant
     pub full_name: String,
+    /// Date of birth (YYYY-MM-DD format)
     pub date_of_birth: String,
+    /// ISO 2-letter country code
     pub country: String,
+    /// Type of identity document (passport, drivers_license, national_id)
     pub document_type: String,
+    /// Document identification number
     pub document_number: String,
+    /// Document expiry date
     pub document_expiry: Option<String>,
+    /// HTTPS URL to selfie photo
     pub selfie_url: String,
+    /// HTTPS URL to front of identity document
     pub document_front_url: String,
+    /// HTTPS URL to back of identity document
     pub document_back_url: Option<String>,
+    /// HTTPS URL to proof of address document (required for enhanced level)
     pub proof_of_address_url: Option<String>,
 }
 
 impl SubmitKycRequest {
+    /// Validate that the required KYC fields are present and well-formed
     pub fn validate(&self) -> Result<()> {
         if self.full_name.is_empty() {
             return Err(ApiError::Validation("Full name is required".to_string()));
@@ -219,24 +265,33 @@ impl SubmitKycRequest {
 /// Admin verification request
 #[derive(Debug, Clone, Deserialize)]
 pub struct VerifyKycRequest {
+    /// Whether to approve or reject the application
     pub approved: bool,
+    /// Reason for rejection (required when rejecting)
     pub rejection_reason: Option<String>,
 }
 
 /// KYC queue query params
 #[derive(Debug, Clone, Deserialize)]
 pub struct KycQueueQuery {
+    /// Filter by status (default: pending)
     pub status: Option<String>,
+    /// Page number (1-indexed)
     pub page: Option<u32>,
+    /// Items per page (max 100)
     pub limit: Option<u32>,
 }
 
 /// KYC queue response
 #[derive(Debug, Clone, Serialize)]
 pub struct KycQueueResponse {
+    /// List of KYC applications
     pub applications: Vec<KycApplicationResponse>,
+    /// Total number of matching applications
     pub total: i64,
+    /// Current page number
     pub page: u32,
+    /// Items per page
     pub limit: u32,
 }
 
@@ -489,10 +544,16 @@ pub async fn get_kyc_stats(State(state): State<AppState>) -> Result<Json<KycStat
 /// KYC statistics
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct KycStats {
+    /// Total number of KYC applications
     pub total: i64,
+    /// Number of applications awaiting review
     pub pending: i64,
+    /// Number of applications under manual review
     pub in_review: i64,
+    /// Number of successfully verified applications
     pub verified: i64,
+    /// Number of rejected applications
     pub rejected: i64,
+    /// Number of expired verifications
     pub expired: i64,
 }

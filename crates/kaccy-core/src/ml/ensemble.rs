@@ -36,6 +36,7 @@ pub struct StackingEnsemble {
 }
 
 impl StackingEnsemble {
+    /// Creates a new `StackingEnsemble` with the given configuration.
     pub fn new(config: StackingConfig) -> Self {
         Self {
             base_predictions: Vec::new(),
@@ -119,6 +120,7 @@ impl StackingEnsemble {
         Ok(())
     }
 
+    /// Returns the learned meta-model weights.
     pub fn get_weights(&self) -> &[f64] {
         &self.meta_weights
     }
@@ -179,6 +181,7 @@ impl WeakLearner {
 }
 
 impl BoostingEnsemble {
+    /// Creates a new `BoostingEnsemble` with the given configuration.
     pub fn new(config: BoostingConfig) -> Self {
         Self {
             weak_learners: Vec::new(),
@@ -299,6 +302,7 @@ impl BoostingEnsemble {
         prediction
     }
 
+    /// Returns the number of weak learners in this ensemble.
     pub fn get_num_learners(&self) -> usize {
         self.weak_learners.len()
     }
@@ -311,6 +315,7 @@ pub struct EnsembleWeightOptimizer {
     method: OptimizationMethod,
 }
 
+/// Optimization method for ensemble weight learning
 #[derive(Debug, Clone, Copy)]
 pub enum OptimizationMethod {
     /// Uniform weights
@@ -324,6 +329,7 @@ pub enum OptimizationMethod {
 }
 
 impl EnsembleWeightOptimizer {
+    /// Creates a new optimizer that uses the specified `OptimizationMethod`.
     pub fn new(method: OptimizationMethod) -> Self {
         Self { method }
     }

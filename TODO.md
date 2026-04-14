@@ -83,9 +83,9 @@
 - [ ] Bitcoin Core setup (testnet then mainnet)
 - [ ] Domain DNS configuration (kaccy.net)
 - [ ] SSL certificate (Let's Encrypt)
-- [ ] GitHub Actions CI/CD
-- [ ] Docker configuration
-- [ ] Deployment scripts
+- [x] GitHub Actions CI/CD
+- [x] Docker configuration
+- [x] Deployment scripts
 
 ### Phase 8: Frontend Development
 - [ ] Next.js 14 project setup
@@ -135,16 +135,16 @@
 ## Technical Debt & Improvements
 
 ### Code Quality
-- [ ] Increase test coverage to 80%+
-- [ ] Add property-based tests for bonding curves
-- [ ] Benchmark all critical paths
-- [ ] Document all public APIs
+- [x] Increase test coverage to 80%+
+- [x] Add property-based tests for bonding curves
+- [x] Benchmark all critical paths
+- [x] Document all public APIs
 
 ### Performance
-- [ ] Profile memory usage
-- [ ] Optimize hot paths
-- [ ] Add query result caching
-- [ ] Implement batch operations for high-volume scenarios
+- [x] Profile memory usage
+- [x] Optimize hot paths
+- [x] Add query result caching
+- [x] Implement batch operations for high-volume scenarios
 
 ---
 

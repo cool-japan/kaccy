@@ -118,6 +118,7 @@ pub struct ComponentConfidence {
 }
 
 impl ComponentConfidence {
+    /// Create a new [`ComponentConfidence`] by computing the confidence level from `data_points`.
     pub fn new(component: impl Into<String>, raw_score: Decimal, data_points: i64) -> Self {
         let confidence = ConfidenceLevel::from_data_points(data_points);
         let weight_multiplier = confidence.weight_multiplier();
@@ -135,6 +136,7 @@ impl ComponentConfidence {
         }
     }
 
+    /// Set the oldest and newest data-point timestamps on this component.
     pub fn with_timestamps(
         mut self,
         oldest: Option<DateTime<Utc>>,
@@ -149,14 +151,19 @@ impl ComponentConfidence {
 /// Full confidence breakdown for all components
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfidenceBreakdown {
+    /// User this breakdown belongs to.
     pub user_id: Uuid,
+    /// Per-component confidence information.
     pub components: Vec<ComponentConfidence>,
+    /// Aggregated overall confidence level.
     pub overall_confidence: ConfidenceLevel,
+    /// Total data points across all components.
     pub overall_data_points: i64,
     /// Confidence-weighted overall score
     pub weighted_score: Decimal,
     /// Raw overall score (without confidence weighting)
     pub raw_score: Decimal,
+    /// Timestamp at which this breakdown was calculated.
     pub calculated_at: DateTime<Utc>,
 }
 
@@ -171,11 +178,17 @@ impl ConfidenceBreakdown {
 /// Stored confidence record
 #[derive(Debug, Clone, FromRow)]
 pub struct ConfidenceRecord {
+    /// Unique identifier for this record.
     pub confidence_id: Uuid,
+    /// User this record belongs to.
     pub user_id: Uuid,
+    /// Name of the score component.
     pub component: String,
+    /// Number of data points used for this component.
     pub data_points: i64,
+    /// String representation of the confidence level.
     pub confidence_level: String,
+    /// When this record was last updated.
     pub last_updated: DateTime<Utc>,
 }
 
@@ -185,6 +198,7 @@ pub struct ConfidenceTracker {
 }
 
 impl ConfidenceTracker {
+    /// Create a new [`ConfidenceTracker`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -449,10 +463,15 @@ impl ConfidenceTracker {
 /// Component weights for score calculation
 #[derive(Debug, Clone)]
 pub struct ComponentWeights {
+    /// Weight for the commitment-fulfillment component.
     pub commitment_fulfillment: Decimal,
+    /// Weight for the response-time component.
     pub response_time: Decimal,
+    /// Weight for the quality-rating component.
     pub quality_rating: Decimal,
+    /// Weight for the community-trust component.
     pub community_trust: Decimal,
+    /// Weight for the longevity component.
     pub longevity: Decimal,
 }
 
@@ -471,6 +490,7 @@ impl Default for ComponentWeights {
 /// Final weighted score with confidence info
 #[derive(Debug, Clone, Serialize)]
 pub struct WeightedScore {
+    /// User this weighted score belongs to.
     pub user_id: Uuid,
     /// Final score (0-1000, confidence-weighted)
     pub final_score: Decimal,

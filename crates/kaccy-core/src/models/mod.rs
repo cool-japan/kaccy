@@ -7,6 +7,7 @@ pub mod audit;
 pub mod balance;
 pub mod burn;
 pub mod commitment_workflow;
+/// Futarchy governance models.
 pub mod futarchy;
 pub mod governance;
 pub mod kyc;

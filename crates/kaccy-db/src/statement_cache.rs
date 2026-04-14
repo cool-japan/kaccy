@@ -81,6 +81,7 @@ pub struct StatementCache {
     stats: Arc<RwLock<CacheStats>>,
 }
 
+/// Statement cache performance statistics.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CacheStats {
     /// Number of cache hits
@@ -146,7 +147,7 @@ impl StatementCache {
         hasher.update(normalized.as_bytes());
         let result = hasher.finalize();
 
-        format!("{:x}", result)
+        hex::encode(result.as_slice())
     }
 
     /// Get a cached statement
@@ -297,15 +298,23 @@ fn normalize_sql(sql: &str) -> String {
     replace_literals(&normalized)
 }
 
+static RE_LITERAL_STRING: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+    regex::Regex::new(r"'[^']*'")
+        .expect("static regex pattern for SQL string literals is always valid")
+});
+
+static RE_LITERAL_NUMBER: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+    regex::Regex::new(r"\b\d+\b")
+        .expect("static regex pattern for SQL numeric literals is always valid")
+});
+
 /// Replace literal values with placeholders
 fn replace_literals(sql: &str) -> String {
     // Replace string literals
-    let re_string = regex::Regex::new(r"'[^']*'").unwrap();
-    let sql = re_string.replace_all(sql, "?");
+    let sql = RE_LITERAL_STRING.replace_all(sql, "?");
 
     // Replace numeric literals
-    let re_number = regex::Regex::new(r"\b\d+\b").unwrap();
-    let sql = re_number.replace_all(&sql, "?");
+    let sql = RE_LITERAL_NUMBER.replace_all(&sql, "?");
 
     sql.to_string()
 }

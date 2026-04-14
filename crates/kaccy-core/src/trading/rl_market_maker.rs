@@ -141,10 +141,15 @@ impl MarketAction {
 /// Experience for replay buffer
 #[derive(Debug, Clone)]
 pub struct Experience {
+    /// Market state at the time of the action.
     pub state: RLMarketState,
+    /// Action taken by the agent.
     pub action: MarketAction,
+    /// Reward received after taking the action.
     pub reward: Decimal,
+    /// Resulting market state after the action.
     pub next_state: RLMarketState,
+    /// Whether this experience ends an episode.
     pub done: bool,
 }
 
@@ -173,7 +178,7 @@ impl ReplayBuffer {
 
     /// Sample batch of experiences
     pub fn sample(&self, batch_size: usize) -> Vec<Experience> {
-        use rand::Rng;
+        use rand::RngExt;
         let mut rng = rand::rng();
         let buffer_vec: Vec<_> = self.buffer.iter().collect();
         let sample_size = batch_size.min(self.buffer.len());
@@ -262,7 +267,7 @@ pub struct QNetwork {
 impl QNetwork {
     /// Create new Q-network
     pub fn new(state_dim: usize, action_dim: usize, hidden_dim: usize) -> Self {
-        use rand::Rng;
+        use rand::RngExt;
         let mut rng = rand::rng();
 
         // Initialize weights randomly
@@ -354,7 +359,7 @@ impl RLMarketMaker {
 
     /// Select action using epsilon-greedy policy
     pub fn select_action(&self, state: &RLMarketState, epsilon: f64) -> MarketAction {
-        use rand::Rng;
+        use rand::RngExt;
         let mut rng = rand::rng();
 
         if rng.random_range(0.0..1.0) < epsilon {
@@ -483,8 +488,11 @@ impl RLMarketMaker {
 /// Training statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrainingStats {
+    /// Total number of training steps completed.
     pub step_count: usize,
+    /// Current exploration rate (epsilon-greedy).
     pub epsilon: f64,
+    /// Number of experiences currently stored in the replay buffer.
     pub replay_buffer_size: usize,
 }
 

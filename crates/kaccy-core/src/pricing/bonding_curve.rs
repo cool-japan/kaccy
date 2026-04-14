@@ -261,21 +261,29 @@ impl CurveComparator {
 /// Result of comparing two curves
 #[derive(Debug, Clone, Serialize)]
 pub struct CurveComparison {
+    /// Supply level at which the comparison was made
     pub supply: Decimal,
+    /// Spot price from the first curve
     pub price1: Decimal,
+    /// Spot price from the second curve
     pub price2: Decimal,
+    /// Absolute price difference (price1 - price2)
     pub difference: Decimal,
+    /// Percentage difference relative to price2
     pub percent_difference: Decimal,
 }
 
 /// Linear bonding curve: P(n) = initial_price + (n * increment)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LinearBondingCurve {
+    /// Starting price at zero supply
     pub initial_price: Decimal,
+    /// Price increase per unit of additional supply
     pub increment: Decimal,
 }
 
 impl LinearBondingCurve {
+    /// Create a new linear bonding curve
     pub fn new(initial_price: Decimal, increment: Decimal) -> Self {
         Self {
             initial_price,
@@ -363,6 +371,7 @@ pub struct BancorBondingCurve {
 }
 
 impl BancorBondingCurve {
+    /// Create a new Bancor bonding curve
     pub fn new(reserve_balance: Decimal, reserve_ratio: Decimal, initial_supply: Decimal) -> Self {
         Self {
             reserve_balance,
@@ -485,12 +494,14 @@ impl BondingCurve for BancorBondingCurve {
 /// Uses polynomial approximation for e^x
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExponentialBondingCurve {
+    /// Starting price at zero supply
     pub initial_price: Decimal,
     /// Growth rate (k). Smaller = gentler curve.
     pub growth_rate: Decimal,
 }
 
 impl ExponentialBondingCurve {
+    /// Create a new exponential bonding curve
     pub fn new(initial_price: Decimal, growth_rate: Decimal) -> Self {
         Self {
             initial_price,
@@ -605,6 +616,7 @@ pub struct SigmoidBondingCurve {
 }
 
 impl SigmoidBondingCurve {
+    /// Create a new sigmoid bonding curve
     pub fn new(max_price: Decimal, growth_rate: Decimal, midpoint: Decimal) -> Self {
         Self {
             max_price,
@@ -745,6 +757,7 @@ pub struct AdaptiveBondingCurve {
 }
 
 impl AdaptiveBondingCurve {
+    /// Create a new adaptive bonding curve with explicit phase thresholds
     pub fn new(
         initial_price: Decimal,
         max_price: Decimal,
@@ -963,12 +976,14 @@ impl BondingCurve for AdaptiveBondingCurve {
 /// Provides gentler price increases than exponential but still rewards early adopters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SquareRootBondingCurve {
+    /// Starting price at zero supply
     pub initial_price: Decimal,
     /// Scale factor controlling curve steepness. Higher = gentler curve.
     pub scale_factor: Decimal,
 }
 
 impl SquareRootBondingCurve {
+    /// Create a new square root bonding curve
     pub fn new(initial_price: Decimal, scale_factor: Decimal) -> Self {
         Self {
             initial_price,
@@ -1034,6 +1049,27 @@ impl SquareRootBondingCurve {
         let result = x_f64.sqrt();
         Decimal::try_from(result).unwrap_or(dec!(1))
     }
+
+    /// Closed-form integral of P(s) = init * sqrt(1 + s/k) from `supply` to `supply + amount`.
+    ///
+    /// Antiderivative: F(s) = init * (2k/3) * (1 + s/k)^(3/2)
+    /// Definite integral = F(s0 + amount) - F(s0)
+    fn sqrt_integral(&self, supply: Decimal, amount: Decimal) -> Decimal {
+        let init: f64 = self.initial_price.try_into().unwrap_or(0.0);
+        let k: f64 = self.scale_factor.try_into().unwrap_or(1.0);
+        let s0: f64 = supply.try_into().unwrap_or(0.0);
+        let amt: f64 = amount.try_into().unwrap_or(0.0);
+
+        if k <= 0.0 || amt <= 0.0 {
+            return dec!(0);
+        }
+
+        let f_upper = (1.0 + (s0 + amt) / k).powf(1.5);
+        let f_lower = (1.0 + s0 / k).powf(1.5);
+        let total = init * (2.0 * k / 3.0) * (f_upper - f_lower);
+
+        Decimal::try_from(total.max(0.0)).unwrap_or(dec!(0))
+    }
 }
 
 impl BondingCurve for SquareRootBondingCurve {
@@ -1047,19 +1083,8 @@ impl BondingCurve for SquareRootBondingCurve {
             return dec!(0);
         }
 
-        // Numerical integration using trapezoidal rule
-        let steps = 100i32;
-        let step_size = amount / Decimal::from(steps);
-        let mut total = dec!(0);
-
-        for i in 0..steps {
-            let n = current_supply + step_size * Decimal::from(i);
-            let price_start = self.spot_price(n);
-            let price_end = self.spot_price(n + step_size);
-            total += (price_start + price_end) / dec!(2) * step_size;
-        }
-
-        total
+        // Exact closed-form antiderivative of P(s) = init * sqrt(1 + s/k)
+        self.sqrt_integral(current_supply, amount)
     }
 
     fn sell_price(&self, current_supply: Decimal, amount: Decimal) -> Decimal {
@@ -1067,22 +1092,8 @@ impl BondingCurve for SquareRootBondingCurve {
             return dec!(0);
         }
 
-        let new_supply = current_supply - amount;
-
-        // Numerical integration
-        let steps = 100i32;
-        let step_size = amount / Decimal::from(steps);
-        let mut total = dec!(0);
-
-        for i in 0..steps {
-            let n = new_supply + step_size * Decimal::from(i);
-            let price_start = self.spot_price(n);
-            let price_end = self.spot_price(n + step_size);
-            total += (price_start + price_end) / dec!(2) * step_size;
-        }
-
-        // Apply 5% spread
-        total * dec!(0.95)
+        // Integrate from (current_supply - amount) to current_supply, then apply 5% spread
+        self.sqrt_integral(current_supply - amount, amount) * dec!(0.95)
     }
 }
 
@@ -1090,6 +1101,7 @@ impl BondingCurve for SquareRootBondingCurve {
 /// Provides diminishing price growth - good for long-term stability
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogarithmicBondingCurve {
+    /// Starting price at zero supply
     pub initial_price: Decimal,
     /// Scale factor controlling curve steepness
     pub scale_factor: Decimal,
@@ -1098,6 +1110,7 @@ pub struct LogarithmicBondingCurve {
 }
 
 impl LogarithmicBondingCurve {
+    /// Create a new logarithmic bonding curve
     pub fn new(initial_price: Decimal, scale_factor: Decimal, log_base: Decimal) -> Self {
         Self {
             initial_price,
@@ -1172,6 +1185,37 @@ impl LogarithmicBondingCurve {
         let result = x_f64.ln() / base_f64.ln();
         Decimal::try_from(result).unwrap_or(dec!(0))
     }
+
+    /// Closed-form integral of P(s) = init * (1 + log_b(1 + s/k)) from `supply` to `supply + amount`.
+    ///
+    /// Antiderivative: F(s) = init * [s + (s+k)/ln(b) * (ln(1 + s/k) - 1)]
+    /// Definite integral = init * { amount + (1/ln(b)) *
+    ///     [(s0+amt+k)*(ln(1+(s0+amt)/k) - 1) - (s0+k)*(ln(1+s0/k) - 1)] }
+    fn log_integral(&self, supply: Decimal, amount: Decimal) -> Decimal {
+        let init: f64 = self.initial_price.try_into().unwrap_or(0.0);
+        let k: f64 = self.scale_factor.try_into().unwrap_or(1.0);
+        let s0: f64 = supply.try_into().unwrap_or(0.0);
+        let amt: f64 = amount.try_into().unwrap_or(0.0);
+        let log_b: f64 = self.log_base.try_into().unwrap_or(std::f64::consts::E);
+
+        if k <= 0.0 || amt <= 0.0 || log_b <= 0.0 || log_b == 1.0 {
+            return dec!(0);
+        }
+
+        let ln_b = log_b.ln();
+
+        // Antiderivative evaluated at s: s + (s+k)/ln_b * (ln(1 + s/k) - 1)
+        let antiderivative = |s: f64| -> f64 {
+            let arg = 1.0 + s / k;
+            if arg <= 0.0 {
+                return 0.0;
+            }
+            s + (s + k) / ln_b * (arg.ln() - 1.0)
+        };
+
+        let total = init * (antiderivative(s0 + amt) - antiderivative(s0));
+        Decimal::try_from(total.max(0.0)).unwrap_or(dec!(0))
+    }
 }
 
 impl BondingCurve for LogarithmicBondingCurve {
@@ -1186,19 +1230,8 @@ impl BondingCurve for LogarithmicBondingCurve {
             return dec!(0);
         }
 
-        // Numerical integration using trapezoidal rule
-        let steps = 100i32;
-        let step_size = amount / Decimal::from(steps);
-        let mut total = dec!(0);
-
-        for i in 0..steps {
-            let n = current_supply + step_size * Decimal::from(i);
-            let price_start = self.spot_price(n);
-            let price_end = self.spot_price(n + step_size);
-            total += (price_start + price_end) / dec!(2) * step_size;
-        }
-
-        total
+        // Exact closed-form antiderivative of P(s) = init * (1 + log_b(1 + s/k))
+        self.log_integral(current_supply, amount)
     }
 
     fn sell_price(&self, current_supply: Decimal, amount: Decimal) -> Decimal {
@@ -1206,22 +1239,8 @@ impl BondingCurve for LogarithmicBondingCurve {
             return dec!(0);
         }
 
-        let new_supply = current_supply - amount;
-
-        // Numerical integration
-        let steps = 100i32;
-        let step_size = amount / Decimal::from(steps);
-        let mut total = dec!(0);
-
-        for i in 0..steps {
-            let n = new_supply + step_size * Decimal::from(i);
-            let price_start = self.spot_price(n);
-            let price_end = self.spot_price(n + step_size);
-            total += (price_start + price_end) / dec!(2) * step_size;
-        }
-
-        // Apply 5% spread
-        total * dec!(0.95)
+        // Integrate from (current_supply - amount) to current_supply, then apply 5% spread
+        self.log_integral(current_supply - amount, amount) * dec!(0.95)
     }
 }
 
@@ -1439,5 +1458,85 @@ mod tests {
         assert!(price_0 > dec!(0));
         assert!(price_100 > dec!(0));
         assert!(price_400 > dec!(0));
+    }
+
+    /// Verify closed-form SquareRoot integral matches 100-step trapezoidal rule within 0.01%.
+    #[test]
+    fn test_closed_form_matches_numerical_sqrt() {
+        let curve = SquareRootBondingCurve::new(dec!(0.0001), dec!(100));
+
+        let test_cases: &[(Decimal, Decimal)] = &[
+            (dec!(0), dec!(50)),
+            (dec!(100), dec!(50)),
+            (dec!(500), dec!(100)),
+            (dec!(1000), dec!(200)),
+        ];
+
+        for &(supply, amount) in test_cases {
+            // Reference: 100-step trapezoidal rule
+            let steps = 100i32;
+            let step_size = amount / Decimal::from(steps);
+            let mut numerical = dec!(0);
+            for i in 0..steps {
+                let n = supply + step_size * Decimal::from(i);
+                let price_start = curve.spot_price(n);
+                let price_end = curve.spot_price(n + step_size);
+                numerical += (price_start + price_end) / dec!(2) * step_size;
+            }
+
+            let closed_form = curve.buy_price(supply, amount);
+
+            // Relative error must be under 0.01%
+            let relative_error = if numerical > dec!(0) {
+                ((closed_form - numerical) / numerical).abs()
+            } else {
+                dec!(0)
+            };
+            assert!(
+                relative_error < dec!(0.0001),
+                "sqrt closed-form vs numerical: supply={supply}, amount={amount}, \
+                 closed={closed_form}, numerical={numerical}, rel_err={relative_error}"
+            );
+        }
+    }
+
+    /// Verify closed-form Logarithmic integral matches 100-step trapezoidal rule within 0.01%.
+    #[test]
+    fn test_closed_form_matches_numerical_log() {
+        let curve = LogarithmicBondingCurve::new_natural_log(dec!(0.0001), dec!(100));
+
+        let test_cases: &[(Decimal, Decimal)] = &[
+            (dec!(0), dec!(50)),
+            (dec!(100), dec!(50)),
+            (dec!(500), dec!(100)),
+            (dec!(1000), dec!(200)),
+        ];
+
+        for &(supply, amount) in test_cases {
+            // Reference: 100-step trapezoidal rule
+            let steps = 100i32;
+            let step_size = amount / Decimal::from(steps);
+            let mut numerical = dec!(0);
+            for i in 0..steps {
+                let n = supply + step_size * Decimal::from(i);
+                let price_start = curve.spot_price(n);
+                let price_end = curve.spot_price(n + step_size);
+                numerical += (price_start + price_end) / dec!(2) * step_size;
+            }
+
+            let closed_form = curve.buy_price(supply, amount);
+
+            // Relative error must be under 0.01%
+            let relative_error = if numerical > dec!(0) {
+                ((closed_form - numerical) / numerical).abs()
+            } else {
+                dec!(0)
+            };
+            assert!(
+                relative_error < dec!(0.0001),
+                "log closed-form vs numerical: supply={supply}, amount={amount}, \
+                 closed={closed_form}, numerical={numerical}, rel_err={relative_error}"
+            );
+        }
     }
 }

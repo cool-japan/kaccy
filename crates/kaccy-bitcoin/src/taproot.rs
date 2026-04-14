@@ -116,7 +116,10 @@ pub enum TaprootSpendPath {
     /// Key path (most private and efficient)
     KeyPath,
     /// Script path with specific leaf
-    ScriptPath { leaf_index: usize },
+    ScriptPath {
+        /// Index of the script leaf to use
+        leaf_index: usize,
+    },
 }
 
 impl TaprootManager {

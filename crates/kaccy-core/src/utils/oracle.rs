@@ -1,4 +1,4 @@
-// Decentralized oracle integration for price feeds and event verification
+//! Decentralized oracle integration for price feeds and event verification
 use crate::error::CoreError;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -8,12 +8,19 @@ use uuid::Uuid;
 /// Oracle provider types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OracleProvider {
+    /// Chainlink decentralized oracle network
     Chainlink,
+    /// Pyth Network high-frequency oracle
     Pyth,
+    /// Band Protocol oracle
     Band,
+    /// API3 first-party oracle
     API3,
+    /// Tellor decentralized oracle
     Tellor,
+    /// UMA optimistic oracle
     UMA,
+    /// Custom/internal oracle
     Custom,
 }
 
@@ -48,12 +55,19 @@ impl OracleProvider {
 /// Price feed from an oracle
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriceFeed {
+    /// Unique identifier of this price feed entry
     pub id: Uuid,
+    /// Trading pair symbol (e.g. "BTC/USD")
     pub symbol: String,
+    /// Current price
     pub price: Decimal,
+    /// Source oracle provider
     pub provider: OracleProvider,
+    /// When this price was reported
     pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Optional ±confidence bound around the price
     pub confidence_interval: Option<Decimal>,
+    /// Number of decimal places in the price
     pub decimals: u8,
 }
 
@@ -94,7 +108,9 @@ impl PriceFeed {
 /// Oracle aggregator for consensus pricing
 #[derive(Debug, Clone)]
 pub struct OracleAggregator {
+    /// Price feeds indexed by symbol
     feeds: HashMap<String, Vec<PriceFeed>>,
+    /// Minimum number of independent sources required
     min_sources: usize,
 }
 
@@ -234,30 +250,49 @@ impl OracleAggregator {
 /// Oracle dispute resolution system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OracleDispute {
+    /// Unique identifier of this dispute
     pub id: Uuid,
+    /// Trading pair symbol under dispute
     pub symbol: String,
+    /// Price being challenged
     pub disputed_price: Decimal,
+    /// Oracle that reported the disputed price
     pub disputed_provider: OracleProvider,
+    /// User who raised the dispute
     pub challenger_id: Uuid,
+    /// Amount staked by the challenger
     pub stake_amount: Decimal,
+    /// Current state of the dispute
     pub status: DisputeStatus,
+    /// When the dispute was created
     pub created_at: chrono::DateTime<chrono::Utc>,
+    /// When the dispute was resolved or rejected
     pub resolved_at: Option<chrono::DateTime<chrono::Utc>>,
+    /// Outcome of the dispute
     pub resolution: Option<DisputeResolution>,
 }
 
+/// Status of an oracle price dispute
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DisputeStatus {
+    /// Dispute submitted and awaiting review
     Pending,
+    /// Dispute is being actively reviewed
     UnderReview,
+    /// Dispute was resolved in the challenger's favour
     Resolved,
+    /// Dispute was rejected as invalid
     Rejected,
 }
 
+/// Outcome record for a resolved oracle dispute
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DisputeResolution {
+    /// The correct price determined by the resolution process
     pub correct_price: Decimal,
+    /// Oracle provider that was penalised, if any
     pub slashed_provider: Option<OracleProvider>,
+    /// Reward paid to the successful challenger
     pub reward_amount: Decimal,
 }
 
@@ -301,19 +336,30 @@ impl OracleDispute {
 /// Event oracle for external event verification
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventOracle {
+    /// Unique identifier of this event oracle
     pub id: Uuid,
+    /// Category or name of the event being verified
     pub event_type: String,
+    /// Data payload associated with the event
     pub event_data: String,
+    /// Attesting data sources
     pub sources: Vec<EventSource>,
+    /// Whether a majority consensus was reached
     pub consensus_reached: bool,
+    /// When consensus was achieved
     pub verified_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
+/// A single attesting source for an event oracle
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventSource {
+    /// Oracle provider supplying this attestation
     pub provider: OracleProvider,
+    /// Raw data string from this source
     pub data: String,
+    /// Whether this source has been individually verified
     pub verified: bool,
+    /// When this attestation was submitted
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
@@ -370,11 +416,15 @@ impl EventOracle {
 /// Fallback mechanism for oracle failures
 #[derive(Debug, Clone)]
 pub struct OracleFallback {
+    /// Preferred oracle providers to query first
     #[allow(dead_code)]
     primary_providers: Vec<OracleProvider>,
+    /// Backup oracle providers used when primary sources fail
     #[allow(dead_code)]
     fallback_providers: Vec<OracleProvider>,
+    /// Most recent successfully fetched price
     last_successful_price: Option<Decimal>,
+    /// Number of consecutive failures since the last success
     failure_count: usize,
 }
 
@@ -430,21 +480,49 @@ impl OracleFallback {
 /// Automated settlement trigger based on oracle events
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutomatedSettlement {
+    /// Unique identifier of this settlement rule
     pub id: Uuid,
+    /// Human-readable condition that must be satisfied to trigger settlement
     pub event_condition: String,
+    /// Action to execute once the condition is met
     pub settlement_action: SettlementAction,
+    /// Oracle providers that must attest to the event
     pub oracle_sources: Vec<OracleProvider>,
+    /// Minimum number of sources required for consensus
     pub min_consensus: usize,
+    /// Whether the settlement has been triggered
     pub triggered: bool,
+    /// Whether the settlement action has been executed
     pub executed: bool,
 }
 
+/// Action to take when an automated settlement triggers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SettlementAction {
-    ReleaseEscrow { amount: Decimal, recipient: Uuid },
-    ExecuteTrade { token_id: Uuid, amount: Decimal },
-    DistributeRewards { pool_id: Uuid },
-    PauseContract { contract_id: Uuid },
+    /// Release escrowed funds to a recipient
+    ReleaseEscrow {
+        /// Amount to release
+        amount: Decimal,
+        /// Recipient user ID
+        recipient: Uuid,
+    },
+    /// Execute a trade on-chain
+    ExecuteTrade {
+        /// Token to trade
+        token_id: Uuid,
+        /// Trade amount
+        amount: Decimal,
+    },
+    /// Distribute rewards from a pool
+    DistributeRewards {
+        /// Pool to distribute from
+        pool_id: Uuid,
+    },
+    /// Pause a smart contract
+    PauseContract {
+        /// Contract to pause
+        contract_id: Uuid,
+    },
 }
 
 impl AutomatedSettlement {

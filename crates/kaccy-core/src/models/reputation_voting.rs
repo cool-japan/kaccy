@@ -54,6 +54,7 @@ pub struct ParticipationHistory {
 }
 
 impl ParticipationHistory {
+    /// Creates a new `ParticipationHistory` for the given user with zeroed counters.
     pub fn new(user_id: Uuid) -> Self {
         Self {
             user_id,
@@ -139,6 +140,7 @@ pub struct DomainReputation {
 }
 
 impl DomainReputation {
+    /// Creates a new `DomainReputation` with zero score for the given domain.
     pub fn new(domain: ExpertiseDomain) -> Self {
         Self {
             domain,
@@ -162,6 +164,7 @@ impl DomainReputation {
 /// Reputation-weighted voter
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReputationVoter {
+    /// Unique identifier for this voter.
     pub user_id: Uuid,
 
     /// Base voting power (from token holdings)
@@ -178,6 +181,7 @@ pub struct ReputationVoter {
 }
 
 impl ReputationVoter {
+    /// Creates a new `ReputationVoter` with default reputation scores.
     pub fn new(user_id: Uuid, base_voting_power: Decimal) -> Self {
         Self {
             user_id,

@@ -152,15 +152,15 @@ impl RegionalCompliance {
 
 /// Transaction monitor for compliance
 pub struct TransactionMonitor {
-    /// User daily volumes
+    /// Accumulated daily trading volume per user
     daily_volumes: HashMap<Uuid, Decimal>,
-    /// User monthly volumes
+    /// Accumulated monthly trading volume per user
     monthly_volumes: HashMap<Uuid, Decimal>,
-    /// Suspicious activity alerts
+    /// Generated suspicious activity alerts
     alerts: Vec<SuspiciousActivityAlert>,
-    /// Regional compliance rules
+    /// Compliance rules keyed by region
     regional_rules: HashMap<Region, RegionalCompliance>,
-    /// User regions
+    /// Assigned region for each user
     user_regions: HashMap<Uuid, Region>,
 }
 
@@ -346,55 +346,78 @@ pub struct ComplianceReport {
 
 /// Real-time trade surveillance system
 pub struct RealTimeSurveillance {
-    /// Active surveillance rules
+    /// Active surveillance rules to evaluate
     rules: Vec<SurveillanceRule>,
-    /// Detected violations
+    /// Violations detected so far
     violations: Vec<Violation>,
 }
 
 /// Surveillance rule
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SurveillanceRule {
+    /// Unique identifier of the rule
     pub id: Uuid,
+    /// Human-readable name of the rule
     pub name: String,
+    /// Category of market behaviour this rule detects
     pub rule_type: RuleType,
+    /// Whether this rule is currently active
     pub enabled: bool,
+    /// Optional numeric threshold that triggers the rule
     pub threshold: Option<f64>,
 }
 
 /// Rule type for surveillance
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RuleType {
+    /// Abnormal spike in trading volume
     VolumeSpike,
+    /// Suspected price manipulation
     PriceManipulation,
+    /// Suspected insider trading
     InsiderTrading,
+    /// General market manipulation
     MarketManipulation,
+    /// Order layering to deceive the market
     Layering,
+    /// Spoofing of the order book
     Spoofing,
 }
 
 /// Violation record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Violation {
+    /// Unique identifier of this violation
     pub id: Uuid,
+    /// ID of the rule that was triggered
     pub rule_id: Uuid,
+    /// User responsible for the violation
     pub user_id: Uuid,
+    /// When the violation was detected
     pub detected_at: DateTime<Utc>,
+    /// How severe the violation is
     pub severity: ViolationSeverity,
+    /// Human-readable description of the violation
     pub description: String,
+    /// Supporting evidence items
     pub evidence: Vec<String>,
 }
 
 /// Violation severity
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ViolationSeverity {
+    /// Minor infraction
     Low,
+    /// Moderate infraction
     Medium,
+    /// Serious infraction
     High,
+    /// Severe infraction requiring immediate action
     Critical,
 }
 
 impl RealTimeSurveillance {
+    /// Create a new real-time surveillance system
     pub fn new() -> Self {
         Self {
             rules: Vec::new(),
@@ -402,14 +425,17 @@ impl RealTimeSurveillance {
         }
     }
 
+    /// Register a new surveillance rule
     pub fn add_rule(&mut self, rule: SurveillanceRule) {
         self.rules.push(rule);
     }
 
+    /// Record a detected violation
     pub fn record_violation(&mut self, violation: Violation) {
         self.violations.push(violation);
     }
 
+    /// Return all violations matching the given severity
     pub fn get_violations_by_severity(&self, severity: ViolationSeverity) -> Vec<&Violation> {
         self.violations
             .iter()
@@ -426,40 +452,58 @@ impl Default for RealTimeSurveillance {
 
 /// Automated Suspicious Activity Report (SAR) generator
 pub struct AutomatedSAR {
-    /// Pending SARs
+    /// SARs awaiting submission
     pending_sars: Vec<SuspiciousActivityReport>,
-    /// Submitted SARs
+    /// SARs already submitted to regulators
     submitted_sars: Vec<SuspiciousActivityReport>,
 }
 
 /// Suspicious Activity Report
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SuspiciousActivityReport {
+    /// Unique identifier of this SAR
     pub id: Uuid,
+    /// Subject user
     pub user_id: Uuid,
+    /// Nature of the suspicious activity
     pub activity_type: SuspiciousActivity,
+    /// Narrative description of the suspicious activity
     pub description: String,
+    /// Start of the observation period
     pub start_date: DateTime<Utc>,
+    /// End of the observation period
     pub end_date: DateTime<Utc>,
+    /// Aggregate value of transactions in this SAR
     pub total_amount: Decimal,
+    /// Number of transactions covered
     pub transaction_count: usize,
+    /// Specific risk indicators observed
     pub risk_indicators: Vec<String>,
+    /// Current lifecycle status of the SAR
     pub status: SARStatus,
+    /// When the SAR was drafted
     pub created_at: DateTime<Utc>,
+    /// When the SAR was submitted to regulators
     pub submitted_at: Option<DateTime<Utc>>,
 }
 
 /// SAR status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SARStatus {
+    /// SAR is being drafted
     Draft,
+    /// SAR is awaiting compliance officer review
     PendingReview,
+    /// SAR has been approved for submission
     Approved,
+    /// SAR has been submitted to regulators
     Submitted,
+    /// SAR was rejected and will not be filed
     Rejected,
 }
 
 impl AutomatedSAR {
+    /// Create a new SAR generator
     pub fn new() -> Self {
         Self {
             pending_sars: Vec::new(),
@@ -526,13 +570,14 @@ impl Default for AutomatedSAR {
 
 /// Market manipulation detector
 pub struct MarketManipulationDetector {
-    /// Detection threshold
+    /// Relative price-change threshold that triggers an alert
     threshold: f64,
-    /// Historical price data
+    /// Ordered historical price observations (timestamp, price)
     price_history: Vec<(DateTime<Utc>, Decimal)>,
 }
 
 impl MarketManipulationDetector {
+    /// Create a new detector with the given price-change threshold
     pub fn new(threshold: f64) -> Self {
         Self {
             threshold,
@@ -610,41 +655,58 @@ impl MarketManipulationDetector {
 /// Manipulation type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ManipulationType {
+    /// Pump-and-dump price inflation scheme
     PumpAndDump,
+    /// Wash trading between the same parties
     WashTrading,
+    /// Layering of fake orders to move price
     Layering,
+    /// Spoofing the order book with cancelled orders
     Spoofing,
 }
 
 /// Manipulation alert
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ManipulationAlert {
+    /// Category of manipulation detected
     pub alert_type: ManipulationType,
+    /// When the manipulation was detected
     pub detected_at: DateTime<Utc>,
+    /// Confidence score in the range [0.0, 1.0]
     pub confidence: f64,
+    /// Human-readable description of the detection
     pub description: String,
 }
 
 /// Insider trading detector
 pub struct InsiderTradingDetector {
-    /// Trades before significant events
+    /// Trades that occurred suspiciously close to significant events
     suspicious_trades: Vec<SuspiciousTrade>,
 }
 
 /// Suspicious trade record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SuspiciousTrade {
+    /// Identifier of the trade being scrutinised
     pub trade_id: Uuid,
+    /// User who placed the trade
     pub user_id: Uuid,
+    /// Token that was traded
     pub token_id: Uuid,
+    /// Notional amount of the trade
     pub amount: Decimal,
+    /// When the trade was executed
     pub trade_timestamp: DateTime<Utc>,
+    /// When the related event occurred
     pub event_timestamp: Option<DateTime<Utc>>,
+    /// Category of the related event
     pub event_type: Option<String>,
+    /// Computed suspicion score in [0.0, 1.0]
     pub suspicion_score: f64,
 }
 
 impl InsiderTradingDetector {
+    /// Create a new insider trading detector
     pub fn new() -> Self {
         Self {
             suspicious_trades: Vec::new(),

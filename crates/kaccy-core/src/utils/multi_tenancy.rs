@@ -375,20 +375,30 @@ impl Default for TenantManager {
 /// Resource type for quota checking
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResourceType {
+    /// Active user accounts.
     Users,
+    /// Protocol tokens created.
     Tokens,
+    /// API request count.
     ApiCalls,
+    /// Persistent data storage in bytes.
     Storage,
+    /// Concurrent open connections.
     Connections,
 }
 
 /// Resource utilization percentages
 #[derive(Debug, Clone)]
 pub struct ResourceUtilization {
+    /// Percentage of the user quota consumed (0–100).
     pub users_percentage: f64,
+    /// Percentage of the token quota consumed (0–100).
     pub tokens_percentage: f64,
+    /// Percentage of the API-call quota consumed (0–100).
     pub api_calls_percentage: f64,
+    /// Percentage of the storage quota consumed (0–100).
     pub storage_percentage: f64,
+    /// Percentage of the connection quota consumed (0–100).
     pub connections_percentage: f64,
 }
 

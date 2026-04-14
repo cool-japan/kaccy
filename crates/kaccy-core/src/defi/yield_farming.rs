@@ -19,15 +19,24 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum EmissionSchedule {
     /// Fixed emission per block/time period
-    Fixed { rate_per_second: Decimal },
+    Fixed {
+        /// Constant reward tokens emitted per second.
+        rate_per_second: Decimal,
+    },
     /// Decreasing emission over time (halving)
     Decreasing {
+        /// Starting emission rate at launch.
         initial_rate: Decimal,
-        halving_period: i64, // seconds
+        /// Duration in seconds between each halving event.
+        halving_period: i64,
+        /// Minimum emission floor after repeated halvings.
         min_rate: Decimal,
     },
     /// Custom emission curve
-    Custom { emissions: Vec<(i64, Decimal)> }, // (timestamp, rate)
+    Custom {
+        /// List of (timestamp, rate) pairs defining the emission curve.
+        emissions: Vec<(i64, Decimal)>,
+    },
 }
 
 impl EmissionSchedule {
@@ -76,7 +85,9 @@ impl EmissionSchedule {
 /// Farming pool configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FarmingPool {
+    /// Unique identifier for this pool
     pub pool_id: Uuid,
+    /// Human-readable name for this pool
     pub name: String,
     /// Staking token (LP token or single token)
     pub stake_token_id: Uuid,
@@ -97,11 +108,14 @@ pub struct FarmingPool {
     /// Lock period (optional minimum staking duration)
     pub lock_period: Option<i64>,
     /// Boost multiplier based on lock duration
+    /// Whether boost multipliers for locked stakes are enabled
     pub boost_enabled: bool,
+    /// Unix timestamp when this pool was created
     pub created_at: i64,
 }
 
 impl FarmingPool {
+    /// Create a new farming pool with the given parameters
     pub fn new(
         name: String,
         stake_token_id: Uuid,
@@ -212,18 +226,28 @@ impl FarmingPool {
 /// User stake in a farming pool
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserStake {
+    /// Unique identifier for this stake
     pub stake_id: Uuid,
+    /// User who owns this stake
     pub user_id: Uuid,
+    /// Pool this stake belongs to
     pub pool_id: Uuid,
+    /// Amount of tokens currently staked
     pub amount: Decimal,
+    /// Accumulated reward debt used to calculate incremental rewards
     pub reward_debt: Decimal,
+    /// Rewards accrued but not yet claimed
     pub pending_rewards: Decimal,
+    /// Unix timestamp when the stake was created
     pub stake_time: i64,
+    /// Unix timestamp when the lock expires, if applicable
     pub unlock_time: Option<i64>,
+    /// Boost multiplier applied to this stake
     pub boost_multiplier: Decimal,
 }
 
 impl UserStake {
+    /// Create a new empty user stake for the given pool
     pub fn new(user_id: Uuid, pool_id: Uuid, lock_period: Option<i64>) -> Self {
         let stake_time = chrono::Utc::now().timestamp();
         let unlock_time = lock_period.map(|period| stake_time + period);
@@ -272,12 +296,16 @@ impl UserStake {
 
 /// Yield farming manager
 pub struct YieldFarmingManager {
+    /// All farming pools keyed by pool ID
     pools: Arc<RwLock<HashMap<Uuid, FarmingPool>>>,
-    user_stakes: Arc<RwLock<HashMap<(Uuid, Uuid), UserStake>>>, // (user_id, pool_id)
+    /// User stakes keyed by (user_id, pool_id)
+    user_stakes: Arc<RwLock<HashMap<(Uuid, Uuid), UserStake>>>,
+    /// Current token prices keyed by token ID
     token_prices: Arc<RwLock<HashMap<Uuid, Decimal>>>,
 }
 
 impl YieldFarmingManager {
+    /// Create a new yield farming manager
     pub fn new() -> Self {
         Self {
             pools: Arc::new(RwLock::new(HashMap::new())),

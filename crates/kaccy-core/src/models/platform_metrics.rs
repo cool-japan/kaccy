@@ -11,6 +11,7 @@ use uuid::Uuid;
 /// Platform-wide metrics snapshot
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PlatformMetrics {
+    /// Unique identifier for this metrics snapshot
     pub metrics_id: Uuid,
     /// Total registered users
     pub total_users: i64,
@@ -50,6 +51,7 @@ pub struct PlatformMetrics {
     pub total_value_locked_btc: Decimal,
     /// Snapshot timestamp
     pub snapshot_at: DateTime<Utc>,
+    /// Timestamp when this record was created
     pub created_at: DateTime<Utc>,
 }
 
@@ -109,6 +111,7 @@ impl PlatformMetrics {
 /// Time-series metrics for charting and trending
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct TimeSeriesMetrics {
+    /// Unique identifier for this data point
     pub id: Uuid,
     /// Metric name (e.g., "daily_active_users", "trading_volume")
     pub metric_name: String,
@@ -116,9 +119,11 @@ pub struct TimeSeriesMetrics {
     pub value: Decimal,
     /// Time period for this metric
     pub period_start: DateTime<Utc>,
+    /// End of the time period for this metric
     pub period_end: DateTime<Utc>,
     /// Granularity (hourly, daily, weekly, monthly)
     pub granularity: MetricGranularity,
+    /// Timestamp when this record was created
     pub created_at: DateTime<Utc>,
 }
 
@@ -127,10 +132,14 @@ pub struct TimeSeriesMetrics {
 #[sqlx(type_name = "varchar", rename_all = "lowercase")]
 #[derive(Default)]
 pub enum MetricGranularity {
+    /// One data point per hour
     Hourly,
+    /// One data point per day
     #[default]
     Daily,
+    /// One data point per week
     Weekly,
+    /// One data point per month
     Monthly,
 }
 
@@ -148,7 +157,9 @@ impl fmt::Display for MetricGranularity {
 /// Token-specific metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TokenMetrics {
+    /// Token this data belongs to
     pub token_id: Uuid,
+    /// Token symbol
     pub symbol: String,
     /// Total holders
     pub holder_count: i64,
@@ -193,6 +204,7 @@ impl TokenMetrics {
 /// User activity metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserActivityMetrics {
+    /// User this data belongs to
     pub user_id: Uuid,
     /// Total tokens created
     pub tokens_created: i32,
@@ -340,9 +352,13 @@ impl SystemHealthMetrics {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum HealthStatus {
+    /// All systems operating normally
     Healthy,
+    /// System is operating but approaching thresholds
     Warning,
+    /// System is degraded and performance is impacted
     Degraded,
+    /// System has a critical failure
     Critical,
 }
 
@@ -360,9 +376,13 @@ impl fmt::Display for HealthStatus {
 /// Leaderboard entry for top traders/issuers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlatformLeaderboardEntry {
+    /// Position in the leaderboard (1 = first place)
     pub rank: i32,
+    /// User this entry represents
     pub user_id: Uuid,
+    /// User's login name
     pub username: String,
+    /// User's display name if set
     pub display_name: Option<String>,
     /// Score based on leaderboard type
     pub score: Decimal,

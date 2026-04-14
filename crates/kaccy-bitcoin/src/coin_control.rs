@@ -11,12 +11,19 @@ use crate::utxo::{SelectionStrategy, Utxo};
 /// UTXO label and metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UtxoLabel {
+    /// Transaction ID of the labeled UTXO
     pub txid: Txid,
+    /// Output index within the transaction
     pub vout: u32,
+    /// Human-readable label for this UTXO
     pub label: String,
+    /// Arbitrary tags for categorization
     pub tags: Vec<String>,
+    /// Optional free-form notes
     pub notes: Option<String>,
+    /// When this label was created
     pub created_at: DateTime<Utc>,
+    /// Privacy score (0-100, higher is better)
     pub privacy_score: Option<u8>,
 }
 
@@ -404,9 +411,13 @@ impl Default for CoinControl {
 /// Result of manual UTXO selection
 #[derive(Debug, Clone)]
 pub struct ManualSelection {
+    /// UTXOs that were successfully selected
     pub selected: Vec<Utxo>,
+    /// Total amount of selected UTXOs in satoshis
     pub total_amount: u64,
+    /// UTXOs requested but not found in the wallet
     pub not_found: Vec<(Txid, u32)>,
+    /// UTXOs requested but currently frozen
     pub frozen: Vec<(Txid, u32)>,
 }
 
@@ -425,10 +436,15 @@ impl ManualSelection {
 /// Result of privacy-preserving selection
 #[derive(Debug, Clone)]
 pub struct PrivacySelection {
+    /// UTXOs selected to maximize privacy
     pub selected: Vec<Utxo>,
+    /// Total amount of selected UTXOs in satoshis
     pub total_amount: u64,
+    /// Target amount requested in satoshis
     pub target_amount: u64,
+    /// Number of distinct addresses contributing to the selection
     pub addresses_used: usize,
+    /// Average privacy score of selected UTXOs (0-100)
     pub avg_privacy_score: Option<u8>,
 }
 

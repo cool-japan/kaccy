@@ -50,22 +50,36 @@ impl Default for MevRebateConfig {
 /// MEV rebate record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MevRebate {
+    /// Unique identifier for this rebate
     pub rebate_id: String,
+    /// User who was harmed by MEV extraction
     pub victim_user_id: String,
+    /// User who performed MEV extraction
     pub attacker_user_id: String,
+    /// Total MEV amount extracted
     pub mev_amount: Decimal,
+    /// Amount to be rebated to the victim
     pub rebate_amount: Decimal,
+    /// Transaction IDs involved in the MEV event
     pub transaction_ids: Vec<String>,
+    /// When this rebate record was created
     pub created_at: SystemTime,
+    /// When this rebate was processed
     pub processed_at: Option<SystemTime>,
+    /// Current processing status
     pub status: RebateStatus,
 }
 
+/// Status of an MEV rebate
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RebateStatus {
+    /// Rebate is queued and awaiting processing
     Pending,
+    /// Rebate is currently being processed
     Processing,
+    /// Rebate has been successfully paid out
     Completed,
+    /// Rebate processing failed
     Failed,
 }
 
@@ -73,12 +87,16 @@ pub enum RebateStatus {
 ///
 /// Manages the distribution of MEV rebates to victims of MEV extraction
 pub struct MevRebateManager {
+    /// Rebate configuration
     config: MevRebateConfig,
+    /// All rebates indexed by rebate ID
     pending_rebates: HashMap<String, MevRebate>,
+    /// Monotonic counter used to generate unique rebate IDs
     rebate_counter: u64,
 }
 
 impl MevRebateManager {
+    /// Create a new MEV rebate manager with the given configuration
     pub fn new(config: MevRebateConfig) -> Self {
         Self {
             config,
@@ -87,6 +105,7 @@ impl MevRebateManager {
         }
     }
 
+    /// Create a new MEV rebate manager with default configuration
     pub fn with_defaults() -> Self {
         Self::new(MevRebateConfig::default())
     }
@@ -196,22 +215,33 @@ impl MevRebateManager {
 /// by ensuring they execute atomically in a specific order.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionBundle {
+    /// Unique identifier for this bundle
     pub bundle_id: String,
+    /// Ordered list of transactions in this bundle
     pub transactions: Vec<BundledTransaction>,
+    /// Earliest acceptable execution time
     pub min_timestamp: Option<SystemTime>,
+    /// Latest acceptable execution time
     pub max_timestamp: Option<SystemTime>,
+    /// Whether to revert all transactions if any one fails
     pub revert_on_failure: bool,
 }
 
+/// A single transaction inside a bundle
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BundledTransaction {
+    /// Transaction identifier
     pub tx_id: String,
+    /// User who submitted this transaction
     pub user_id: String,
+    /// Position of this transaction within the bundle (zero-indexed)
     pub order_index: usize,
+    /// Raw encoded transaction data
     pub data: Vec<u8>,
 }
 
 impl TransactionBundle {
+    /// Create an empty transaction bundle with the given ID
     pub fn new(bundle_id: String) -> Self {
         Self {
             bundle_id,
@@ -272,11 +302,11 @@ impl TransactionBundle {
 /// Implements fair transaction ordering to prevent front-running
 #[derive(Debug)]
 pub struct FairOrderingManager {
-    /// Pending transactions waiting to be ordered
+    /// Transactions waiting to be included in the next batch
     pending_queue: VecDeque<PendingTransaction>,
-    /// Batch interval for fair ordering
+    /// How long to accumulate transactions before ordering and dispatching them
     batch_interval: Duration,
-    /// Last batch processing time
+    /// Timestamp of the most recently dispatched batch
     last_batch_time: SystemTime,
 }
 
@@ -291,6 +321,7 @@ struct PendingTransaction {
 }
 
 impl FairOrderingManager {
+    /// Create a new fair ordering manager with the specified batch interval
     pub fn new(batch_interval: Duration) -> Self {
         Self {
             pending_queue: VecDeque::new(),
@@ -299,6 +330,7 @@ impl FairOrderingManager {
         }
     }
 
+    /// Create a fair ordering manager with a 10-second batch interval
     pub fn with_defaults() -> Self {
         Self::new(Duration::from_secs(10)) // 10-second batches
     }
@@ -368,7 +400,7 @@ impl FairOrderingManager {
 /// until after execution, preventing MEV extraction.
 #[derive(Debug)]
 pub struct PrivateExecutionEngine {
-    /// Encrypted pending transactions
+    /// Encrypted transactions awaiting decryption and execution
     encrypted_pool: HashMap<String, EncryptedTransaction>,
 }
 
@@ -384,6 +416,7 @@ struct EncryptedTransaction {
 }
 
 impl PrivateExecutionEngine {
+    /// Create an empty private execution engine
     pub fn new() -> Self {
         Self {
             encrypted_pool: HashMap::new(),
@@ -441,13 +474,18 @@ impl Default for PrivateExecutionEngine {
 ///
 /// Coordinates multiple MEV mitigation strategies
 pub struct MevProtectionCoordinator {
+    /// Manager for MEV rebates to victims
     rebate_manager: MevRebateManager,
+    /// Fair ordering component
     fair_ordering: FairOrderingManager,
+    /// Private execution component
     private_execution: PrivateExecutionEngine,
+    /// Which mitigation strategies are active
     enabled_strategies: Vec<MitigationStrategy>,
 }
 
 impl MevProtectionCoordinator {
+    /// Create a coordinator with the specified set of active strategies
     pub fn new(enabled_strategies: Vec<MitigationStrategy>) -> Self {
         Self {
             rebate_manager: MevRebateManager::with_defaults(),
@@ -457,6 +495,7 @@ impl MevProtectionCoordinator {
         }
     }
 
+    /// Create a coordinator with all available strategies enabled
     pub fn with_all_strategies() -> Self {
         Self::new(vec![
             MitigationStrategy::FairOrdering,

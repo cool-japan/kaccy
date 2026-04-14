@@ -232,9 +232,13 @@ impl Default for CircuitBreaker {
 /// Circuit breaker statistics
 #[derive(Debug, Clone)]
 pub struct CircuitBreakerStats {
+    /// Current state of the circuit breaker.
     pub state: CircuitState,
+    /// Number of consecutive failures recorded.
     pub failure_count: u32,
+    /// Number of consecutive successes recorded (relevant in half-open state).
     pub success_count: u32,
+    /// Time elapsed since the last state transition.
     pub time_in_current_state: Duration,
 }
 

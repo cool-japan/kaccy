@@ -83,20 +83,40 @@ impl RequestValidationConfig {
 #[derive(Debug)]
 pub enum ValidationError {
     /// Request body too large
-    BodyTooLarge { size: usize, max: usize },
+    BodyTooLarge {
+        /// Actual body size in bytes
+        size: usize,
+        /// Maximum allowed body size in bytes
+        max: usize,
+    },
     /// Invalid content type
     InvalidContentType {
+        /// The content type that was received
         actual: String,
+        /// The list of permitted content types
         allowed: Vec<String>,
     },
     /// URL too long
-    UrlTooLong { length: usize, max: usize },
+    UrlTooLong {
+        /// Actual URL length in bytes
+        length: usize,
+        /// Maximum allowed URL length in bytes
+        max: usize,
+    },
     /// Header too large
-    HeaderTooLarge { size: usize, max: usize },
+    HeaderTooLarge {
+        /// Actual header size in bytes
+        size: usize,
+        /// Maximum allowed header size in bytes
+        max: usize,
+    },
     /// HTTPS required
     HttpsRequired,
     /// Method not allowed
-    MethodNotAllowed { method: String },
+    MethodNotAllowed {
+        /// The HTTP method that was used
+        method: String,
+    },
 }
 
 impl IntoResponse for ValidationError {

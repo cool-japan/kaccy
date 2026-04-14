@@ -72,10 +72,15 @@ impl Default for FailoverConfig {
 /// Replica node in the failover cluster
 #[derive(Debug)]
 pub struct ReplicaNode {
+    /// Database connection pool for this node.
     pub pool: PgPool,
+    /// Current role (Primary, Standby, or Failed) protected by a lock.
     pub role: Arc<RwLock<ReplicaRole>>,
+    /// Most recent health check result protected by a lock.
     pub health: Arc<RwLock<HealthStatus>>,
+    /// Number of health check failures since the last success.
     pub consecutive_failures: Arc<RwLock<usize>>,
+    /// Timestamp of the last health check, or `None` if never checked.
     pub last_health_check: Arc<RwLock<Option<Instant>>>,
 }
 
@@ -314,16 +319,22 @@ impl FailoverManager {
 /// Cluster status information
 #[derive(Debug, Clone)]
 pub struct ClusterStatus {
+    /// Index of the current primary node in the nodes list, if one exists.
     pub primary_index: Option<usize>,
+    /// Status of each node in the cluster.
     pub nodes: Vec<NodeStatus>,
+    /// Total number of nodes in the cluster.
     pub total_nodes: usize,
 }
 
 /// Individual node status
 #[derive(Debug, Clone)]
 pub struct NodeStatus {
+    /// Current role of the node (e.g., "Primary", "Standby", "Failed").
     pub role: String,
+    /// Most recent health check outcome.
     pub health: HealthStatus,
+    /// Number of consecutive health check failures.
     pub consecutive_failures: usize,
 }
 

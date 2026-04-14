@@ -9,13 +9,18 @@ use uuid::Uuid;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ValueType {
+    /// A UTF-8 string value.
     String,
+    /// A numeric value (stored as string, parsed as f64).
     Number,
+    /// A boolean true/false value.
     Boolean,
+    /// An arbitrary JSON value.
     Json,
 }
 
 impl ValueType {
+    /// Return the lowercase string representation of the value type.
     pub fn as_str(&self) -> &'static str {
         match self {
             ValueType::String => "string",
@@ -29,75 +34,125 @@ impl ValueType {
 /// System configuration model
 #[derive(Debug, Clone, sqlx::FromRow, Serialize, Deserialize)]
 pub struct SystemConfig {
+    /// Unique identifier for the config entry.
     pub id: Uuid,
+    /// Configuration key (e.g., "feature.dark_mode").
     pub config_key: String,
+    /// Serialized configuration value.
     pub config_value: String,
+    /// Value type string (e.g., "string", "number", "boolean", "json").
     pub value_type: String,
+    /// Human-readable description of the configuration.
     pub description: Option<String>,
+    /// Optional grouping category.
     pub category: Option<String>,
+    /// Environment this config applies to (e.g., "production", "staging").
     pub environment: String,
+    /// Monotonically increasing version number.
     pub version: i32,
+    /// Whether this configuration entry is currently active.
     pub is_active: bool,
+    /// JSON schema or rules used to validate the config value.
     pub validation_rules: Option<JsonValue>,
+    /// Whether the config value should be treated as sensitive.
     pub is_sensitive: bool,
+    /// User who last changed this config, if known.
     pub changed_by: Option<Uuid>,
+    /// Reason for the most recent change.
     pub changed_reason: Option<String>,
+    /// Previous value before the most recent change.
     pub previous_value: Option<String>,
+    /// Timestamp when this entry was first created.
     pub created_at: DateTime<Utc>,
+    /// Timestamp of the most recent update.
     pub updated_at: DateTime<Utc>,
+    /// Timestamp from which this config becomes effective.
     pub effective_from: Option<DateTime<Utc>>,
+    /// Timestamp after which this config is no longer effective.
     pub effective_until: Option<DateTime<Utc>>,
 }
 
 /// Parameters for creating a new config
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateSystemConfig {
+    /// Configuration key.
     pub config_key: String,
+    /// Initial configuration value.
     pub config_value: String,
+    /// Type of the configuration value.
     pub value_type: ValueType,
+    /// Optional description.
     pub description: Option<String>,
+    /// Optional category grouping.
     pub category: Option<String>,
+    /// Target environment; defaults to "production" if not specified.
     pub environment: Option<String>,
+    /// JSON validation rules for the value.
     pub validation_rules: Option<JsonValue>,
+    /// Whether the value is sensitive; defaults to false.
     pub is_sensitive: Option<bool>,
+    /// User creating the config.
     pub changed_by: Option<Uuid>,
+    /// Reason for creation.
     pub changed_reason: Option<String>,
+    /// When the config becomes effective.
     pub effective_from: Option<DateTime<Utc>>,
+    /// When the config expires.
     pub effective_until: Option<DateTime<Utc>>,
 }
 
 /// Parameters for updating a config
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateSystemConfig {
+    /// New configuration value.
     pub config_value: String,
+    /// Updated description.
     pub description: Option<String>,
+    /// User making the update.
     pub changed_by: Option<Uuid>,
+    /// Reason for the update.
     pub changed_reason: Option<String>,
+    /// New effective-from timestamp.
     pub effective_from: Option<DateTime<Utc>>,
+    /// New expiry timestamp.
     pub effective_until: Option<DateTime<Utc>>,
 }
 
 /// Configuration change history
 #[derive(Debug, Clone, sqlx::FromRow, Serialize, Deserialize)]
 pub struct ConfigHistory {
+    /// Unique identifier for this history record.
     pub id: Uuid,
+    /// Config entry that was changed.
     pub config_id: Uuid,
+    /// Key of the config entry.
     pub config_key: String,
+    /// Previous value before the change.
     pub old_value: Option<String>,
+    /// New value after the change.
     pub new_value: String,
+    /// Value type of the config.
     pub value_type: String,
+    /// Type of change (e.g., "create", "update", "delete").
     pub change_type: String,
+    /// User who made the change.
     pub changed_by: Option<Uuid>,
+    /// Reason provided for the change.
     pub changed_reason: Option<String>,
+    /// Environment the change applies to.
     pub environment: String,
+    /// Timestamp when the change was recorded.
     pub created_at: DateTime<Utc>,
 }
 
 /// Configuration summary by category
 #[derive(Debug, Clone, sqlx::FromRow, Serialize, Deserialize)]
 pub struct ConfigCategorySummary {
+    /// Category name.
     pub category: String,
+    /// Total number of configs in this category.
     pub total_configs: i64,
+    /// Number of currently active configs.
     pub active_configs: i64,
 }
 
@@ -532,6 +587,7 @@ impl SystemConfigRepository {
             .map(|c| c.config_value))
     }
 
+    /// Retrieve a configuration value parsed as a floating-point number.
     pub async fn get_number(&self, key: &str, environment: Option<&str>) -> Result<Option<f64>> {
         Ok(self
             .get_by_key(key, environment)
@@ -539,6 +595,7 @@ impl SystemConfigRepository {
             .and_then(|c| c.config_value.parse::<f64>().ok()))
     }
 
+    /// Retrieve a configuration value parsed as a boolean.
     pub async fn get_bool(&self, key: &str, environment: Option<&str>) -> Result<Option<bool>> {
         Ok(self
             .get_by_key(key, environment)
@@ -546,6 +603,7 @@ impl SystemConfigRepository {
             .map(|c| c.config_value.eq_ignore_ascii_case("true") || c.config_value == "1"))
     }
 
+    /// Retrieve a configuration value parsed as a JSON value.
     pub async fn get_json(
         &self,
         key: &str,

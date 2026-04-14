@@ -9,17 +9,29 @@ use crate::error::Result;
 /// Order data from database
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct OrderRow {
+    /// Unique identifier for the order.
     pub order_id: Uuid,
+    /// User who placed the order.
     pub user_id: Uuid,
+    /// Token being bought or sold.
     pub token_id: Uuid,
+    /// Order type (e.g., "buy", "sell").
     pub order_type: String,
+    /// Token amount specified in the order.
     pub amount: Decimal,
+    /// Price per token in BTC.
     pub price_btc: Decimal,
+    /// Total BTC value of the order.
     pub total_btc: Decimal,
+    /// Current order status (e.g., "pending", "completed", "cancelled").
     pub status: String,
+    /// BTC address for payment or receipt.
     pub btc_address: Option<String>,
+    /// BTC transaction ID once settled.
     pub btc_txid: Option<String>,
+    /// Timestamp when the order was placed.
     pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Timestamp when the order was completed or cancelled.
     pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
@@ -29,6 +41,7 @@ pub struct OrderRepository {
 }
 
 impl OrderRepository {
+    /// Create a new order repository.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -477,22 +490,29 @@ impl OrderRepository {
 /// Order book depth with buy and sell orders grouped by price
 #[derive(Debug, Clone)]
 pub struct OrderBookDepth {
+    /// Aggregated buy orders sorted by price descending.
     pub buy_orders: Vec<PriceLevel>,
+    /// Aggregated sell orders sorted by price ascending.
     pub sell_orders: Vec<PriceLevel>,
 }
 
 /// Price level in the order book
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct PriceLevel {
+    /// Price in BTC at this level.
     pub price_btc: Decimal,
+    /// Total token amount available at this price.
     pub total_amount: Decimal,
+    /// Number of open orders at this price.
     pub order_count: i64,
 }
 
 /// Best bid and ask prices
 #[derive(Debug, Clone)]
 pub struct BidAsk {
+    /// Highest open buy price in BTC, or None if no open buys.
     pub best_bid: Option<Decimal>,
+    /// Lowest open sell price in BTC, or None if no open sells.
     pub best_ask: Option<Decimal>,
 }
 

@@ -1,13 +1,18 @@
-/// Advanced analytics for kaccy-api
-///
-/// This module provides comprehensive analytics tracking including:
-/// - User behavior tracking
-/// - Performance analytics
-/// - Business intelligence metrics
-/// - Predictive analytics
+//! Advanced analytics for kaccy-api
+//!
+//! This module provides comprehensive analytics tracking including:
+//! - User behavior tracking
+//! - Performance analytics
+//! - Business intelligence metrics
+//! - Predictive analytics
+
+/// User behavior and session tracking
 pub mod behavior;
+/// Business metrics counters and gauges
 pub mod metrics;
+/// Request performance tracking
 pub mod performance;
+/// Central analytics tracker
 pub mod tracker;
 
 pub use behavior::{BehaviorTracker, UserAction};

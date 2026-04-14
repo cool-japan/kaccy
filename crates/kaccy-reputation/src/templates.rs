@@ -35,6 +35,7 @@ pub enum TemplateCategory {
 }
 
 impl TemplateCategory {
+    /// Returns the lowercase database string representation of this category.
     pub fn to_db_string(&self) -> &'static str {
         match self {
             TemplateCategory::Content => "content",
@@ -47,6 +48,7 @@ impl TemplateCategory {
         }
     }
 
+    /// Parses a category from its lowercase database string; returns `None` for unknown values.
     pub fn from_db_string(s: &str) -> Option<Self> {
         match s {
             "content" => Some(TemplateCategory::Content),
@@ -60,6 +62,7 @@ impl TemplateCategory {
         }
     }
 
+    /// Returns a vector containing every [`TemplateCategory`] variant.
     pub fn all() -> Vec<TemplateCategory> {
         vec![
             TemplateCategory::Content,
@@ -102,19 +105,33 @@ impl std::str::FromStr for TemplateCategory {
 /// A commitment template definition
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CommitmentTemplate {
+    /// Unique identifier for this template.
     pub template_id: Uuid,
+    /// Display name for the template.
     pub name: String,
+    /// String representation of the template category.
     pub category: String,
+    /// Full description of what this commitment involves.
     pub description: String,
+    /// Default number of days from creation to deadline.
     pub default_duration_days: i32,
+    /// Criteria used to verify successful completion.
     pub verification_criteria: String,
+    /// Description of evidence that must be submitted.
     pub evidence_requirements: String,
+    /// Reputation points awarded for fulfilling this commitment.
     pub reputation_reward: Decimal,
+    /// Reputation points deducted for failing this commitment.
     pub reputation_penalty: Decimal,
+    /// Whether this is a built-in system template.
     pub is_system: bool,
+    /// Whether this template is currently available for use.
     pub is_active: bool,
+    /// Number of commitments created from this template.
     pub usage_count: i64,
+    /// User who created this template, or `None` for system templates.
     pub created_by: Option<Uuid>,
+    /// Timestamp when this template was created.
     pub created_at: DateTime<Utc>,
 }
 
@@ -133,17 +150,26 @@ impl CommitmentTemplate {
 /// Request to create a new template
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateTemplateRequest {
+    /// Display name for the template.
     pub name: String,
+    /// Category this template belongs to.
     pub category: TemplateCategory,
+    /// Full description of what this commitment involves.
     pub description: String,
+    /// Default duration in days from creation to deadline.
     pub default_duration_days: i32,
+    /// Criteria used to verify successful completion.
     pub verification_criteria: String,
+    /// Description of evidence that must be submitted.
     pub evidence_requirements: String,
+    /// Optional reputation reward override.
     pub reputation_reward: Option<Decimal>,
+    /// Optional reputation penalty override.
     pub reputation_penalty: Option<Decimal>,
 }
 
 impl CreateTemplateRequest {
+    /// Validate the request, returning an error if any field is invalid.
     pub fn validate(&self) -> Result<()> {
         if self.name.is_empty() {
             return Err(ReputationError::Validation("Name is required".to_string()));
@@ -175,31 +201,46 @@ impl CreateTemplateRequest {
 /// Request to create a commitment from a template
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateFromTemplateRequest {
+    /// Template to instantiate.
     pub template_id: Uuid,
+    /// Token to associate with the new commitment.
     pub token_id: Uuid,
+    /// Optional title override; defaults to the template name.
     pub title: Option<String>,
+    /// Optional description override.
     pub custom_description: Option<String>,
+    /// Optional deadline override; defaults to template's default duration.
     pub custom_deadline: Option<DateTime<Utc>>,
 }
 
 /// Summary of templates by category
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct TemplateSummary {
+    /// Total number of templates in the system.
     pub total_templates: i64,
+    /// Template counts broken down by category.
     pub templates_by_category: Vec<CategoryCount>,
+    /// Most frequently used templates.
     pub most_used: Vec<TemplateUsage>,
 }
 
+/// Template count for a single category.
 #[derive(Debug, Clone, Serialize)]
 pub struct CategoryCount {
+    /// String representation of the category.
     pub category: String,
+    /// Number of templates in this category.
     pub count: i64,
 }
 
+/// Usage statistics for a single template.
 #[derive(Debug, Clone, Serialize)]
 pub struct TemplateUsage {
+    /// Template identifier.
     pub template_id: Uuid,
+    /// Template name.
     pub name: String,
+    /// Total number of commitments created from this template.
     pub usage_count: i64,
 }
 
@@ -209,6 +250,7 @@ pub struct TemplateService {
 }
 
 impl TemplateService {
+    /// Create a new [`TemplateService`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -647,5 +689,270 @@ impl TemplateService {
         .await?;
 
         Ok(templates)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rust_decimal_macros::dec;
+    use uuid::Uuid;
+
+    // ── TemplateCategory ──────────────────────────────────────────────────────
+
+    #[test]
+    fn test_category_to_db_string_all_variants() {
+        assert_eq!(TemplateCategory::Content.to_db_string(), "content");
+        assert_eq!(TemplateCategory::Development.to_db_string(), "development");
+        assert_eq!(TemplateCategory::Community.to_db_string(), "community");
+        assert_eq!(TemplateCategory::Education.to_db_string(), "education");
+        assert_eq!(TemplateCategory::Events.to_db_string(), "events");
+        assert_eq!(TemplateCategory::Support.to_db_string(), "support");
+        assert_eq!(TemplateCategory::Other.to_db_string(), "other");
+    }
+
+    #[test]
+    fn test_category_from_db_string_roundtrip() {
+        for cat in TemplateCategory::all() {
+            let s = cat.to_db_string();
+            let parsed = TemplateCategory::from_db_string(s)
+                .expect("from_db_string should succeed for valid db string");
+            assert_eq!(parsed, cat, "roundtrip failed for {s}");
+        }
+    }
+
+    #[test]
+    fn test_category_from_db_string_unknown_returns_none() {
+        assert!(TemplateCategory::from_db_string("unknown").is_none());
+        assert!(TemplateCategory::from_db_string("").is_none());
+    }
+
+    #[test]
+    fn test_category_from_str_aliases() {
+        use std::str::FromStr;
+        assert_eq!(
+            TemplateCategory::from_str("dev").expect("dev alias"),
+            TemplateCategory::Development
+        );
+        assert_eq!(
+            TemplateCategory::from_str("edu").expect("edu alias"),
+            TemplateCategory::Education
+        );
+    }
+
+    #[test]
+    fn test_category_from_str_invalid_returns_error() {
+        use std::str::FromStr;
+        assert!(TemplateCategory::from_str("bogus").is_err());
+    }
+
+    #[test]
+    fn test_category_display() {
+        assert_eq!(format!("{}", TemplateCategory::Content), "content");
+        assert_eq!(format!("{}", TemplateCategory::Development), "development");
+    }
+
+    #[test]
+    fn test_category_all_count() {
+        // Ensure all() enumerates all 7 variants
+        assert_eq!(TemplateCategory::all().len(), 7);
+    }
+
+    // ── CreateTemplateRequest::validate ───────────────────────────────────────
+
+    fn valid_request() -> CreateTemplateRequest {
+        CreateTemplateRequest {
+            name: "Test Template".to_string(),
+            category: TemplateCategory::Content,
+            description: "A test description".to_string(),
+            default_duration_days: 14,
+            verification_criteria: "Some criteria".to_string(),
+            evidence_requirements: "Some evidence".to_string(),
+            reputation_reward: Some(dec!(10)),
+            reputation_penalty: Some(dec!(-15)),
+        }
+    }
+
+    #[test]
+    fn test_validate_valid_request_succeeds() {
+        valid_request()
+            .validate()
+            .expect("valid request should pass");
+    }
+
+    #[test]
+    fn test_validate_empty_name_rejected() {
+        let mut req = valid_request();
+        req.name = String::new();
+        assert!(req.validate().is_err(), "empty name should fail");
+    }
+
+    #[test]
+    fn test_validate_name_too_long_rejected() {
+        let mut req = valid_request();
+        req.name = "x".repeat(101);
+        let err = req.validate().expect_err("name >100 chars should fail");
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("100"),
+            "error message should mention 100: {msg}"
+        );
+    }
+
+    #[test]
+    fn test_validate_name_exactly_100_chars_accepted() {
+        let mut req = valid_request();
+        req.name = "a".repeat(100);
+        req.validate().expect("exactly 100 chars should pass");
+    }
+
+    #[test]
+    fn test_validate_description_too_long_rejected() {
+        let mut req = valid_request();
+        req.description = "d".repeat(1001);
+        assert!(
+            req.validate().is_err(),
+            "description >1000 chars should fail"
+        );
+    }
+
+    #[test]
+    fn test_validate_description_exactly_1000_chars_accepted() {
+        let mut req = valid_request();
+        req.description = "d".repeat(1000);
+        req.validate().expect("exactly 1000 chars should pass");
+    }
+
+    #[test]
+    fn test_validate_duration_zero_rejected() {
+        let mut req = valid_request();
+        req.default_duration_days = 0;
+        assert!(req.validate().is_err(), "duration 0 should fail");
+    }
+
+    #[test]
+    fn test_validate_duration_366_rejected() {
+        let mut req = valid_request();
+        req.default_duration_days = 366;
+        assert!(req.validate().is_err(), "duration >365 should fail");
+    }
+
+    #[test]
+    fn test_validate_duration_boundary_values_accepted() {
+        let mut req = valid_request();
+        req.default_duration_days = 1;
+        req.validate().expect("duration 1 should pass");
+        req.default_duration_days = 365;
+        req.validate().expect("duration 365 should pass");
+    }
+
+    #[test]
+    fn test_validate_empty_verification_criteria_rejected() {
+        let mut req = valid_request();
+        req.verification_criteria = String::new();
+        assert!(
+            req.validate().is_err(),
+            "empty verification_criteria should fail"
+        );
+    }
+
+    // ── CommitmentTemplate helpers ────────────────────────────────────────────
+
+    fn make_template(category: &str, duration_days: i32) -> CommitmentTemplate {
+        CommitmentTemplate {
+            template_id: Uuid::new_v4(),
+            name: "Sample".to_string(),
+            category: category.to_string(),
+            description: "desc".to_string(),
+            default_duration_days: duration_days,
+            verification_criteria: "criteria".to_string(),
+            evidence_requirements: "evidence".to_string(),
+            reputation_reward: dec!(10),
+            reputation_penalty: dec!(-15),
+            is_system: false,
+            is_active: true,
+            usage_count: 0,
+            created_by: None,
+            created_at: chrono::Utc::now(),
+        }
+    }
+
+    #[test]
+    fn test_parsed_category_known_value() {
+        let t = make_template("content", 7);
+        assert_eq!(t.parsed_category(), Some(TemplateCategory::Content));
+    }
+
+    #[test]
+    fn test_parsed_category_unknown_returns_none() {
+        let t = make_template("invalid_cat", 7);
+        assert!(t.parsed_category().is_none());
+    }
+
+    #[test]
+    fn test_calculate_deadline_positive_duration() {
+        let t = make_template("content", 30);
+        let before = chrono::Utc::now();
+        let deadline = t.calculate_deadline();
+        let after = chrono::Utc::now();
+        assert!(deadline > before + chrono::Duration::days(29));
+        assert!(deadline < after + chrono::Duration::days(31));
+    }
+
+    // ── Default system templates pass their own validation ────────────────────
+
+    #[test]
+    fn test_all_default_templates_are_valid() {
+        for template in TemplateService::default_templates() {
+            template.validate().unwrap_or_else(|e| {
+                panic!(
+                    "default template '{}' failed validation: {e}",
+                    template.name
+                )
+            });
+        }
+    }
+
+    #[test]
+    fn test_default_reward_penalty_fallbacks() {
+        let req = CreateTemplateRequest {
+            name: "Minimal".to_string(),
+            category: TemplateCategory::Other,
+            description: String::new(),
+            default_duration_days: 7,
+            verification_criteria: "criteria".to_string(),
+            evidence_requirements: "evidence".to_string(),
+            reputation_reward: None,
+            reputation_penalty: None,
+        };
+        // Default reward is dec!(10), penalty is dec!(-20) — verify None is allowed
+        req.validate().expect("None reward/penalty should be valid");
+    }
+
+    #[test]
+    fn test_create_from_template_request_uses_template_title_when_none() {
+        // Exercises the title fallback logic in create_commitment_from_template
+        // We can verify it by inspecting the request struct directly
+        let token_id = Uuid::new_v4();
+        let template_id = Uuid::new_v4();
+        let req = CreateFromTemplateRequest {
+            template_id,
+            token_id,
+            title: None,
+            custom_description: None,
+            custom_deadline: None,
+        };
+        // title is None — the service would use template.name as fallback
+        assert!(req.title.is_none(), "title should be None");
+        assert!(req.custom_description.is_none());
+        assert!(req.custom_deadline.is_none());
+    }
+
+    #[test]
+    fn test_template_summary_default_zeroed() {
+        let summary = TemplateSummary::default();
+        assert_eq!(summary.total_templates, 0);
+        assert!(summary.templates_by_category.is_empty());
+        assert!(summary.most_used.is_empty());
     }
 }

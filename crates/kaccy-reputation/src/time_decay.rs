@@ -105,24 +105,38 @@ impl DecayConfig {
 /// User activity status for decay calculation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserActivity {
+    /// User this activity record belongs to.
     pub user_id: Uuid,
+    /// Timestamp of the user's most recent activity, if any.
     pub last_activity_at: Option<DateTime<Utc>>,
+    /// Timestamp when the account was created.
     pub account_created_at: DateTime<Utc>,
+    /// Current reputation score before decay.
     pub current_score: Decimal,
+    /// Number of consecutive days without activity.
     pub days_inactive: i64,
+    /// Whether the user is within the grace period and should not yet decay.
     pub is_in_grace_period: bool,
+    /// Whether a decay event should be applied on the next maintenance run.
     pub should_decay: bool,
 }
 
 /// Result of applying decay
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecayResult {
+    /// User to whom decay was applied.
     pub user_id: Uuid,
+    /// Score before decay was applied.
     pub previous_score: Decimal,
+    /// Score after decay was applied.
     pub new_score: Decimal,
+    /// Amount of decay that was deducted.
     pub decay_applied: Decimal,
+    /// Tier before decay was applied.
     pub previous_tier: ReputationTier,
+    /// Tier after decay was applied.
     pub new_tier: ReputationTier,
+    /// Whether the decay caused a tier change.
     pub tier_changed: bool,
 }
 
@@ -133,10 +147,12 @@ pub struct TimeDecayService {
 }
 
 impl TimeDecayService {
+    /// Create a new [`TimeDecayService`] with a custom decay configuration.
     pub fn new(pool: PgPool, config: DecayConfig) -> Self {
         Self { pool, config }
     }
 
+    /// Create a new [`TimeDecayService`] with the default decay configuration.
     pub fn with_default_config(pool: PgPool) -> Self {
         Self::new(pool, DecayConfig::default())
     }

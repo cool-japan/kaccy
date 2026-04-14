@@ -115,9 +115,9 @@ impl PaymentCode {
         }
     }
 
-    /// Convert to base58 string format
+    /// Convert to base58 string format.
     ///
-    /// Format: PM8T[version][features][pubkey][chaincode]
+    /// Format: `PM8T` followed by version, features, pubkey, and chaincode bytes.
     pub fn to_base58(&self) -> String {
         let mut payload = Vec::new();
         payload.push(self.version.as_byte());

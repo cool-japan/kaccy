@@ -2,6 +2,8 @@
 
 Comprehensive reputation system for the Kaccy Protocol, providing on-chain and off-chain reputation tracking, AI-assisted scoring, dispute resolution, and cross-platform portability.
 
+**Version:** 0.2.0 | **Tests:** 489 passing
+
 ## Features
 
 ### Phase 0 (MVP) - Core Reputation
@@ -121,6 +123,15 @@ let credential = portability.export_reputation(ExportReputationRequest {
 }).await?;
 ```
 
+### Phase 23 - Ergonomic Enhancements (v0.2.0)
+
+- **Score Comparison**: Side-by-side comparison of two users' reputation profiles
+- **Component Analysis**: Drill-down breakdown of each score component with confidence levels
+- **Tier Progression**: Compute score delta needed to reach the next tier and projected timeline
+- **Batch Processing**: High-throughput score updates via `batch.rs`
+- **Leaderboard**: Real-time top-N reputation rankings via `leaderboard.rs`
+- **Validation Layer**: Centralized input validation for all public APIs via `validation.rs`
+
 ### Integration
 
 The `ReputationOrchestrator` provides high-level workflows coordinating all features:
@@ -187,15 +198,25 @@ kaccy-reputation/
 │   ├── history.rs          # Tier change history
 │   ├── milestone.rs        # Milestone commitments
 │   ├── recurring.rs        # Recurring commitments
-│   ├── templates.rs        # Commitment templates
+│   ├── templates.rs        # Commitment templates (15+ types)
 │   ├── holder_ratings.rs   # Token holder ratings
 │   ├── events.rs           # Event sourcing & notifications
-│   ├── sbt.rs             # Soulbound tokens
-│   ├── ai_scoring.rs      # AI evaluations & fraud detection
-│   ├── dispute.rs         # Dispute resolution & appeals
-│   ├── portability.rs     # Import/export reputation
-│   ├── integration.rs     # High-level orchestration
-│   └── error.rs           # Error types
+│   ├── sbt.rs              # Soulbound tokens
+│   ├── ai_scoring.rs       # AI evaluations & fraud detection
+│   ├── dispute.rs          # Dispute resolution & appeals
+│   ├── portability.rs      # Import/export reputation
+│   ├── integration.rs      # ReputationOrchestrator (high-level workflows)
+│   ├── query_builder.rs    # Dynamic reputation query construction
+│   ├── statistics.rs       # Aggregate statistics & percentile ranking
+│   ├── cache.rs            # Reputation score caching layer
+│   ├── analytics.rs        # Trend analysis & scoring insights
+│   ├── audit.rs            # Audit trails for score changes
+│   ├── batch.rs            # Batch score update processing
+│   ├── leaderboard.rs      # Top-reputation leaderboards
+│   ├── maintenance.rs      # Score maintenance & cleanup routines
+│   ├── export_import.rs    # Bulk data export/import
+│   ├── validation.rs       # Input validation for reputation data
+│   └── error.rs            # Error types
 └── Cargo.toml
 ```
 
@@ -279,9 +300,14 @@ match engine.get_score(user_id).await {
 
 ## Testing
 
+The crate ships with **489 passing tests** covering all scoring, tier, commitment, AI, dispute, portability, analytics, and orchestration modules.
+
 ```bash
 # Run all tests
 cargo test -p kaccy-reputation
+
+# Run with nextest
+cargo nextest run -p kaccy-reputation --no-fail-fast
 
 # Run with output
 cargo test -p kaccy-reputation -- --nocapture

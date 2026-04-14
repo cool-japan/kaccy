@@ -235,12 +235,17 @@ impl UtxoCache {
 /// Block header cache
 #[derive(Debug, Clone)]
 pub struct BlockHeader {
+    /// Block hash
     pub hash: BlockHash,
+    /// Block height in the chain
     pub height: u64,
+    /// Block timestamp (Unix epoch seconds)
     pub time: u64,
+    /// Hash of the previous block
     pub previous_block_hash: Option<BlockHash>,
 }
 
+/// Cache for block header data indexed by hash and height
 pub struct BlockHeaderCache {
     by_hash: Arc<RwLock<HashMap<BlockHash, CachedEntry<BlockHeader>>>>,
     by_height: Arc<RwLock<HashMap<u64, CachedEntry<BlockHeader>>>>,
@@ -370,9 +375,13 @@ impl BlockHeaderCache {
 /// Cache statistics
 #[derive(Debug, Clone)]
 pub struct CacheStats {
+    /// Total number of entries (active + expired)
     pub total_entries: usize,
+    /// Number of entries that have expired but not yet been evicted
     pub expired_entries: usize,
+    /// Number of non-expired entries
     pub active_entries: usize,
+    /// Maximum allowed entries
     pub max_entries: usize,
 }
 
@@ -389,8 +398,11 @@ impl CacheStats {
 
 /// Unified cache manager
 pub struct CacheManager {
+    /// Transaction data cache
     pub transactions: TransactionCache,
+    /// UTXO data cache
     pub utxos: UtxoCache,
+    /// Block header cache
     pub block_headers: BlockHeaderCache,
     #[allow(dead_code)]
     config: CacheConfig,
@@ -433,8 +445,11 @@ impl CacheManager {
 /// Overall cache statistics
 #[derive(Debug, Clone)]
 pub struct OverallCacheStats {
+    /// Statistics for the transaction cache
     pub transaction_stats: CacheStats,
+    /// Statistics for the UTXO cache
     pub utxo_stats: CacheStats,
+    /// Statistics for the block header cache
     pub block_header_stats: CacheStats,
 }
 

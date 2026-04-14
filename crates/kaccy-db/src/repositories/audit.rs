@@ -10,66 +10,107 @@ use uuid::Uuid;
 /// Audit log entry representing a change to a database record
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct AuditLog {
+    /// Unique identifier for this log entry.
     pub id: Uuid,
+    /// Name of the table that was modified.
     pub table_name: String,
+    /// Primary key of the record that was changed.
     pub record_id: Uuid,
+    /// Action performed (e.g., "INSERT", "UPDATE", "DELETE").
     pub action: String,
+    /// User who performed the action, if known.
     pub user_id: Option<Uuid>,
+    /// Previous values of changed fields.
     pub old_values: Option<JsonValue>,
+    /// New values of changed fields.
     pub new_values: Option<JsonValue>,
+    /// List of field names that were changed.
     pub changed_fields: Option<Vec<String>>,
+    /// Client IP address.
     pub ip_address: Option<String>,
+    /// Client User-Agent.
     pub user_agent: Option<String>,
+    /// Timestamp when the change occurred.
     pub created_at: DateTime<Utc>,
 }
 
 /// Admin action entry
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct AdminAction {
+    /// Unique identifier for this action record.
     pub id: Uuid,
+    /// Admin user who performed the action.
     pub admin_user_id: Uuid,
+    /// Type of administrative action.
     pub action_type: String,
+    /// Type of the target entity, if applicable.
     pub target_type: Option<String>,
+    /// Identifier of the target entity.
     pub target_id: Option<Uuid>,
+    /// Human-readable description of the action.
     pub description: String,
+    /// Additional metadata as JSON.
     pub metadata: Option<JsonValue>,
+    /// IP address from which the action was performed.
     pub ip_address: Option<String>,
+    /// Timestamp when the action was recorded.
     pub created_at: DateTime<Utc>,
 }
 
 /// Audit summary statistics
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct AuditSummary {
+    /// Name of the table.
     pub table_name: String,
+    /// Action type (e.g., "INSERT").
     pub action: String,
+    /// Date of the aggregation bucket.
     pub audit_date: NaiveDate,
+    /// Number of events.
     pub event_count: i64,
+    /// Number of distinct users.
     pub unique_users: i64,
+    /// Number of distinct records affected.
     pub unique_records: i64,
 }
 
 /// User activity report
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct UserAuditActivity {
+    /// User identifier.
     pub user_id: Uuid,
+    /// Total number of recorded actions.
     pub total_actions: i64,
+    /// Number of INSERT operations.
     pub insert_count: i64,
+    /// Number of UPDATE operations.
     pub update_count: i64,
+    /// Number of DELETE operations.
     pub delete_count: i64,
+    /// Number of distinct tables modified.
     pub tables_modified: i64,
+    /// Timestamp of the most recent action.
     pub last_activity: DateTime<Utc>,
 }
 
 /// Table change report
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct TableChangeReport {
+    /// Name of the table.
     pub table_name: String,
+    /// Total number of changes.
     pub total_changes: i64,
+    /// Number of INSERT operations.
     pub insert_count: i64,
+    /// Number of UPDATE operations.
     pub update_count: i64,
+    /// Number of DELETE operations.
     pub delete_count: i64,
+    /// Number of distinct users who made changes.
     pub unique_users: i64,
+    /// Timestamp of the earliest recorded change.
     pub first_change: DateTime<Utc>,
+    /// Timestamp of the most recent recorded change.
     pub last_change: DateTime<Utc>,
 }
 
@@ -483,5 +524,339 @@ impl AuditRepository {
             .await?;
 
         Ok(count.0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{NaiveDate, Utc};
+    use serde_json::json;
+    use uuid::Uuid;
+
+    // ── AuditLog construction & field verification ───────────────────────────
+
+    #[test]
+    fn audit_log_fields_are_set_correctly() {
+        let id = Uuid::new_v4();
+        let record_id = Uuid::new_v4();
+        let user_id = Uuid::new_v4();
+        let now = Utc::now();
+
+        let log = AuditLog {
+            id,
+            table_name: "orders".to_string(),
+            record_id,
+            action: "INSERT".to_string(),
+            user_id: Some(user_id),
+            old_values: None,
+            new_values: Some(json!({"amount": 100})),
+            changed_fields: Some(vec!["amount".to_string()]),
+            ip_address: Some("127.0.0.1".to_string()),
+            user_agent: Some("kaccy-client/1.0".to_string()),
+            created_at: now,
+        };
+
+        assert_eq!(log.id, id);
+        assert_eq!(log.table_name, "orders");
+        assert_eq!(log.record_id, record_id);
+        assert_eq!(log.action, "INSERT");
+        assert_eq!(log.user_id, Some(user_id));
+        assert!(log.old_values.is_none());
+        assert!(log.new_values.is_some());
+    }
+
+    #[test]
+    fn audit_log_optional_fields_can_be_none() {
+        let log = AuditLog {
+            id: Uuid::new_v4(),
+            table_name: "users".to_string(),
+            record_id: Uuid::new_v4(),
+            action: "DELETE".to_string(),
+            user_id: None,
+            old_values: None,
+            new_values: None,
+            changed_fields: None,
+            ip_address: None,
+            user_agent: None,
+            created_at: Utc::now(),
+        };
+
+        assert!(log.user_id.is_none());
+        assert!(log.old_values.is_none());
+        assert!(log.changed_fields.is_none());
+        assert!(log.ip_address.is_none());
+        assert!(log.user_agent.is_none());
+    }
+
+    #[test]
+    fn audit_log_serde_roundtrip() {
+        let log = AuditLog {
+            id: Uuid::new_v4(),
+            table_name: "tokens".to_string(),
+            record_id: Uuid::new_v4(),
+            action: "UPDATE".to_string(),
+            user_id: Some(Uuid::new_v4()),
+            old_values: Some(json!({"price": "1.00"})),
+            new_values: Some(json!({"price": "2.00"})),
+            changed_fields: Some(vec!["price".to_string()]),
+            ip_address: Some("10.0.0.1".to_string()),
+            user_agent: None,
+            created_at: Utc::now(),
+        };
+
+        let json_str = serde_json::to_string(&log).expect("AuditLog must serialize to JSON");
+        let restored: AuditLog =
+            serde_json::from_str(&json_str).expect("AuditLog must deserialize from JSON");
+
+        assert_eq!(log.id, restored.id);
+        assert_eq!(log.table_name, restored.table_name);
+        assert_eq!(log.action, restored.action);
+        assert_eq!(log.old_values, restored.old_values);
+        assert_eq!(log.new_values, restored.new_values);
+        assert_eq!(log.changed_fields, restored.changed_fields);
+    }
+
+    #[test]
+    fn audit_log_changed_fields_stored_as_vec() {
+        let fields = vec![
+            "email".to_string(),
+            "username".to_string(),
+            "bio".to_string(),
+        ];
+        let log = AuditLog {
+            id: Uuid::new_v4(),
+            table_name: "users".to_string(),
+            record_id: Uuid::new_v4(),
+            action: "UPDATE".to_string(),
+            user_id: None,
+            old_values: None,
+            new_values: None,
+            changed_fields: Some(fields.clone()),
+            ip_address: None,
+            user_agent: None,
+            created_at: Utc::now(),
+        };
+
+        let stored = log
+            .changed_fields
+            .expect("changed_fields should be present");
+        assert_eq!(stored.len(), 3);
+        assert!(stored.contains(&"email".to_string()));
+        assert!(stored.contains(&"username".to_string()));
+    }
+
+    // ── AdminAction construction & field verification ────────────────────────
+
+    #[test]
+    fn admin_action_fields_are_set_correctly() {
+        let id = Uuid::new_v4();
+        let admin_id = Uuid::new_v4();
+        let target_id = Uuid::new_v4();
+        let now = Utc::now();
+
+        let action = AdminAction {
+            id,
+            admin_user_id: admin_id,
+            action_type: "SUSPEND_USER".to_string(),
+            target_type: Some("user".to_string()),
+            target_id: Some(target_id),
+            description: "User violated ToS".to_string(),
+            metadata: Some(json!({"reason": "spam", "severity": "high"})),
+            ip_address: Some("192.168.0.1".to_string()),
+            created_at: now,
+        };
+
+        assert_eq!(action.id, id);
+        assert_eq!(action.admin_user_id, admin_id);
+        assert_eq!(action.action_type, "SUSPEND_USER");
+        assert_eq!(action.target_type, Some("user".to_string()));
+        assert_eq!(action.target_id, Some(target_id));
+        assert!(!action.description.is_empty());
+    }
+
+    #[test]
+    fn admin_action_serde_roundtrip() {
+        let action = AdminAction {
+            id: Uuid::new_v4(),
+            admin_user_id: Uuid::new_v4(),
+            action_type: "DELETE_TOKEN".to_string(),
+            target_type: Some("token".to_string()),
+            target_id: Some(Uuid::new_v4()),
+            description: "Token removed for policy violation".to_string(),
+            metadata: Some(json!({"policy": "rule_42"})),
+            ip_address: None,
+            created_at: Utc::now(),
+        };
+
+        let json_str = serde_json::to_string(&action).expect("AdminAction must serialize to JSON");
+        let restored: AdminAction =
+            serde_json::from_str(&json_str).expect("AdminAction must deserialize from JSON");
+
+        assert_eq!(action.id, restored.id);
+        assert_eq!(action.action_type, restored.action_type);
+        assert_eq!(action.description, restored.description);
+        assert_eq!(action.metadata, restored.metadata);
+    }
+
+    #[test]
+    fn admin_action_optional_target_can_be_none() {
+        let action = AdminAction {
+            id: Uuid::new_v4(),
+            admin_user_id: Uuid::new_v4(),
+            action_type: "SYSTEM_MAINTENANCE".to_string(),
+            target_type: None,
+            target_id: None,
+            description: "Scheduled maintenance window".to_string(),
+            metadata: None,
+            ip_address: None,
+            created_at: Utc::now(),
+        };
+
+        assert!(action.target_type.is_none());
+        assert!(action.target_id.is_none());
+        assert!(action.metadata.is_none());
+    }
+
+    // ── AuditSummary construction & field verification ───────────────────────
+
+    #[test]
+    fn audit_summary_fields_are_set_correctly() {
+        let date = NaiveDate::from_ymd_opt(2026, 4, 13).expect("date must be valid");
+
+        let summary = AuditSummary {
+            table_name: "orders".to_string(),
+            action: "UPDATE".to_string(),
+            audit_date: date,
+            event_count: 500,
+            unique_users: 42,
+            unique_records: 300,
+        };
+
+        assert_eq!(summary.table_name, "orders");
+        assert_eq!(summary.action, "UPDATE");
+        assert_eq!(summary.audit_date, date);
+        assert_eq!(summary.event_count, 500);
+        assert_eq!(summary.unique_users, 42);
+        assert_eq!(summary.unique_records, 300);
+    }
+
+    #[test]
+    fn audit_summary_serde_roundtrip() {
+        let summary = AuditSummary {
+            table_name: "users".to_string(),
+            action: "INSERT".to_string(),
+            audit_date: NaiveDate::from_ymd_opt(2026, 1, 1).expect("date must be valid"),
+            event_count: 1200,
+            unique_users: 80,
+            unique_records: 1200,
+        };
+
+        let json_str =
+            serde_json::to_string(&summary).expect("AuditSummary must serialize to JSON");
+        let restored: AuditSummary =
+            serde_json::from_str(&json_str).expect("AuditSummary must deserialize from JSON");
+
+        assert_eq!(summary.table_name, restored.table_name);
+        assert_eq!(summary.event_count, restored.event_count);
+        assert_eq!(summary.audit_date, restored.audit_date);
+    }
+
+    // ── UserAuditActivity construction & field verification ──────────────────
+
+    #[test]
+    fn user_audit_activity_counts_are_correct() {
+        let user_id = Uuid::new_v4();
+        let now = Utc::now();
+
+        let activity = UserAuditActivity {
+            user_id,
+            total_actions: 150,
+            insert_count: 30,
+            update_count: 100,
+            delete_count: 20,
+            tables_modified: 5,
+            last_activity: now,
+        };
+
+        assert_eq!(activity.user_id, user_id);
+        assert_eq!(
+            activity.insert_count + activity.update_count + activity.delete_count,
+            150
+        );
+        assert_eq!(activity.tables_modified, 5);
+    }
+
+    #[test]
+    fn user_audit_activity_serde_roundtrip() {
+        let activity = UserAuditActivity {
+            user_id: Uuid::new_v4(),
+            total_actions: 42,
+            insert_count: 10,
+            update_count: 22,
+            delete_count: 10,
+            tables_modified: 3,
+            last_activity: Utc::now(),
+        };
+
+        let json_str =
+            serde_json::to_string(&activity).expect("UserAuditActivity must serialize to JSON");
+        let restored: UserAuditActivity =
+            serde_json::from_str(&json_str).expect("UserAuditActivity must deserialize from JSON");
+
+        assert_eq!(activity.user_id, restored.user_id);
+        assert_eq!(activity.total_actions, restored.total_actions);
+        assert_eq!(activity.insert_count, restored.insert_count);
+    }
+
+    // ── TableChangeReport construction & field verification ──────────────────
+
+    #[test]
+    fn table_change_report_fields_are_set_correctly() {
+        let start = Utc::now();
+        let end = Utc::now();
+
+        let report = TableChangeReport {
+            table_name: "balances".to_string(),
+            total_changes: 2000,
+            insert_count: 500,
+            update_count: 1400,
+            delete_count: 100,
+            unique_users: 250,
+            first_change: start,
+            last_change: end,
+        };
+
+        assert_eq!(report.table_name, "balances");
+        assert_eq!(
+            report.insert_count + report.update_count + report.delete_count,
+            2000
+        );
+        assert_eq!(report.unique_users, 250);
+    }
+
+    #[test]
+    fn table_change_report_serde_roundtrip() {
+        let now = Utc::now();
+
+        let report = TableChangeReport {
+            table_name: "trades".to_string(),
+            total_changes: 9999,
+            insert_count: 9000,
+            update_count: 999,
+            delete_count: 0,
+            unique_users: 100,
+            first_change: now,
+            last_change: now,
+        };
+
+        let json_str =
+            serde_json::to_string(&report).expect("TableChangeReport must serialize to JSON");
+        let restored: TableChangeReport =
+            serde_json::from_str(&json_str).expect("TableChangeReport must deserialize from JSON");
+
+        assert_eq!(report.table_name, restored.table_name);
+        assert_eq!(report.total_changes, restored.total_changes);
+        assert_eq!(report.delete_count, restored.delete_count);
     }
 }

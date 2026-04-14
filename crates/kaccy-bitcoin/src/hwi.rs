@@ -14,10 +14,15 @@ use std::str::FromStr;
 /// Supported hardware wallet types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HardwareWalletType {
+    /// Ledger hardware wallet
     Ledger,
+    /// Trezor hardware wallet
     Trezor,
+    /// Coldcard hardware wallet
     Coldcard,
+    /// BitBox hardware wallet
     BitBox,
+    /// KeepKey hardware wallet
     KeepKey,
 }
 

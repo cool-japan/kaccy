@@ -7,8 +7,11 @@ use serde::{Deserialize, Serialize};
 /// Feature importance score
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeatureImportance {
+    /// Name of the feature.
     pub feature_name: String,
+    /// Numeric importance score (higher is more important).
     pub importance_score: f64,
+    /// Rank of the feature by importance (1 = most important).
     pub rank: usize,
 }
 
@@ -19,6 +22,7 @@ pub struct FeatureImportanceAnalyzer {
     method: ImportanceMethod,
 }
 
+/// Method used to compute feature importance scores
 #[derive(Debug, Clone, Copy)]
 pub enum ImportanceMethod {
     /// Permutation importance
@@ -32,6 +36,7 @@ pub enum ImportanceMethod {
 }
 
 impl FeatureImportanceAnalyzer {
+    /// Creates a new analyzer using the specified importance method.
     pub fn new(method: ImportanceMethod) -> Self {
         Self { method }
     }
@@ -275,6 +280,7 @@ pub struct FeatureSelector {
 }
 
 impl FeatureSelector {
+    /// Creates a new `FeatureSelector` with the given minimum importance threshold.
     pub fn new(threshold: f64) -> Self {
         Self {
             threshold,
@@ -282,6 +288,7 @@ impl FeatureSelector {
         }
     }
 
+    /// Sets an upper bound on the number of features selected.
     pub fn with_max_features(mut self, max_features: usize) -> Self {
         self.max_features = Some(max_features);
         self

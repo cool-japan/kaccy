@@ -456,9 +456,13 @@ impl<C: Cache> DistributedCache<C> {
 /// Cache statistics
 #[derive(Debug)]
 pub struct CacheStatistics {
+    /// Active write mode (write-through or write-back).
     pub write_mode: WriteMode,
+    /// Cache coherency protocol in use.
     pub coherency_protocol: CoherencyProtocol,
+    /// Number of dirty entries awaiting write-back flush.
     pub write_back_pending: usize,
+    /// Per-state entry counts.
     pub state_counts: HashMap<CacheEntryState, usize>,
 }
 
@@ -498,6 +502,7 @@ impl Default for MockRedisCache {
 
 impl MockRedisCache {
     #[allow(dead_code)]
+    /// Create a new in-memory mock Redis cache for testing.
     pub fn new() -> Self {
         Self {
             data: Arc::new(RwLock::new(HashMap::new())),

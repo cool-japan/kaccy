@@ -16,29 +16,47 @@ use crate::error::Result;
 /// A milestone within a commitment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Milestone {
+    /// Unique identifier for this milestone.
     pub milestone_id: Uuid,
+    /// Parent commitment ID.
     pub commitment_id: Uuid,
+    /// 1-based position of this milestone within the commitment.
     pub sequence_number: i32,
+    /// Short descriptive title.
     pub title: String,
+    /// Optional extended description.
     pub description: Option<String>,
+    /// Deadline for completing this milestone.
     pub deadline: DateTime<Utc>,
     /// Weight of this milestone (percentage of total commitment)
     pub weight_percent: Decimal,
+    /// Current lifecycle status of this milestone.
     pub status: MilestoneStatus,
+    /// URL to submitted evidence, if any.
     pub evidence_url: Option<String>,
+    /// Description of the submitted evidence, if any.
     pub evidence_description: Option<String>,
+    /// Timestamp when this milestone was verified.
     pub verified_at: Option<DateTime<Utc>>,
+    /// User who verified this milestone.
     pub verified_by: Option<Uuid>,
+    /// Timestamp when this milestone was created.
     pub created_at: DateTime<Utc>,
 }
 
+/// Lifecycle status of a milestone.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum MilestoneStatus {
+    /// Milestone not yet started.
     #[default]
     Pending,
+    /// Evidence submitted; awaiting verification.
     Completed,
+    /// Milestone verified as fulfilled.
     Verified,
+    /// Milestone not completed before its deadline.
     Failed,
+    /// Milestone was intentionally skipped.
     Skipped,
 }
 
@@ -75,40 +93,62 @@ impl std::str::FromStr for MilestoneStatus {
 /// Commitment with milestones
 #[derive(Debug, Clone, Serialize)]
 pub struct MilestoneCommitment {
+    /// Unique identifier for this commitment.
     pub commitment_id: Uuid,
+    /// User who created the commitment.
     pub user_id: Uuid,
+    /// Token associated with the commitment.
     pub token_id: Uuid,
+    /// Short descriptive title.
     pub title: String,
+    /// Optional extended description.
     pub description: Option<String>,
+    /// Overall deadline for the full commitment.
     pub overall_deadline: DateTime<Utc>,
+    /// Current overall lifecycle status.
     pub status: CommitmentStatus,
+    /// Individual milestones that make up this commitment.
     pub milestones: Vec<Milestone>,
+    /// Sum of all milestone weights (should equal 100).
     pub total_weight: Decimal,
+    /// Sum of weights of completed/verified milestones.
     pub completed_weight: Decimal,
+    /// Percentage of the commitment completed (0–100).
     pub completion_percentage: Decimal,
+    /// Timestamp when this commitment was created.
     pub created_at: DateTime<Utc>,
 }
 
 /// Request to create a milestone commitment
 #[derive(Debug, Deserialize)]
 pub struct CreateMilestoneCommitmentRequest {
+    /// Token to associate with this commitment.
     pub token_id: Uuid,
+    /// Short descriptive title.
     pub title: String,
+    /// Optional extended description.
     pub description: Option<String>,
+    /// Overall deadline for the full commitment.
     pub overall_deadline: DateTime<Utc>,
+    /// List of milestones that make up this commitment.
     pub milestones: Vec<MilestoneRequest>,
 }
 
+/// A single milestone within a multi-milestone commitment.
 #[derive(Debug, Deserialize)]
 pub struct MilestoneRequest {
+    /// Short title for this milestone.
     pub title: String,
+    /// Optional extended description.
     pub description: Option<String>,
+    /// Deadline by which this milestone must be completed.
     pub deadline: DateTime<Utc>,
     /// Weight as percentage (should sum to 100)
     pub weight_percent: Decimal,
 }
 
 impl CreateMilestoneCommitmentRequest {
+    /// Validate the request, returning an error if any field is invalid.
     pub fn validate(&self) -> Result<()> {
         if self.title.is_empty() {
             return Err(crate::error::ReputationError::Validation(
@@ -182,6 +222,7 @@ pub struct MilestoneService {
 }
 
 impl MilestoneService {
+    /// Create a new [`MilestoneService`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }

@@ -13,7 +13,9 @@ use crate::error::ReputationError;
 /// AI quality evaluation result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QualityEvaluation {
+    /// Identifier of the commitment that was evaluated.
     pub commitment_id: Uuid,
+    /// Timestamp when this evaluation was produced.
     pub evaluated_at: DateTime<Utc>,
     /// Overall quality score (0-100)
     pub quality_score: i32,
@@ -46,11 +48,17 @@ pub struct AspectScores {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum QualityFlag {
+    /// Deliverable is missing required parts.
     Incomplete,
+    /// Work does not meet minimum quality standards.
     PoorQuality,
+    /// Content appears to have been copied from another source.
     PlagiarismSuspected,
+    /// Submitted work does not match the commitment description.
     OffTopic,
+    /// Supporting evidence is missing or inadequate.
     InsufficientEvidence,
+    /// Behavioral patterns suggest fraudulent activity.
     SuspiciousActivity,
 }
 
@@ -91,8 +99,11 @@ impl std::str::FromStr for QualityFlag {
 /// Fraud detection result
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct FraudDetection {
+    /// Unique identifier for this fraud detection record.
     pub id: Uuid,
+    /// User whose activity triggered the detection.
     pub user_id: Uuid,
+    /// Timestamp when the suspicious activity was detected.
     pub detected_at: DateTime<Utc>,
     /// Fraud risk level (0-100, higher = more suspicious)
     pub risk_score: i32,
@@ -104,6 +115,7 @@ pub struct FraudDetection {
     pub recommended_action: String,
     /// Whether admin has reviewed this
     pub reviewed: bool,
+    /// Timestamp when the detection was recorded.
     pub created_at: DateTime<Utc>,
 }
 
@@ -128,7 +140,9 @@ pub enum FraudPattern {
 /// Commitment success prediction
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SuccessPrediction {
+    /// Commitment that was evaluated.
     pub commitment_id: Uuid,
+    /// Timestamp when the prediction was generated.
     pub predicted_at: DateTime<Utc>,
     /// Probability of success (0-100)
     pub success_probability: i32,
@@ -141,24 +155,31 @@ pub struct SuccessPrediction {
 /// Factor influencing success prediction
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PredictionFactor {
+    /// Human-readable name of the factor.
     pub name: String,
     /// Impact on success probability (-100 to 100)
     pub impact: i32,
+    /// Explanation of why this factor has its computed impact.
     pub description: String,
 }
 
 /// Request to evaluate quality
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvaluateQualityRequest {
+    /// Commitment whose deliverable is being evaluated.
     pub commitment_id: Uuid,
+    /// URL of the submitted evidence artifact.
     pub evidence_url: String,
+    /// Human-readable description of the evidence.
     pub evidence_description: String,
+    /// Original description of the commitment.
     pub commitment_description: String,
 }
 
 /// Request to detect fraud
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DetectFraudRequest {
+    /// User whose activity should be analysed.
     pub user_id: Uuid,
     /// Recent activity to analyze
     pub activity_window_days: i32,
@@ -167,9 +188,13 @@ pub struct DetectFraudRequest {
 /// Request to predict success
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PredictSuccessRequest {
+    /// Commitment to evaluate.
     pub commitment_id: Uuid,
+    /// User who owns the commitment.
     pub user_id: Uuid,
+    /// Description of the commitment's deliverable.
     pub commitment_description: String,
+    /// Number of days until the commitment deadline.
     pub deadline_days: i32,
 }
 
@@ -179,6 +204,7 @@ pub struct AIScoringService {
 }
 
 impl AIScoringService {
+    /// Create a new [`AIScoringService`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }

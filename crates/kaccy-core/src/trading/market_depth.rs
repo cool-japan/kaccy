@@ -15,8 +15,11 @@ use uuid::Uuid;
 /// Order book depth level
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriceLevel {
+    /// Price of this level in the order book.
     pub price: Decimal,
+    /// Aggregate volume resting at this price level.
     pub volume: Decimal,
+    /// Number of individual orders at this price level.
     pub order_count: u32,
 }
 

@@ -1,4 +1,4 @@
-// Advanced analytics and reporting for custom dashboards and financial reports
+//! Advanced analytics and reporting for custom dashboards and financial reports
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -7,21 +7,32 @@ use uuid::Uuid;
 /// Custom dashboard configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dashboard {
+    /// Unique identifier of the dashboard
     pub id: Uuid,
+    /// User who owns this dashboard
     pub user_id: Uuid,
+    /// Human-readable name
     pub name: String,
+    /// Optional description of the dashboard's purpose
     pub description: String,
+    /// Layout settings
     pub layout: DashboardLayout,
+    /// Widgets displayed on this dashboard
     pub widgets: Vec<Widget>,
+    /// Timestamp when the dashboard was created
     pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Timestamp of the most recent modification
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Dashboard layout configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DashboardLayout {
+    /// Number of columns in the grid
     pub grid_columns: u32,
+    /// Number of rows in the grid
     pub grid_rows: u32,
+    /// Whether the layout should adapt to screen size
     pub responsive: bool,
 }
 
@@ -76,59 +87,92 @@ impl Dashboard {
 /// Widget for displaying metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Widget {
+    /// Unique identifier of the widget
     pub id: Uuid,
+    /// Category of widget
     pub widget_type: WidgetType,
+    /// Position of the widget in the dashboard grid
     pub position: GridPosition,
+    /// Dimensions of the widget in grid units
     pub size: WidgetSize,
+    /// Widget display and data configuration
     pub config: WidgetConfig,
+    /// How often the widget should refresh its data, in seconds
     pub refresh_interval_seconds: u32,
 }
 
+/// Grid position for widget placement
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GridPosition {
+    /// Row index in the grid
     pub row: u32,
+    /// Column index in the grid
     pub col: u32,
 }
 
+/// Widget dimensions in grid units
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WidgetSize {
-    pub width: u32,  // in grid units
-    pub height: u32, // in grid units
+    /// Width in grid units
+    pub width: u32,
+    /// Height in grid units
+    pub height: u32,
 }
 
 /// Widget configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WidgetConfig {
+    /// Display title of the widget
     pub title: String,
+    /// Data source identifier
     pub data_source: String,
+    /// Key-value parameters for the data source
     pub parameters: HashMap<String, String>,
+    /// How the data should be visualised
     pub visualization: VisualizationType,
 }
 
 /// Types of widgets
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WidgetType {
+    /// Token price history chart
     PriceChart,
+    /// Trading volume chart
     VolumeChart,
+    /// Portfolio value summary
     PortfolioSummary,
+    /// List of recent trades
     RecentTrades,
+    /// Order book depth display
     OrderBook,
+    /// Key performance metrics
     PerformanceMetrics,
+    /// Risk metrics display
     RiskMetrics,
+    /// Market depth visualisation
     MarketDepth,
+    /// User-defined custom metric
     CustomMetric,
 }
 
 /// Visualization types
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VisualizationType {
+    /// Line chart
     LineChart,
+    /// Bar chart
     BarChart,
+    /// Pie or donut chart
     PieChart,
+    /// OHLCV candlestick chart
     Candlestick,
+    /// Heat map
     HeatMap,
+    /// Tabular data
     Table,
+    /// Single numeric value
     Number,
+    /// Gauge/dial indicator
     Gauge,
 }
 
@@ -169,40 +213,66 @@ impl Widget {
 /// Tax report generator
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaxReport {
+    /// Unique identifier of this report
     pub id: Uuid,
+    /// User this report belongs to
     pub user_id: Uuid,
+    /// Tax year covered by this report
     pub tax_year: u32,
+    /// Classification of gains to include
     pub report_type: TaxReportType,
+    /// Capital gains summary
     pub capital_gains: CapitalGainsReport,
+    /// Timestamp when the report was generated
     pub generated_at: chrono::DateTime<chrono::Utc>,
 }
 
+/// Tax report classification by holding period
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TaxReportType {
+    /// Short-term capital gains only (held <= 365 days)
     ShortTerm,
+    /// Long-term capital gains only (held > 365 days)
     LongTerm,
+    /// Combined short and long-term report
     Combined,
 }
 
+/// Capital gains summary for tax reporting
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CapitalGainsReport {
+    /// Total short-term capital gains
     pub short_term_gains: Decimal,
+    /// Total long-term capital gains
     pub long_term_gains: Decimal,
+    /// Total gains before losses
     pub total_gains: Decimal,
+    /// Total capital losses
     pub total_losses: Decimal,
+    /// Net gains after offsetting losses
     pub net_gains: Decimal,
+    /// Individual transactions included in this report
     pub transactions: Vec<TaxTransaction>,
 }
 
+/// Individual taxable transaction record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaxTransaction {
+    /// Token ticker symbol
     pub token_symbol: String,
+    /// Date the asset was purchased
     pub buy_date: chrono::DateTime<chrono::Utc>,
+    /// Date the asset was sold
     pub sell_date: chrono::DateTime<chrono::Utc>,
+    /// Quantity of tokens transacted
     pub quantity: Decimal,
+    /// Original purchase cost
     pub cost_basis: Decimal,
+    /// Sale proceeds
     pub proceeds: Decimal,
+    /// Net gain or loss
     pub gain_loss: Decimal,
+    /// Number of days the asset was held
     pub holding_period_days: i64,
 }
 
@@ -254,22 +324,36 @@ impl TaxReport {
 /// Regulatory report generator
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegulatoryReport {
+    /// Unique identifier of this report
     pub id: Uuid,
+    /// Type of regulatory filing
     pub report_type: RegulatoryReportType,
+    /// Start of the reporting period
     pub period_start: chrono::DateTime<chrono::Utc>,
+    /// End of the reporting period
     pub period_end: chrono::DateTime<chrono::Utc>,
+    /// Regulatory jurisdiction (e.g. "US", "EU")
     pub jurisdiction: String,
+    /// Arbitrary key-value data fields for the report
     pub data: HashMap<String, String>,
+    /// Timestamp when the report was generated
     pub generated_at: chrono::DateTime<chrono::Utc>,
 }
 
+/// Type of regulatory report
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RegulatoryReportType {
-    AML,  // Anti-Money Laundering
-    KYC,  // Know Your Customer
-    SAR,  // Suspicious Activity Report
-    CTR,  // Currency Transaction Report
-    FBAR, // Foreign Bank Account Report
+    /// Anti-Money Laundering report
+    AML,
+    /// Know Your Customer report
+    KYC,
+    /// Suspicious Activity Report
+    SAR,
+    /// Currency Transaction Report
+    CTR,
+    /// Foreign Bank Account Report
+    FBAR,
+    /// Custom regulatory report with a specific name
     Custom(String),
 }
 
@@ -301,19 +385,30 @@ impl RegulatoryReport {
 /// Performance attribution report
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceAttribution {
+    /// Unique identifier of this attribution report
     pub id: Uuid,
+    /// Portfolio being analysed
     pub portfolio_id: Uuid,
+    /// Start of the attribution period
     pub period_start: chrono::DateTime<chrono::Utc>,
+    /// End of the attribution period
     pub period_end: chrono::DateTime<chrono::Utc>,
+    /// Total portfolio return over the period
     pub total_return: Decimal,
+    /// Per-category attribution breakdown
     pub attributions: Vec<Attribution>,
+    /// Timestamp when the report was generated
     pub generated_at: chrono::DateTime<chrono::Utc>,
 }
 
+/// Single attribution entry for performance decomposition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Attribution {
+    /// Category or factor name
     pub category: String,
+    /// Absolute contribution to total return
     pub contribution: Decimal,
+    /// Percentage contribution to total return
     pub percentage: Decimal,
 }
 
@@ -368,35 +463,56 @@ impl PerformanceAttribution {
 /// Risk report
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskReport {
+    /// Unique identifier of this risk report
     pub id: Uuid,
+    /// Portfolio being assessed
     pub portfolio_id: Uuid,
+    /// Date and time as of which risk metrics were computed
     pub as_of_date: chrono::DateTime<chrono::Utc>,
+    /// Value-at-Risk metrics
     pub value_at_risk: VaRMetrics,
+    /// Results of individual stress-test scenarios
     pub stress_test_results: Vec<RiskStressTestResult>,
+    /// Concentration risk percentages keyed by category
     pub concentration_risk: HashMap<String, Decimal>,
+    /// Liquidity risk metrics
     pub liquidity_risk: LiquidityRiskMetrics,
+    /// Timestamp when the report was generated
     pub generated_at: chrono::DateTime<chrono::Utc>,
 }
 
+/// Value-at-Risk metrics for a portfolio
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VaRMetrics {
+    /// Value-at-Risk at 95% confidence level
     pub var_95: Decimal,
+    /// Value-at-Risk at 99% confidence level
     pub var_99: Decimal,
+    /// Expected Shortfall (Conditional VaR)
     pub expected_shortfall: Decimal,
+    /// Confidence level used for VaR computation
     pub confidence_level: Decimal,
 }
 
+/// Result of a single stress test scenario
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskStressTestResult {
+    /// Name of the stress scenario
     pub scenario: String,
+    /// Estimated monetary loss under this scenario
     pub estimated_loss: Decimal,
+    /// Loss expressed as a percentage of portfolio value
     pub loss_percentage: Decimal,
 }
 
+/// Liquidity risk metrics for a portfolio
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiquidityRiskMetrics {
+    /// Ratio of liquid assets to near-term obligations
     pub liquidity_coverage_ratio: Decimal,
+    /// Estimated days required to fully liquidate the portfolio
     pub days_to_liquidate: u32,
+    /// Percentage of portfolio considered illiquid
     pub illiquid_percentage: Decimal,
 }
 
@@ -453,19 +569,30 @@ impl RiskReport {
 /// Real-time data stream for widgets
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataStream {
+    /// Unique identifier of this stream
     pub id: Uuid,
+    /// Data source identifier (e.g. trading pair symbol)
     pub source: String,
+    /// Category of data carried by this stream
     pub data_type: DataType,
+    /// Target update interval in milliseconds
     pub update_frequency_ms: u64,
+    /// Timestamp of the most recent data update
     pub last_update: Option<chrono::DateTime<chrono::Utc>>,
 }
 
+/// Type of data carried by a stream
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DataType {
+    /// Token price data
     Price,
+    /// Trading volume data
     Volume,
+    /// Order book depth data
     OrderBook,
+    /// Individual trade data
     Trades,
+    /// Aggregate performance metrics
     Metrics,
 }
 
@@ -503,22 +630,36 @@ impl DataStream {
 /// Report scheduler for automated report generation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReportSchedule {
+    /// Unique identifier of this schedule
     pub id: Uuid,
+    /// Owner of the scheduled report
     pub user_id: Uuid,
+    /// Human-readable name of the report
     pub report_name: String,
+    /// How often the report should be generated
     pub schedule: ScheduleFrequency,
+    /// Email addresses to deliver the report to
     pub recipients: Vec<String>,
+    /// Whether this schedule is active
     pub enabled: bool,
+    /// Timestamp of the most recent execution
     pub last_run: Option<chrono::DateTime<chrono::Utc>>,
+    /// Timestamp of the next scheduled execution
     pub next_run: chrono::DateTime<chrono::Utc>,
 }
 
+/// Frequency at which a scheduled report runs
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ScheduleFrequency {
+    /// Run once per day
     Daily,
+    /// Run once per week
     Weekly,
+    /// Run once per month
     Monthly,
+    /// Run once per quarter
     Quarterly,
+    /// Run once per year
     Yearly,
 }
 

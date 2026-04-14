@@ -21,6 +21,7 @@ pub struct BatchService {
 }
 
 impl BatchService {
+    /// Create a new [`BatchService`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         let engine = ReputationEngine::new(pool.clone());
         let decay_service = TimeDecayService::new(pool.clone(), DecayConfig::default());
@@ -285,71 +286,97 @@ impl BatchService {
 /// Score update request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScoreUpdate {
+    /// User whose score should be updated.
     pub user_id: Uuid,
+    /// Score delta to apply (positive or negative).
     pub delta: Decimal,
+    /// Human-readable reason for the update.
     pub reason: String,
 }
 
 /// Result of batch score operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BatchScoreResult {
+    /// Total number of score updates attempted.
     pub total_processed: i32,
+    /// Number of updates that succeeded.
     pub successful: i32,
+    /// Number of updates that failed.
     pub failed: i32,
+    /// Details for each failed update.
     pub failed_operations: Vec<FailedOperation>,
 }
 
 /// Failed operation detail
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FailedOperation {
+    /// User for whom the operation failed.
     pub user_id: Uuid,
+    /// Description of why the operation failed.
     pub reason: String,
 }
 
 /// Result of batch decay operation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BatchDecayResult {
+    /// Number of users who had decay applied.
     pub users_decayed: i32,
+    /// Number of users skipped (e.g. within grace period).
     pub users_skipped: i32,
+    /// Timestamp when the decay batch was applied.
     pub decay_applied_at: chrono::DateTime<Utc>,
 }
 
 /// Result of batch expire operation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BatchExpireResult {
+    /// Number of commitments that were expired.
     pub expired_count: i32,
+    /// User IDs whose commitments were expired.
     pub affected_users: Vec<Uuid>,
 }
 
 /// User with low score
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LowScoreUser {
+    /// User identifier.
     pub user_id: Uuid,
+    /// User's current reputation score.
     pub score: Decimal,
 }
 
 /// Result of batch verification
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BatchVerifyResult {
+    /// Number of commitments successfully verified.
     pub verified_count: i32,
+    /// Number of commitment verifications that failed.
     pub failed_count: i32,
+    /// Details for each failed verification.
     pub failed_verifications: Vec<FailedVerification>,
 }
 
 /// Failed verification detail
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FailedVerification {
+    /// Commitment that could not be verified.
     pub commitment_id: Uuid,
+    /// Description of why verification failed.
     pub reason: String,
 }
 
 /// Pending commitment information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PendingCommitmentInfo {
+    /// Unique identifier for the commitment.
     pub commitment_id: Uuid,
+    /// User who created the commitment.
     pub user_id: Uuid,
+    /// Short title of the commitment.
     pub title: String,
+    /// Timestamp when the commitment was created.
     pub created_at: chrono::DateTime<Utc>,
+    /// Deadline for the commitment.
     pub deadline: chrono::DateTime<Utc>,
 }
 

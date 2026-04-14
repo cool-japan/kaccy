@@ -12,35 +12,55 @@ use uuid::Uuid;
 /// JIT liquidity position
 #[derive(Debug, Clone)]
 pub struct JitPosition {
+    /// Unique identifier for this JIT position
     pub id: Uuid,
+    /// Liquidity provider user ID
     pub provider: Uuid,
+    /// Token pool this position was added to
     pub token_id: Uuid,
+    /// Amount of token A deposited
     pub amount_a: Decimal,
+    /// Amount of token B deposited
     pub amount_b: Decimal,
+    /// When this JIT position was added
     pub added_at: SystemTime,
+    /// When this JIT position was removed (if applicable)
     pub removed_at: Option<SystemTime>,
+    /// Fees earned while this position was active
     pub fees_earned: Decimal,
 }
 
 /// JIT liquidity opportunity
 #[derive(Debug, Clone)]
 pub struct JitOpportunity {
+    /// Token pool where the opportunity exists
     pub token_id: Uuid,
+    /// Volume of the pending trade that triggered this opportunity
     pub pending_trade_volume: Decimal,
+    /// Current liquidity depth in the pool
     pub current_liquidity: Decimal,
+    /// Expected fee income from providing JIT liquidity for this trade
     pub expected_fee: Decimal,
+    /// Overall risk score for this opportunity (higher = riskier)
     pub risk_score: Decimal,
+    /// Suggested JIT liquidity amount to deploy
     pub optimal_amount: Decimal,
+    /// Time window within which liquidity must be added
     pub timing_window: Duration,
+    /// Probability of MEV exploitation (0–1)
     pub mev_risk: Decimal,
 }
 
 /// JIT liquidity provider
 #[derive(Debug)]
 pub struct JitLiquidityProvider {
+    /// Minimum profit threshold (as a ratio) to consider an opportunity viable
     pub min_profit_threshold: Decimal,
+    /// Maximum capital to deploy in a single JIT position
     pub max_position_size: Decimal,
+    /// Maximum acceptable MEV risk (0–1)
     pub max_mev_risk: Decimal,
+    /// Milliseconds of buffer to allow before the trade executes
     pub timing_buffer_ms: u64,
 }
 
@@ -243,8 +263,11 @@ impl JitLiquidityProvider {
 /// JIT liquidity strategy optimizer
 #[derive(Debug)]
 pub struct JitStrategyOptimizer {
+    /// Minimum liquidity gap (relative to pool) that warrants JIT provisioning
     pub min_liquidity_gap: Decimal,
+    /// Target percentage of available fees to capture
     pub target_fee_capture: Decimal,
+    /// Maximum gas cost as a ratio of expected fee income
     pub max_gas_cost_ratio: Decimal,
 }
 

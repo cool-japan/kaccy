@@ -1,0 +1,4 @@
+[toolchain]
+channel = "stable"
+targets = []
+components = ["rustfmt", "clippy", "rust-src"]

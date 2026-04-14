@@ -83,7 +83,7 @@ impl RetryConfig {
 
         // Add jitter to prevent thundering herd
         if self.use_jitter {
-            use rand::Rng;
+            use rand::RngExt;
             let jitter = rand::rng().random_range(0.0..=0.3);
             delay *= 1.0 + jitter;
         }

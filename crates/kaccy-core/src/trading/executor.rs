@@ -16,6 +16,7 @@ pub struct TradeExecutor {
 }
 
 impl TradeExecutor {
+    /// Creates a new `TradeExecutor` with the default fee schedule.
     pub fn new(pool: PgPool) -> Self {
         Self {
             pool,
@@ -23,6 +24,7 @@ impl TradeExecutor {
         }
     }
 
+    /// Creates a new `TradeExecutor` with the specified fee schedule.
     pub fn with_fee_schedule(pool: PgPool, fee_schedule: FeeSchedule) -> Self {
         Self { pool, fee_schedule }
     }
@@ -517,7 +519,9 @@ impl TradeExecutor {
 /// Result of batch order execution
 #[derive(Debug)]
 pub struct BatchExecutionResult {
+    /// Trades that were executed successfully.
     pub successful_trades: Vec<Trade>,
+    /// Orders that failed, paired with their error messages.
     pub failed_orders: Vec<(Uuid, String)>,
 }
 
@@ -540,5 +544,277 @@ impl BatchExecutionResult {
     /// Check if all orders succeeded
     pub fn all_successful(&self) -> bool {
         self.failed_orders.is_empty()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pricing::FeeSchedule;
+    use chrono::Utc;
+    use rust_decimal_macros::dec;
+
+    /// Build a minimal valid `Trade` for use in test fixtures.
+    fn make_trade() -> Trade {
+        Trade {
+            trade_id: Uuid::new_v4(),
+            buyer_user_id: Uuid::new_v4(),
+            seller_user_id: None,
+            token_id: Uuid::new_v4(),
+            amount: dec!(10),
+            price_btc: dec!(0.001),
+            total_btc: dec!(0.01),
+            platform_fee_btc: dec!(0.00025),
+            issuer_royalty_btc: dec!(0.00005),
+            executed_at: Utc::now(),
+        }
+    }
+
+    // ----------------------------------------------------------------
+    // BatchExecutionResult — total_processed
+    // ----------------------------------------------------------------
+
+    #[test]
+    fn test_total_processed_empty_batch() {
+        let result = BatchExecutionResult {
+            successful_trades: vec![],
+            failed_orders: vec![],
+        };
+        assert_eq!(
+            result.total_processed(),
+            0,
+            "Empty batch must report zero total processed"
+        );
+    }
+
+    #[test]
+    fn test_total_processed_all_successful() {
+        let result = BatchExecutionResult {
+            successful_trades: vec![make_trade(), make_trade(), make_trade()],
+            failed_orders: vec![],
+        };
+        assert_eq!(
+            result.total_processed(),
+            3,
+            "All-successful batch must count only the successful trades"
+        );
+    }
+
+    #[test]
+    fn test_total_processed_all_failed() {
+        let result = BatchExecutionResult {
+            successful_trades: vec![],
+            failed_orders: vec![
+                (Uuid::new_v4(), "supply exceeded".to_string()),
+                (Uuid::new_v4(), "order not found".to_string()),
+            ],
+        };
+        assert_eq!(
+            result.total_processed(),
+            2,
+            "All-failed batch must count only the failed orders"
+        );
+    }
+
+    #[test]
+    fn test_total_processed_mixed_batch() {
+        let result = BatchExecutionResult {
+            successful_trades: vec![make_trade(), make_trade()],
+            failed_orders: vec![(Uuid::new_v4(), "validation error".to_string())],
+        };
+        assert_eq!(
+            result.total_processed(),
+            3,
+            "Mixed batch must sum successful and failed counts"
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // BatchExecutionResult — success_rate
+    // ----------------------------------------------------------------
+
+    #[test]
+    fn test_success_rate_empty_batch_returns_zero() {
+        let result = BatchExecutionResult {
+            successful_trades: vec![],
+            failed_orders: vec![],
+        };
+        assert_eq!(
+            result.success_rate(),
+            dec!(0),
+            "Empty batch must return success_rate of 0"
+        );
+    }
+
+    #[test]
+    fn test_success_rate_all_successful_is_100() {
+        let result = BatchExecutionResult {
+            successful_trades: vec![make_trade(), make_trade()],
+            failed_orders: vec![],
+        };
+        assert_eq!(
+            result.success_rate(),
+            dec!(100),
+            "All-successful batch must return success_rate of 100"
+        );
+    }
+
+    #[test]
+    fn test_success_rate_all_failed_is_zero() {
+        let result = BatchExecutionResult {
+            successful_trades: vec![],
+            failed_orders: vec![
+                (Uuid::new_v4(), "err".to_string()),
+                (Uuid::new_v4(), "err".to_string()),
+            ],
+        };
+        assert_eq!(
+            result.success_rate(),
+            dec!(0),
+            "All-failed batch must return success_rate of 0"
+        );
+    }
+
+    #[test]
+    fn test_success_rate_fifty_percent() {
+        let result = BatchExecutionResult {
+            successful_trades: vec![make_trade()],
+            failed_orders: vec![(Uuid::new_v4(), "err".to_string())],
+        };
+        assert_eq!(
+            result.success_rate(),
+            dec!(50),
+            "One success out of two total must return success_rate of 50"
+        );
+    }
+
+    #[test]
+    fn test_success_rate_one_in_four_is_25() {
+        let result = BatchExecutionResult {
+            successful_trades: vec![make_trade()],
+            failed_orders: vec![
+                (Uuid::new_v4(), "e".to_string()),
+                (Uuid::new_v4(), "e".to_string()),
+                (Uuid::new_v4(), "e".to_string()),
+            ],
+        };
+        assert_eq!(
+            result.success_rate(),
+            dec!(25),
+            "One success out of four total must return success_rate of 25"
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // BatchExecutionResult — all_successful
+    // ----------------------------------------------------------------
+
+    #[test]
+    fn test_all_successful_true_when_no_failures() {
+        let result = BatchExecutionResult {
+            successful_trades: vec![make_trade()],
+            failed_orders: vec![],
+        };
+        assert!(
+            result.all_successful(),
+            "all_successful must be true when failed_orders is empty"
+        );
+    }
+
+    #[test]
+    fn test_all_successful_false_when_any_failure() {
+        let result = BatchExecutionResult {
+            successful_trades: vec![make_trade()],
+            failed_orders: vec![(Uuid::new_v4(), "one failure".to_string())],
+        };
+        assert!(
+            !result.all_successful(),
+            "all_successful must be false when there is at least one failure"
+        );
+    }
+
+    #[test]
+    fn test_all_successful_true_for_empty_batch() {
+        // Empty batch has no failures, so all_successful is vacuously true
+        let result = BatchExecutionResult {
+            successful_trades: vec![],
+            failed_orders: vec![],
+        };
+        assert!(
+            result.all_successful(),
+            "all_successful must be true for an empty batch (no failures)"
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // FeeSchedule::calculate (pure logic used by TradeExecutor)
+    // ----------------------------------------------------------------
+
+    #[test]
+    fn test_fee_calculation_default_schedule() {
+        let schedule = FeeSchedule::default();
+        let breakdown = schedule.calculate(dec!(1.0));
+
+        // platform fee: 1.0 * 0.025 = 0.025
+        assert_eq!(
+            breakdown.platform_fee_btc,
+            dec!(0.025),
+            "Default platform fee must be 2.5% of trade amount"
+        );
+        // issuer royalty: 1.0 * 0.005 = 0.005
+        assert_eq!(
+            breakdown.issuer_royalty_btc,
+            dec!(0.005),
+            "Default issuer royalty must be 0.5% of trade amount"
+        );
+        // net: 1.0 - 0.025 - 0.005 = 0.97
+        assert_eq!(
+            breakdown.net_amount_btc,
+            dec!(0.97),
+            "Net amount must be trade amount minus all fees"
+        );
+        assert_eq!(
+            breakdown.total_fees_btc,
+            dec!(0.03),
+            "Total fees must be 3% of trade amount"
+        );
+    }
+
+    #[test]
+    fn test_fee_calculation_zero_amount() {
+        let schedule = FeeSchedule::default();
+        let breakdown = schedule.calculate(dec!(0));
+
+        assert_eq!(breakdown.platform_fee_btc, dec!(0));
+        assert_eq!(breakdown.issuer_royalty_btc, dec!(0));
+        assert_eq!(breakdown.total_fees_btc, dec!(0));
+        assert_eq!(breakdown.net_amount_btc, dec!(0));
+    }
+
+    #[test]
+    fn test_fee_schedule_with_discount() {
+        let schedule = FeeSchedule::default();
+        let discounted = schedule.with_discount(dec!(50)); // 50% off platform fee
+
+        // Platform fee halved: 0.025 * 0.5 = 0.0125
+        assert_eq!(discounted.platform_fee_rate, dec!(0.0125));
+        // Issuer royalty unchanged
+        assert_eq!(
+            discounted.issuer_royalty_rate, schedule.issuer_royalty_rate,
+            "Royalty rate must not change with discount"
+        );
+    }
+
+    #[test]
+    fn test_fee_schedule_discount_capped_at_50pct() {
+        let schedule = FeeSchedule::default();
+        // Apply 100% discount — must be capped at 50%
+        let discounted = schedule.with_discount(dec!(100));
+        let capped = schedule.with_discount(dec!(50));
+
+        assert_eq!(
+            discounted.platform_fee_rate, capped.platform_fee_rate,
+            "Discount must be capped at 50% of the platform fee rate"
+        );
     }
 }

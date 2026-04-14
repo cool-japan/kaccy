@@ -234,6 +234,7 @@ pub struct AiCommitmentVerifier {
 }
 
 impl AiCommitmentVerifier {
+    /// Create a new `AiCommitmentVerifier` backed by the given LLM client.
     #[must_use]
     pub fn new(llm: LlmClient) -> Self {
         Self { llm }
@@ -335,10 +336,15 @@ Respond in JSON format:
 /// Request for commitment verification
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationRequest {
+    /// Title of the commitment being verified.
     pub commitment_title: String,
+    /// Optional longer description of the commitment.
     pub commitment_description: Option<String>,
+    /// ISO 8601 deadline for the commitment.
     pub deadline: String,
+    /// URL to the submitted evidence.
     pub evidence_url: String,
+    /// Optional human-readable description of the evidence.
     pub evidence_description: Option<String>,
 }
 
@@ -371,6 +377,7 @@ pub struct AiFraudDetector {
 }
 
 impl AiFraudDetector {
+    /// Create a new `AiFraudDetector` backed by the given LLM client.
     #[must_use]
     pub fn new(llm: LlmClient) -> Self {
         Self { llm }
@@ -465,19 +472,28 @@ Respond in JSON format:
 /// Request for fraud check
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FraudCheckRequest {
+    /// Type of content being checked (e.g., `"code"`, `"text"`).
     pub content_type: String,
+    /// The actual content to analyse.
     pub content: String,
+    /// Total number of commitments the user has made.
     pub commitments_made: i32,
+    /// Number of commitments the user has fulfilled.
     pub commitments_fulfilled: i32,
+    /// User's average quality score if available.
     pub avg_quality_score: Option<f64>,
 }
 
 /// Result of fraud check
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FraudCheckResult {
+    /// Risk level classification (`"low"`, `"medium"`, `"high"`, `"critical"`).
     pub risk_level: String,
+    /// Numeric risk score (0–100).
     pub risk_score: f64,
+    /// List of specific fraud indicators detected.
     pub indicators: Vec<String>,
+    /// Recommended action to take.
     pub recommendation: String,
 }
 

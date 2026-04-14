@@ -17,14 +17,18 @@ use kaccy_db::repositories::session::{
 /// Response for active sessions list
 #[derive(Debug, Serialize)]
 pub struct ActiveSessionsResponse {
+    /// List of currently active sessions
     pub sessions: Vec<ActiveSessionSummary>,
+    /// Aggregate session statistics
     pub stats: SessionStats,
 }
 
 /// Response for session history
 #[derive(Debug, Serialize)]
 pub struct SessionHistoryResponse {
+    /// Historical sessions for the user
     pub sessions: Vec<UserSession>,
+    /// Total number of historical session records
     pub total: usize,
 }
 

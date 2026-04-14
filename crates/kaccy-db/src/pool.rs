@@ -5,13 +5,21 @@ use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use std::time::Duration;
 use thiserror::Error;
 
+/// Errors that can occur when creating or managing connection pools.
 #[derive(Error, Debug)]
 pub enum PoolError {
+    /// Initial connection to the database failed.
     #[error("Failed to create connection pool: {0}")]
     ConnectionFailed(#[from] sqlx::Error),
 
+    /// All retry attempts were exhausted without a successful connection.
     #[error("Connection failed after {attempts} retry attempts: {last_error}")]
-    RetryExhausted { attempts: u32, last_error: String },
+    RetryExhausted {
+        /// Number of attempts that were made.
+        attempts: u32,
+        /// Error message from the last attempt.
+        last_error: String,
+    },
 }
 
 /// Retry configuration for database connections
@@ -141,18 +149,28 @@ pub async fn create_pool_with_options(
 /// Health check result
 #[derive(Debug, Serialize)]
 pub struct HealthCheck {
+    /// Overall health status of the pool.
     pub status: HealthStatus,
+    /// Whether a connection to the database was established.
     pub database_connected: bool,
+    /// Current total number of connections in the pool.
     pub pool_size: u32,
+    /// Number of idle connections available.
     pub pool_idle: u32,
+    /// Round-trip query latency in milliseconds.
     pub latency_ms: Option<u64>,
+    /// PostgreSQL server version string.
     pub version: Option<String>,
 }
 
+/// Health status of a database connection or pool.
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub enum HealthStatus {
+    /// All checks passed and latency is acceptable.
     Healthy,
+    /// Connected but latency is elevated.
     Degraded,
+    /// Could not connect or query the database.
     Unhealthy,
 }
 
@@ -208,8 +226,11 @@ pub async fn health_check(pool: &PgPool) -> HealthCheck {
 /// Pool statistics
 #[derive(Debug, Serialize)]
 pub struct PoolStats {
+    /// Total number of connections (idle + in-use).
     pub size: u32,
+    /// Number of connections currently idle.
     pub idle: u32,
+    /// Number of connections currently in use.
     pub in_use: u32,
 }
 

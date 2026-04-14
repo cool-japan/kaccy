@@ -27,28 +27,40 @@ pub struct MarketMakerPerformance {
 /// Trade record for market making
 #[derive(Debug, Clone)]
 pub struct MmTrade {
+    /// Whether the market maker bought or sold
     pub side: MmSide,
+    /// Execution price of the trade
     pub price: Decimal,
+    /// Quantity traded
     pub quantity: Decimal,
+    /// Mid-point of bid-ask spread at time of trade
     pub midpoint_at_trade: Decimal,
+    /// Mid-point of bid-ask spread when the position was closed, if known
     pub midpoint_at_exit: Option<Decimal>,
 }
 
+/// Side of a market-making trade
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MmSide {
+    /// Market maker bought
     Buy,
+    /// Market maker sold
     Sell,
 }
 
 /// Market making analytics engine
 #[derive(Debug)]
 pub struct MarketMakingAnalytics {
+    /// All recorded trades
     trades: Vec<MmTrade>,
-    inventory_history: VecDeque<(Decimal, i64)>, // (inventory, timestamp)
+    /// Historical (inventory, timestamp) snapshots, oldest first
+    inventory_history: VecDeque<(Decimal, i64)>,
+    /// Maximum number of inventory snapshots to retain
     max_history: usize,
 }
 
 impl MarketMakingAnalytics {
+    /// Create a new market-making analytics engine
     pub fn new(max_history: usize) -> Self {
         Self {
             trades: Vec::new(),
@@ -57,10 +69,12 @@ impl MarketMakingAnalytics {
         }
     }
 
+    /// Record a completed market-making trade
     pub fn record_trade(&mut self, trade: MmTrade) {
         self.trades.push(trade);
     }
 
+    /// Record an inventory snapshot at the given Unix timestamp
     pub fn record_inventory(&mut self, inventory: Decimal, timestamp: i64) {
         if self.inventory_history.len() >= self.max_history {
             self.inventory_history.pop_front();
@@ -282,10 +296,12 @@ pub struct SpreadComponents {
 /// Inventory management analyzer
 #[derive(Debug)]
 pub struct InventoryAnalyzer {
+    /// Desired inventory level around which to quote symmetrically
     target_inventory: Decimal,
 }
 
 impl InventoryAnalyzer {
+    /// Create a new inventory analyzer targeting the given inventory level
     pub fn new(target_inventory: Decimal) -> Self {
         Self { target_inventory }
     }
@@ -332,8 +348,11 @@ impl InventoryAnalyzer {
 /// Quote adjustment recommendations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuoteAdjustments {
+    /// Adjustment to apply to the bid price (negative means tighten)
     pub bid_adjustment: Decimal,
+    /// Adjustment to apply to the ask price (positive means widen)
     pub ask_adjustment: Decimal,
+    /// Suggested total bid-ask spread
     pub suggested_spread: Decimal,
 }
 

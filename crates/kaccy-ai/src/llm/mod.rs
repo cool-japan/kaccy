@@ -183,6 +183,7 @@ impl Default for LlmClientBuilder {
 }
 
 impl LlmClientBuilder {
+    /// Create a new builder with no keys or preferences configured.
     pub fn new() -> Self {
         Self {
             openai_api_key: None,

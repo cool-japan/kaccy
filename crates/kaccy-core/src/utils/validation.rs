@@ -26,6 +26,7 @@ pub struct ValidationError(pub String);
 
 /// Validator trait for custom validation logic
 pub trait Validator {
+    /// Run validation and return the result.
     fn validate(&self) -> ValidationResult;
 }
 
@@ -154,10 +155,12 @@ pub struct StringLengthValidator {
 }
 
 impl StringLengthValidator {
+    /// Create a new string length validator with minimum and maximum length bounds.
     pub fn new(min: usize, max: usize) -> Self {
         Self { min, max }
     }
 
+    /// Validate that `value` satisfies the configured length constraints.
     pub fn validate(&self, value: &str, field_name: &str) -> ValidationResult {
         let len = value.len();
 
@@ -186,10 +189,12 @@ pub struct NumericRangeValidator {
 }
 
 impl NumericRangeValidator {
+    /// Create a new numeric range validator with inclusive min and max bounds.
     pub fn new(min: Decimal, max: Decimal) -> Self {
         Self { min, max }
     }
 
+    /// Validate that `value` falls within the configured numeric range.
     pub fn validate(&self, value: Decimal, field_name: &str) -> ValidationResult {
         if value < self.min {
             return Err(ValidationError(format!(
@@ -208,6 +213,7 @@ impl NumericRangeValidator {
         Ok(())
     }
 
+    /// Validate that `value` is strictly positive and within the configured range.
     pub fn validate_positive(&self, value: Decimal, field_name: &str) -> ValidationResult {
         if value <= Decimal::ZERO {
             return Err(ValidationError(format!("{} must be positive", field_name)));

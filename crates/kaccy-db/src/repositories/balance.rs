@@ -9,24 +9,38 @@ use crate::error::Result;
 /// Balance data from database
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct BalanceRow {
+    /// Unique identifier for the balance record.
     pub balance_id: Uuid,
+    /// User who holds this balance.
     pub user_id: Uuid,
+    /// Token this balance is denominated in.
     pub token_id: Uuid,
+    /// Available (unlocked) token amount.
     pub amount: Decimal,
+    /// Amount locked in open orders or commitments.
     pub locked_amount: Decimal,
+    /// Timestamp of the most recent balance update.
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Balance with token information
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct BalanceWithTokenRow {
+    /// Unique identifier for the balance record.
     pub balance_id: Uuid,
+    /// User who holds this balance.
     pub user_id: Uuid,
+    /// Token this balance is denominated in.
     pub token_id: Uuid,
+    /// Available token amount.
     pub amount: Decimal,
+    /// Locked token amount.
     pub locked_amount: Decimal,
+    /// Last update timestamp.
     pub updated_at: chrono::DateTime<chrono::Utc>,
+    /// Trading symbol of the token.
     pub token_symbol: String,
+    /// Full name of the token.
     pub token_name: String,
 }
 
@@ -36,6 +50,7 @@ pub struct BalanceRepository {
 }
 
 impl BalanceRepository {
+    /// Create a new balance repository.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -504,10 +519,15 @@ impl BalanceRepository {
 /// Holder information with balance details
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct HolderInfo {
+    /// Unique identifier of the holder.
     pub user_id: Uuid,
+    /// Unlocked token amount.
     pub amount: Decimal,
+    /// Locked token amount.
     pub locked_amount: Decimal,
+    /// Sum of amount and locked_amount.
     pub total_balance: Decimal,
+    /// Last balance update timestamp.
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -524,20 +544,30 @@ struct BalanceStatisticsRow {
 /// Balance distribution statistics for a token
 #[derive(Debug, Clone)]
 pub struct BalanceStatistics {
+    /// Token these statistics relate to.
     pub token_id: Uuid,
+    /// Number of holders with a non-zero balance.
     pub holder_count: i64,
+    /// Total circulating (unlocked) amount.
     pub total_amount: Decimal,
+    /// Total locked amount across all holders.
     pub total_locked: Decimal,
+    /// Mean balance per holder.
     pub average_balance: Decimal,
+    /// Median balance per holder.
     pub median_balance: Decimal,
+    /// Fraction of total supply held by the top-10 holders.
     pub top_10_concentration: Decimal,
 }
 
 /// User portfolio summary
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct PortfolioSummary {
+    /// User identifier.
     pub user_id: Uuid,
+    /// Number of distinct tokens held.
     pub token_count: i64,
+    /// Total number of balance records for this user.
     pub balance_count: i64,
 }
 

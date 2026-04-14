@@ -13,24 +13,39 @@ use crate::error::ApiError;
 use crate::middleware::{AdminUser, metrics::COMMITMENTS_VERIFIED_TOTAL};
 use crate::state::AppState;
 
+/// Query parameters for listing pending commitments
 #[derive(Debug, Deserialize)]
 pub struct PendingCommitmentsQuery {
+    /// Maximum number of commitments to return (default 50, max 100)
     pub limit: Option<i64>,
 }
 
+/// A pending commitment with enriched user and token data
 #[derive(Debug, Serialize)]
 pub struct PendingCommitment {
+    /// Unique commitment ID
     pub commitment_id: Uuid,
+    /// ID of the user who created the commitment
     pub user_id: Uuid,
+    /// ID of the associated token
     pub token_id: Uuid,
+    /// Commitment title
     pub title: String,
+    /// Detailed description of the commitment
     pub description: Option<String>,
+    /// Commitment deadline
     pub deadline: DateTime<Utc>,
+    /// HTTPS URL to submitted evidence
     pub evidence_url: Option<String>,
+    /// Description of the submitted evidence
     pub evidence_description: Option<String>,
+    /// Timestamp when commitment was created
     pub created_at: DateTime<Utc>,
+    /// Username of the commitment creator
     pub user_username: String,
+    /// Current reputation score of the creator
     pub user_reputation: Decimal,
+    /// Symbol of the associated token
     pub token_symbol: String,
 }
 
@@ -69,18 +84,27 @@ impl From<PendingCommitmentRow> for PendingCommitment {
     }
 }
 
+/// Request to verify (approve or reject) a commitment
 #[derive(Debug, Deserialize)]
 pub struct VerifyCommitmentRequest {
+    /// Whether the commitment was fulfilled
     pub fulfilled: bool,
+    /// Quality score (0-100), used to calculate reputation bonus
     pub quality_score: Option<Decimal>,
+    /// Admin notes about the verification
     pub notes: Option<String>,
 }
 
+/// Response after verifying a commitment
 #[derive(Debug, Serialize)]
 pub struct VerifyCommitmentResponse {
+    /// ID of the verified commitment
     pub commitment_id: Uuid,
+    /// New status of the commitment (verified or failed)
     pub status: String,
+    /// Reputation change applied to the user
     pub reputation_delta: Decimal,
+    /// User's new reputation score after the change
     pub new_user_reputation: Decimal,
 }
 
@@ -270,12 +294,18 @@ pub async fn verify_commitment(
     }))
 }
 
+/// Admin dashboard statistics
 #[derive(Debug, Serialize)]
 pub struct AdminStats {
+    /// Total number of registered users
     pub total_users: i64,
+    /// Total number of created tokens
     pub total_tokens: i64,
+    /// Total number of executed trades
     pub total_trades: i64,
+    /// Number of commitments awaiting verification
     pub pending_commitments: i64,
+    /// Total trading volume in BTC
     pub total_volume_btc: Option<Decimal>,
 }
 
@@ -314,22 +344,35 @@ pub async fn get_admin_stats(
     }))
 }
 
+/// Query parameters for listing users
 #[derive(Debug, Deserialize)]
 pub struct UsersQuery {
+    /// Maximum number of users to return (default 50, max 100)
     pub limit: Option<i64>,
+    /// Number of records to skip for pagination
     pub offset: Option<i64>,
+    /// Filter by user role (user or admin)
     pub role: Option<String>,
 }
 
+/// User record as seen by admins (includes sensitive fields)
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct AdminUserView {
+    /// Unique user ID
     pub user_id: Uuid,
+    /// User's email address
     pub email: String,
+    /// Username
     pub username: String,
+    /// Display name
     pub display_name: Option<String>,
+    /// KYC verification status
     pub kyc_status: String,
+    /// User role (user or admin)
     pub role: String,
+    /// Current reputation score
     pub reputation_score: Decimal,
+    /// Account creation timestamp
     pub created_at: DateTime<Utc>,
 }
 
@@ -375,8 +418,10 @@ pub async fn list_users(
     Ok(Json(users))
 }
 
+/// Request to update a user's role
 #[derive(Debug, Deserialize)]
 pub struct UpdateUserRoleRequest {
+    /// New role to assign (user or admin)
     pub role: String,
 }
 

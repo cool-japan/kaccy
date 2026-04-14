@@ -20,10 +20,18 @@ pub enum RiskCheckResult {
     Approved,
 
     /// Trade is rejected due to risk limits
-    Rejected { reason: String },
+    Rejected {
+        /// Human-readable explanation for the rejection.
+        reason: String,
+    },
 
     /// Trade requires manual review
-    RequiresReview { reason: String, risk_score: u8 },
+    RequiresReview {
+        /// Explanation of why manual review is needed.
+        reason: String,
+        /// Risk score that triggered the review (0–100).
+        risk_score: u8,
+    },
 }
 
 /// Risk assessment configuration
@@ -68,23 +76,33 @@ impl Default for RiskAssessmentConfig {
 /// Portfolio position for risk assessment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PortfolioPosition {
+    /// Asset identifier (token symbol or address).
     pub asset: String,
+    /// Held quantity of the asset.
     pub quantity: Decimal,
+    /// Current market value of the position.
     pub market_value: Decimal,
 }
 
 /// Trade request for risk assessment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeRequest {
+    /// Asset to trade (token symbol or address).
     pub asset: String,
+    /// Intended trade quantity.
     pub quantity: Decimal,
+    /// Expected execution price.
     pub price: Decimal,
+    /// Buy or sell direction.
     pub side: TradeSide,
 }
 
+/// Direction of a trade (buy or sell)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TradeSide {
+    /// Purchasing the asset.
     Buy,
+    /// Selling the asset.
     Sell,
 }
 

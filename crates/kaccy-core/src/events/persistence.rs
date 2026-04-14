@@ -11,12 +11,19 @@ use crate::error::{CoreError, Result};
 /// Represents a persisted event in the database
 #[derive(Debug, Clone)]
 pub struct PersistedEvent {
+    /// Unique identifier of this persisted event record.
     pub id: Uuid,
+    /// String tag identifying the kind of event.
     pub event_type: String,
+    /// Optional ID of the aggregate this event belongs to.
     pub aggregate_id: Option<Uuid>,
+    /// Optional ID of the user who triggered this event.
     pub user_id: Option<Uuid>,
+    /// JSON payload containing event-specific data.
     pub payload: Value,
+    /// Timestamp when the domain event occurred.
     pub occurred_at: DateTime<Utc>,
+    /// Timestamp when the event was written to the store.
     pub persisted_at: DateTime<Utc>,
 }
 

@@ -22,41 +22,52 @@ use super::order_book::{LimitOrder, OrderSide};
 pub enum TimeBasedOrderType {
     /// Market-on-Close: execute at market price at session close
     MOC {
+        /// Token to trade.
         token_id: Uuid,
+        /// Buy or sell direction.
         side: OrderSide,
+        /// Order quantity.
         quantity: Decimal,
         /// Trading session close time (Unix timestamp)
         close_time: i64,
     },
     /// Limit-on-Close: execute at limit price at session close
     LOC {
+        /// Token to trade.
         token_id: Uuid,
+        /// Buy or sell direction.
         side: OrderSide,
+        /// Order quantity.
         quantity: Decimal,
+        /// Limit price for execution.
         price: Decimal,
         /// Trading session close time (Unix timestamp)
         close_time: i64,
     },
     /// Good-After-Time: order becomes active after specified time
     GAT {
+        /// Underlying limit order to activate.
         order: Box<LimitOrder>,
         /// Activation time (Unix timestamp)
         activation_time: i64,
     },
     /// Good-Till-Time: order expires at specified time
     GTT {
+        /// Underlying limit order.
         order: Box<LimitOrder>,
         /// Expiration time (Unix timestamp)
         expiration_time: i64,
     },
     /// Day order: expires at end of trading day
     Day {
+        /// Underlying limit order.
         order: Box<LimitOrder>,
         /// End of day time (Unix timestamp)
         eod_time: i64,
     },
     /// Time slice order: execute only during specific time window
     TimeSlice {
+        /// Underlying limit order.
         order: Box<LimitOrder>,
         /// Window start time (Unix timestamp)
         start_time: i64,
@@ -87,13 +98,21 @@ pub enum TimeBasedOrderStatus {
 /// Time-based order with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimeBasedOrder {
+    /// Unique identifier for this order
     pub id: Uuid,
+    /// User who submitted the order
     pub user_id: Uuid,
+    /// Specific time-based order type and parameters
     pub order_type: TimeBasedOrderType,
+    /// Current lifecycle status of the order
     pub status: TimeBasedOrderStatus,
+    /// Unix timestamp when the order was created
     pub created_at: i64,
+    /// Unix timestamp when the order was last updated
     pub updated_at: i64,
+    /// Amount of the order that has been filled so far
     pub filled_quantity: Decimal,
+    /// Arbitrary key-value metadata attached to the order
     pub metadata: HashMap<String, String>,
 }
 
@@ -343,6 +362,7 @@ pub struct TimeBasedOrderManager {
 }
 
 impl TimeBasedOrderManager {
+    /// Create a new time-based order manager
     pub fn new() -> Self {
         Self {
             orders: Arc::new(RwLock::new(HashMap::new())),

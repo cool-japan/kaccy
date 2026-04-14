@@ -108,11 +108,17 @@ pub struct VideoMetadata {
 /// Supported video platforms
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VideoPlatform {
+    /// YouTube or youtu.be.
     YouTube,
+    /// Vimeo.
     Vimeo,
+    /// Twitter / X.
     Twitter,
+    /// TikTok.
     TikTok,
+    /// Twitch.
     Twitch,
+    /// Platform could not be detected.
     Unknown,
 }
 
@@ -420,6 +426,7 @@ pub struct LlmTranscriptAnalyzer {
 }
 
 impl LlmTranscriptAnalyzer {
+    /// Create a new `LlmTranscriptAnalyzer` backed by the given LLM client.
     #[must_use]
     pub fn new(llm: LlmClient) -> Self {
         Self { llm }

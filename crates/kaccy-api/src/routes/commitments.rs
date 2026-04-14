@@ -12,32 +12,52 @@ use crate::error::ApiError;
 use crate::middleware::metrics::COMMITMENTS_CREATED_TOTAL;
 use crate::state::AppState;
 
+/// Request to create a new output commitment
 #[derive(Debug, Deserialize)]
 pub struct CreateCommitmentRequest {
+    /// ID of the token this commitment is associated with
     pub token_id: Uuid,
+    /// Commitment title (max 200 characters)
     pub title: String,
+    /// Detailed description (max 2000 characters)
     pub description: Option<String>,
+    /// Commitment deadline (must be in the future)
     pub deadline: DateTime<Utc>,
 }
 
+/// Request to submit evidence for a commitment
 #[derive(Debug, Deserialize)]
 pub struct SubmitEvidenceRequest {
+    /// HTTPS URL to the evidence
     pub evidence_url: String,
+    /// Optional description of the evidence
     pub evidence_description: Option<String>,
 }
 
+/// Commitment API response
 #[derive(Debug, Serialize)]
 pub struct CommitmentResponse {
+    /// Unique commitment ID
     pub commitment_id: Uuid,
+    /// ID of the user who created the commitment
     pub user_id: Uuid,
+    /// ID of the associated token
     pub token_id: Uuid,
+    /// Commitment title
     pub title: String,
+    /// Detailed description
     pub description: Option<String>,
+    /// Commitment deadline
     pub deadline: DateTime<Utc>,
+    /// Current status (pending, completed, verified, failed)
     pub status: String,
+    /// HTTPS URL to submitted evidence
     pub evidence_url: Option<String>,
+    /// Description of the submitted evidence
     pub evidence_description: Option<String>,
+    /// Timestamp when commitment was verified
     pub verified_at: Option<DateTime<Utc>>,
+    /// Creation timestamp
     pub created_at: DateTime<Utc>,
 }
 

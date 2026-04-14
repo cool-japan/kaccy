@@ -11,8 +11,11 @@ use tracing::trace;
 /// Metric types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MetricType {
+    /// A monotonically increasing value
     Counter,
+    /// A value that can go up or down
     Gauge,
+    /// A distribution of observed values
     Histogram,
 }
 
@@ -235,13 +238,21 @@ impl BitcoinMetrics {
 /// Aggregated metrics statistics
 #[derive(Debug, Clone, Default)]
 pub struct MetricsStats {
+    /// Total number of RPC calls made
     pub total_rpc_calls: u64,
+    /// Number of RPC calls that completed successfully
     pub successful_rpc_calls: u64,
+    /// Number of RPC calls that failed
     pub failed_rpc_calls: u64,
+    /// Cumulative RPC call duration in milliseconds
     pub total_rpc_duration_ms: f64,
+    /// Total number of transaction confirmations observed
     pub total_confirmations: u64,
+    /// Average time to confirmation in seconds
     pub avg_confirmation_time_secs: f64,
+    /// Total number of UTXO selection operations performed
     pub total_utxo_selections: u64,
+    /// Total number of addresses generated
     pub total_addresses_generated: u64,
 }
 

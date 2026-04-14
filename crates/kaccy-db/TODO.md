@@ -400,15 +400,13 @@
 
 ### Security & Compliance
 
-**Status: Partially enabled - encryption and audit logging are working**
+**Status: Fully enabled - sanitization, encryption, and audit logging are all working**
 
-- [x] Query parameter sanitization (security/sanitization.rs) - **IMPLEMENTED BUT DISABLED**
+- [x] Query parameter sanitization (security/sanitization.rs) - **ENABLED**
   - [x] Automatic SQL injection prevention (ParameterSanitizer)
   - [x] PII redaction in logs (PiiRedactor)
   - [x] Sensitive data masking (DataMasker)
-  - [x] **Blocked: Critical Rust 1.90 lexer bug E0762 (unterminated string literals)**
-  - [x] **Investigated: Tried format_args!, write_str, concat!, byte strings - all fail**
-  - [ ] **Waiting for: Rust compiler fix or downgrade to Rust 1.89**
+  - [x] **Fixed: root cause was an unescaped `"` in a raw regex literal (`r"['\";...]"`) misidentified as a compiler E0762 bug; fixed with hash-delimited raw string (`r#"..."#`)**
 - [x] Encryption at rest support (security/encryption.rs) - **ENABLED**
   - [x] Transparent column encryption (EncryptionProvider with AES-256-GCM)
   - [x] Key rotation strategies (KeyRotationManager)
@@ -425,13 +423,10 @@
   - [x] **Fixed: Refactored to use runtime queries instead of query! macros**
   - [x] Successfully exported in lib.rs
 
-**Resolution Plan:**
+**Resolution Notes:**
 1. ~~Set up sqlx offline mode with `cargo sqlx prepare`~~ (Not needed - refactored to runtime queries)
-2. Sanitization module requires either:
-   - Update to thiserror that works around Rust 1.90 lexer bug, OR
-   - Downgrade Rust toolchain to pre-1.90, OR
-   - Manual implementation of Display trait instead of thiserror
-3. ~~Re-enable security module in lib.rs exports~~ (Completed for encryption + audit)
+2. ~~Sanitization module blocked by Rust 1.90 lexer bug~~ - Fixed: unescaped `"` in raw regex literal resolved with hash-delimited raw string (`r#"..."#`)
+3. ~~Re-enable security module in lib.rs exports~~ (Completed for all three security submodules)
 
 ### Documentation & Developer Experience
 
@@ -470,10 +465,10 @@ The kaccy-db crate is **production-ready** with all major features implemented a
 - **Complete documentation** with examples and guides
 - **Performance benchmarks** for critical paths
 
-### Feature Completion: 99%
+### Feature Completion: 100%
 
-All planned features are implemented except:
-- ⚠️ Sanitization module (blocked by critical Rust 1.90 lexer bug E0762 - no workaround possible)
+All planned features are implemented and enabled:
+- ✅ Sanitization module - fixed and enabled (raw regex literal `r#"..."#` workaround)
 - ✅ Examples fixed - now compile without DATABASE_URL (converted to runtime queries)
 
 ### Quality Metrics
@@ -527,7 +522,7 @@ All planned features are implemented except:
 
 ### Next Steps (Optional)
 
-1. **Sanitization Module**: Blocked by Rust 1.90 compiler bug - wait for Rust update
+1. ~~**Sanitization Module**~~: ✅ **COMPLETED** - Fixed with hash-delimited raw string literal
 2. ~~**Example Database Setup**~~: ✅ **COMPLETED** - All examples now use runtime queries
 3. **Integration Tests**: Set up CI with PostgreSQL for full integration testing
 4. ~~**Benchmarks**~~: ✅ **COMPLETED** - Added criterion benchmarks for encryption, caching, cursor operations, and password hashing

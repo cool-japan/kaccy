@@ -137,6 +137,7 @@ pub struct FeatureBinner {
     strategy: BinningStrategy,
 }
 
+/// Strategy for discretizing continuous features into bins.
 #[derive(Debug, Clone)]
 pub enum BinningStrategy {
     /// Equal width bins
@@ -261,13 +262,20 @@ pub struct RollingFeatureGenerator {
     statistics: Vec<RollingStatistic>,
 }
 
+/// Statistic to compute over a rolling window.
 #[derive(Debug, Clone, Copy)]
 pub enum RollingStatistic {
+    /// Arithmetic mean over the window.
     Mean,
+    /// Standard deviation over the window.
     StdDev,
+    /// Minimum value in the window.
     Min,
+    /// Maximum value in the window.
     Max,
+    /// Median value in the window.
     Median,
+    /// Sum of all values in the window.
     Sum,
 }
 

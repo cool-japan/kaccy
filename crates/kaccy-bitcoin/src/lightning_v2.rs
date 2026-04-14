@@ -71,6 +71,7 @@ pub struct DualFundedChannelRequest {
 }
 
 impl DualFundedChannelRequest {
+    /// Create a new dual-funded channel request
     pub fn new(
         node_pubkey: impl Into<String>,
         our_funding_sats: u64,
@@ -140,6 +141,7 @@ pub struct MultiPathPaymentRequest {
 }
 
 impl MultiPathPaymentRequest {
+    /// Create a new multi-path payment request
     pub fn new(
         destination: impl Into<String>,
         amount_msat: u64,
@@ -209,6 +211,7 @@ pub struct OfferRequest {
 }
 
 impl OfferRequest {
+    /// Create a new offer request with the given description
     pub fn new(description: impl Into<String>) -> Self {
         Self {
             description: description.into(),
@@ -221,16 +224,19 @@ impl OfferRequest {
         }
     }
 
+    /// Set a fixed amount for this offer in millisatoshis
     pub fn with_amount(mut self, amount_msat: u64) -> Self {
         self.amount_msat = Some(amount_msat);
         self
     }
 
+    /// Set the issuer identifier for this offer
     pub fn with_issuer(mut self, issuer: impl Into<String>) -> Self {
         self.issuer = Some(issuer.into());
         self
     }
 
+    /// Set the offer expiry duration in seconds from now
     pub fn with_expiry(mut self, expiry_secs: u64) -> Self {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -390,6 +396,7 @@ pub struct LiquidityManager {
 }
 
 impl LiquidityManager {
+    /// Create a new liquidity manager with the given provider and configuration
     pub fn new(provider: Box<dyn LightningV2Provider>, config: LiquidityConfig) -> Self {
         Self { provider, config }
     }
@@ -479,6 +486,7 @@ pub struct MultiPathRouter {
 }
 
 impl MultiPathRouter {
+    /// Create a new multi-path router with the given provider and routing strategy
     pub fn new(provider: Box<dyn LightningV2Provider>, strategy: RoutingStrategy) -> Self {
         Self { provider, strategy }
     }
@@ -540,6 +548,7 @@ pub struct ZeroConfManager {
 }
 
 impl ZeroConfManager {
+    /// Create a new zero-conf manager with no trusted peers
     pub fn new(provider: Box<dyn LightningV2Provider>) -> Self {
         Self {
             provider,
@@ -580,6 +589,7 @@ pub struct OfferManager {
 }
 
 impl OfferManager {
+    /// Create a new offer manager with no active offers
     pub fn new(provider: Box<dyn LightningV2Provider>) -> Self {
         Self {
             provider,

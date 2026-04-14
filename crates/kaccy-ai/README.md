@@ -2,6 +2,8 @@
 
 AI services for Kaccy Protocol - Comprehensive LLM-powered evaluation, verification, fraud detection, and automation.
 
+**Version:** 0.2.0 | **Tests:** 308 passing
+
 ## Overview
 
 The `kaccy-ai` crate provides advanced AI capabilities for the Kaccy Protocol, including:
@@ -499,6 +501,8 @@ println!("{}", report.summary());
 
 ## Testing
 
+The crate ships with **308 passing tests** covering all LLM providers, evaluators, fraud detection, image similarity, plagiarism detection, oracle consensus, batch processing, and access control.
+
 ```bash
 # Run unit tests
 cargo test -p kaccy-ai
@@ -619,4 +623,4 @@ Specialized:
 
 ## License
 
-MIT OR Apache-2.0
+Apache-2.0

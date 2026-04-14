@@ -431,33 +431,56 @@ impl GitHubClient {
 /// Repository information
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Repository {
+    /// Numeric repository ID.
     pub id: u64,
+    /// Short repository name.
     pub name: String,
+    /// Full `owner/name` identifier.
     pub full_name: String,
+    /// Optional repository description.
     pub description: Option<String>,
+    /// URL to view the repository on GitHub.
     pub html_url: String,
+    /// Git clone URL.
     pub clone_url: String,
+    /// Default branch name.
     pub default_branch: String,
+    /// Number of stars.
     pub stargazers_count: u32,
+    /// Number of forks.
     pub forks_count: u32,
+    /// Primary programming language.
     pub language: Option<String>,
+    /// ISO 8601 creation timestamp.
     pub created_at: String,
+    /// ISO 8601 last-updated timestamp.
     pub updated_at: String,
+    /// ISO 8601 last-push timestamp.
     pub pushed_at: Option<String>,
 }
 
 /// File contents from repository
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct FileContents {
+    /// File name.
     pub name: String,
+    /// Path within the repository.
     pub path: String,
+    /// Git blob SHA.
     pub sha: String,
+    /// File size in bytes.
     pub size: u64,
+    /// API URL for this file.
     pub url: String,
+    /// HTML URL to view the file.
     pub html_url: String,
+    /// Direct download URL.
     pub download_url: Option<String>,
+    /// Base64-encoded file content (if available).
     pub content: Option<String>,
+    /// Content encoding (usually `"base64"`).
     pub encoding: Option<String>,
+    /// Object type (e.g., `"file"` or `"dir"`).
     #[serde(rename = "type")]
     pub file_type: String,
 }
@@ -511,97 +534,147 @@ fn base64_decode(input: &str) -> Result<Vec<u8>> {
 /// Commit information
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Commit {
+    /// Full commit SHA.
     pub sha: String,
+    /// HTML URL to view the commit.
     pub html_url: String,
+    /// Core commit metadata.
     pub commit: CommitData,
+    /// GitHub user who authored the commit.
     pub author: Option<GitHubUser>,
+    /// GitHub user who committed.
     pub committer: Option<GitHubUser>,
+    /// Line-change statistics.
     pub stats: Option<CommitStats>,
+    /// Files changed in this commit.
     pub files: Option<Vec<CommitFile>>,
 }
 
 /// Commit summary (from list endpoint)
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CommitSummary {
+    /// Full commit SHA.
     pub sha: String,
+    /// HTML URL to view the commit.
     pub html_url: String,
+    /// Core commit metadata.
     pub commit: CommitData,
+    /// GitHub user who authored the commit.
     pub author: Option<GitHubUser>,
+    /// GitHub user who committed.
     pub committer: Option<GitHubUser>,
 }
 
 /// Commit data
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CommitData {
+    /// Commit message.
     pub message: String,
+    /// Git author information.
     pub author: GitAuthor,
+    /// Git committer information.
     pub committer: GitAuthor,
 }
 
 /// Git author
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GitAuthor {
+    /// Author name.
     pub name: String,
+    /// Author email.
     pub email: String,
+    /// ISO 8601 timestamp.
     pub date: String,
 }
 
 /// Commit statistics
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CommitStats {
+    /// Lines added.
     pub additions: u32,
+    /// Lines deleted.
     pub deletions: u32,
+    /// Total lines changed.
     pub total: u32,
 }
 
 /// File changed in a commit
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CommitFile {
+    /// File path within the repository.
     pub filename: String,
+    /// Change status (e.g., `"added"`, `"modified"`, `"removed"`).
     pub status: String,
+    /// Lines added.
     pub additions: u32,
+    /// Lines deleted.
     pub deletions: u32,
+    /// Total lines changed.
     pub changes: u32,
+    /// Unified diff patch.
     pub patch: Option<String>,
 }
 
 /// GitHub user
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GitHubUser {
+    /// GitHub username.
     pub login: String,
+    /// Numeric user ID.
     pub id: u64,
+    /// Avatar image URL.
     pub avatar_url: String,
+    /// Profile page URL.
     pub html_url: String,
 }
 
 /// Pull request information
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PullRequest {
+    /// Numeric PR ID.
     pub id: u64,
+    /// PR number within the repository.
     pub number: u64,
+    /// PR state (`"open"` or `"closed"`).
     pub state: String,
+    /// PR title.
     pub title: String,
+    /// PR body text.
     pub body: Option<String>,
+    /// HTML URL to view the PR.
     pub html_url: String,
+    /// User who opened the PR.
     pub user: GitHubUser,
+    /// ISO 8601 creation timestamp.
     pub created_at: String,
+    /// ISO 8601 last-update timestamp.
     pub updated_at: String,
+    /// ISO 8601 close timestamp.
     pub closed_at: Option<String>,
+    /// ISO 8601 merge timestamp.
     pub merged_at: Option<String>,
+    /// Merge commit SHA.
     pub merge_commit_sha: Option<String>,
+    /// Head branch reference.
     pub head: PullRequestRef,
+    /// Base branch reference.
     pub base: PullRequestRef,
+    /// Lines added.
     pub additions: Option<u32>,
+    /// Lines deleted.
     pub deletions: Option<u32>,
+    /// Number of changed files.
     pub changed_files: Option<u32>,
 }
 
 impl PullRequest {
+    /// Returns `true` if the PR has been merged.
     #[must_use]
     pub fn is_merged(&self) -> bool {
         self.merged_at.is_some()
     }
 
+    /// Returns `true` if the PR is closed (merged or rejected).
     #[must_use]
     pub fn is_closed(&self) -> bool {
         self.state == "closed"
@@ -611,68 +684,107 @@ impl PullRequest {
 /// Pull request reference (head/base)
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PullRequestRef {
+    /// Full label (`owner:branch`).
     pub label: String,
+    /// Branch name.
     #[serde(rename = "ref")]
     pub ref_name: String,
+    /// Tip commit SHA.
     pub sha: String,
 }
 
 /// File in a pull request
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PullRequestFile {
+    /// Blob SHA.
     pub sha: String,
+    /// File path within the repository.
     pub filename: String,
+    /// Change status (e.g., `"added"`, `"modified"`, `"removed"`).
     pub status: String,
+    /// Lines added.
     pub additions: u32,
+    /// Lines deleted.
     pub deletions: u32,
+    /// Total lines changed.
     pub changes: u32,
+    /// Unified diff patch.
     pub patch: Option<String>,
+    /// Raw file URL.
     pub raw_url: String,
 }
 
 /// Release information
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Release {
+    /// Numeric release ID.
     pub id: u64,
+    /// Git tag name.
     pub tag_name: String,
+    /// Human-readable release name.
     pub name: Option<String>,
+    /// Release body (changelog).
     pub body: Option<String>,
+    /// HTML URL to view the release.
     pub html_url: String,
+    /// Whether this is a draft release.
     pub draft: bool,
+    /// Whether this is a pre-release.
     pub prerelease: bool,
+    /// ISO 8601 creation timestamp.
     pub created_at: String,
+    /// ISO 8601 publication timestamp.
     pub published_at: Option<String>,
+    /// User who created the release.
     pub author: GitHubUser,
+    /// Attached release assets.
     pub assets: Vec<ReleaseAsset>,
 }
 
 /// Release asset
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ReleaseAsset {
+    /// Numeric asset ID.
     pub id: u64,
+    /// Asset file name.
     pub name: String,
+    /// Asset size in bytes.
     pub size: u64,
+    /// Number of times the asset was downloaded.
     pub download_count: u32,
+    /// Direct browser download URL.
     pub browser_download_url: String,
 }
 
 /// Issue information
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Issue {
+    /// Numeric issue ID.
     pub id: u64,
+    /// Issue number within the repository.
     pub number: u64,
+    /// Issue state (`"open"` or `"closed"`).
     pub state: String,
+    /// Issue title.
     pub title: String,
+    /// Issue body text.
     pub body: Option<String>,
+    /// HTML URL to view the issue.
     pub html_url: String,
+    /// User who opened the issue.
     pub user: GitHubUser,
+    /// Labels applied to the issue.
     pub labels: Vec<IssueLabel>,
+    /// ISO 8601 creation timestamp.
     pub created_at: String,
+    /// ISO 8601 last-update timestamp.
     pub updated_at: String,
+    /// ISO 8601 close timestamp.
     pub closed_at: Option<String>,
 }
 
 impl Issue {
+    /// Returns `true` if the issue is closed.
     #[must_use]
     pub fn is_closed(&self) -> bool {
         self.state == "closed"
@@ -682,34 +794,48 @@ impl Issue {
 /// Issue label
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct IssueLabel {
+    /// Label name.
     pub name: String,
+    /// Hex colour code (without `#`).
     pub color: String,
 }
 
 /// Code search result
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CodeSearchResult {
+    /// Total number of matching results.
     pub total_count: u32,
+    /// Whether the result set is incomplete.
     pub incomplete_results: bool,
+    /// Matching items.
     pub items: Vec<CodeSearchItem>,
 }
 
 /// Code search item
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CodeSearchItem {
+    /// File name.
     pub name: String,
+    /// File path within the repository.
     pub path: String,
+    /// Blob SHA.
     pub sha: String,
+    /// HTML URL to view the file.
     pub html_url: String,
+    /// Repository containing the file.
     pub repository: CodeSearchRepository,
 }
 
 /// Repository in code search
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CodeSearchRepository {
+    /// Numeric repository ID.
     pub id: u64,
+    /// Short repository name.
     pub name: String,
+    /// Full `owner/name` identifier.
     pub full_name: String,
+    /// HTML URL to view the repository.
     pub html_url: String,
 }
 
@@ -722,6 +848,7 @@ pub struct GitHubVerifier {
 }
 
 impl GitHubVerifier {
+    /// Create a new `GitHubVerifier` backed by the given client.
     #[must_use]
     pub fn new(client: GitHubClient) -> Self {
         Self { client }
@@ -856,28 +983,47 @@ impl GitHubVerifier {
 /// Parsed GitHub URL
 #[derive(Debug, Clone)]
 pub enum ParsedGitHubUrl {
+    /// A commit URL.
     Commit {
+        /// Repository owner.
         owner: String,
+        /// Repository name.
         repo: String,
+        /// Commit SHA.
         sha: String,
     },
+    /// A pull request URL.
     PullRequest {
+        /// Repository owner.
         owner: String,
+        /// Repository name.
         repo: String,
+        /// Pull request number.
         number: u64,
     },
+    /// A release URL.
     Release {
+        /// Repository owner.
         owner: String,
+        /// Repository name.
         repo: String,
+        /// Release tag.
         tag: String,
     },
+    /// An issue URL.
     Issue {
+        /// Repository owner.
         owner: String,
+        /// Repository name.
         repo: String,
+        /// Issue number.
         number: u64,
     },
+    /// A repository URL.
     Repository {
+        /// Repository owner.
         owner: String,
+        /// Repository name.
         repo: String,
     },
 }
@@ -953,64 +1099,104 @@ pub fn parse_github_url(url: &str) -> Result<ParsedGitHubUrl> {
 /// Commit verification result
 #[derive(Debug, Clone, Serialize)]
 pub struct CommitVerification {
+    /// Whether the commit was found.
     pub exists: bool,
+    /// Full commit SHA.
     pub sha: String,
+    /// Commit message.
     pub message: String,
+    /// Commit author name.
     pub author: String,
+    /// ISO 8601 commit date.
     pub date: String,
+    /// Line-change statistics.
     pub stats: Option<CommitStats>,
+    /// HTML URL to view the commit.
     pub url: String,
 }
 
 /// Release verification result
 #[derive(Debug, Clone, Serialize)]
 pub struct ReleaseVerification {
+    /// Whether the release was found.
     pub exists: bool,
+    /// Release tag name.
     pub tag: String,
+    /// Human-readable release name.
     pub name: Option<String>,
+    /// Release body text.
     pub body: Option<String>,
+    /// Whether this is a pre-release.
     pub is_prerelease: bool,
+    /// Whether this is a draft.
     pub is_draft: bool,
+    /// ISO 8601 publication timestamp.
     pub published_at: Option<String>,
+    /// Number of release assets.
     pub assets_count: usize,
+    /// HTML URL to view the release.
     pub url: String,
 }
 
 /// PR verification result
 #[derive(Debug, Clone, Serialize)]
 pub struct PrVerification {
+    /// Whether the PR was found.
     pub exists: bool,
+    /// PR number within the repository.
     pub number: u64,
+    /// PR title.
     pub title: String,
+    /// PR state (`"open"` or `"closed"`).
     pub state: String,
+    /// Whether the PR has been merged.
     pub is_merged: bool,
+    /// ISO 8601 merge timestamp.
     pub merged_at: Option<String>,
+    /// GitHub login of the PR author.
     pub author: String,
+    /// Lines added.
     pub additions: Option<u32>,
+    /// Lines deleted.
     pub deletions: Option<u32>,
+    /// HTML URL to view the PR.
     pub url: String,
 }
 
 /// Issue verification result
 #[derive(Debug, Clone, Serialize)]
 pub struct IssueVerification {
+    /// Whether the issue was found.
     pub exists: bool,
+    /// Issue number within the repository.
     pub number: u64,
+    /// Issue title.
     pub title: String,
+    /// Issue state (`"open"` or `"closed"`).
     pub state: String,
+    /// Whether the issue is closed.
     pub is_closed: bool,
+    /// ISO 8601 close timestamp.
     pub closed_at: Option<String>,
+    /// GitHub login of the issue author.
     pub author: String,
+    /// Label names applied to the issue.
     pub labels: Vec<String>,
+    /// HTML URL to view the issue.
     pub url: String,
 }
 
 /// GitHub verification result enum
 #[derive(Debug, Clone, Serialize)]
 pub enum GitHubVerificationResult {
+    /// Result for a commit URL.
     Commit(CommitVerification),
+    /// Result for a pull request URL.
     PullRequest(PrVerification),
+    /// Result for a release URL.
     Release(ReleaseVerification),
+    /// Result for an issue URL.
     Issue(IssueVerification),
+    /// Result for a repository URL.
     Repository(Repository),
 }

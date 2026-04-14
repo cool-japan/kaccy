@@ -178,6 +178,7 @@ impl Default for CursorPagination {
 }
 
 impl CursorPagination {
+    /// Create a new cursor pagination request.
     pub fn new(cursor: Option<String>, limit: u32) -> Self {
         Self { cursor, limit }
     }
@@ -211,6 +212,7 @@ pub struct CursorPaginatedResponse<T> {
 }
 
 impl<T> CursorPaginatedResponse<T> {
+    /// Create a new paginated response from items and an optional next cursor.
     pub fn new(items: Vec<T>, next_cursor: Option<String>) -> Self {
         let has_more = next_cursor.is_some();
         Self {

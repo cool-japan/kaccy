@@ -12,12 +12,20 @@ use std::fmt;
 #[derive(Debug, Clone, PartialEq)]
 pub enum PartitioningStrategy {
     /// Range partitioning (e.g., by date ranges)
-    Range { column: String },
+    Range {
+        /// Column used as the partition key.
+        column: String,
+    },
     /// List partitioning (e.g., by specific values)
-    List { column: String },
+    List {
+        /// Column used as the partition key.
+        column: String,
+    },
     /// Hash partitioning (e.g., for even distribution)
     Hash {
+        /// Column used as the partition key.
         column: String,
+        /// Number of hash partitions to create.
         num_partitions: usize,
     },
 }
@@ -56,47 +64,82 @@ impl PartitionInterval {
     }
 
     /// Get start and end dates for partition
-    pub fn partition_bounds(&self, date: DateTime<Utc>) -> (DateTime<Utc>, DateTime<Utc>) {
+    pub fn partition_bounds(&self, date: DateTime<Utc>) -> Result<(DateTime<Utc>, DateTime<Utc>)> {
         use chrono::{Datelike, Duration, NaiveDate};
 
         match self {
             Self::Daily => {
-                let start = date.date_naive().and_hms_opt(0, 0, 0).unwrap();
+                let start = date.date_naive().and_hms_opt(0, 0, 0).ok_or_else(|| {
+                    DbError::Other("Invalid daily partition start time".to_string())
+                })?;
                 let end = start + Duration::days(1);
-                (
+                Ok((
                     DateTime::from_naive_utc_and_offset(start, Utc),
                     DateTime::from_naive_utc_and_offset(end, Utc),
-                )
+                ))
             }
             Self::Weekly => {
                 let days_from_monday = date.weekday().num_days_from_monday();
                 let start_date = date.date_naive() - Duration::days(days_from_monday as i64);
-                let start = start_date.and_hms_opt(0, 0, 0).unwrap();
+                let start = start_date.and_hms_opt(0, 0, 0).ok_or_else(|| {
+                    DbError::Other("Invalid weekly partition start time".to_string())
+                })?;
                 let end = start + Duration::weeks(1);
-                (
+                Ok((
                     DateTime::from_naive_utc_and_offset(start, Utc),
                     DateTime::from_naive_utc_and_offset(end, Utc),
-                )
+                ))
             }
             Self::Monthly => {
-                let start_date = NaiveDate::from_ymd_opt(date.year(), date.month(), 1).unwrap();
-                let start = start_date.and_hms_opt(0, 0, 0).unwrap();
+                let start_date =
+                    NaiveDate::from_ymd_opt(date.year(), date.month(), 1).ok_or_else(|| {
+                        DbError::Other(format!(
+                            "Invalid monthly partition start date: {}-{:02}-01",
+                            date.year(),
+                            date.month()
+                        ))
+                    })?;
+                let start = start_date.and_hms_opt(0, 0, 0).ok_or_else(|| {
+                    DbError::Other("Invalid monthly partition start time".to_string())
+                })?;
                 let next_month = if date.month() == 12 {
-                    NaiveDate::from_ymd_opt(date.year() + 1, 1, 1).unwrap()
+                    NaiveDate::from_ymd_opt(date.year() + 1, 1, 1).ok_or_else(|| {
+                        DbError::Other(format!(
+                            "Invalid monthly partition end date: {}-01-01",
+                            date.year() + 1
+                        ))
+                    })?
                 } else {
-                    NaiveDate::from_ymd_opt(date.year(), date.month() + 1, 1).unwrap()
+                    NaiveDate::from_ymd_opt(date.year(), date.month() + 1, 1).ok_or_else(|| {
+                        DbError::Other(format!(
+                            "Invalid monthly partition end date: {}-{:02}-01",
+                            date.year(),
+                            date.month() + 1
+                        ))
+                    })?
                 };
-                let end = next_month.and_hms_opt(0, 0, 0).unwrap();
-                (
+                let end = next_month.and_hms_opt(0, 0, 0).ok_or_else(|| {
+                    DbError::Other("Invalid monthly partition end time".to_string())
+                })?;
+                Ok((
                     DateTime::from_naive_utc_and_offset(start, Utc),
                     DateTime::from_naive_utc_and_offset(end, Utc),
-                )
+                ))
             }
             Self::Quarterly => {
                 let quarter = (date.month() - 1) / 3 + 1;
                 let start_month = (quarter - 1) * 3 + 1;
-                let start_date = NaiveDate::from_ymd_opt(date.year(), start_month, 1).unwrap();
-                let start = start_date.and_hms_opt(0, 0, 0).unwrap();
+                let start_date =
+                    NaiveDate::from_ymd_opt(date.year(), start_month, 1).ok_or_else(|| {
+                        DbError::Other(format!(
+                            "Invalid quarterly partition start date: {}-{:02}-01",
+                            date.year(),
+                            start_month
+                        ))
+                    })?;
+                let start = start_date.and_hms_opt(0, 0, 0).ok_or_else(|| {
+                    DbError::Other("Invalid quarterly partition start time".to_string())
+                })?;
 
                 let end_month = start_month + 3;
                 let (end_year, end_month) = if end_month > 12 {
@@ -104,23 +147,45 @@ impl PartitionInterval {
                 } else {
                     (date.year(), end_month)
                 };
-                let end_date = NaiveDate::from_ymd_opt(end_year, end_month, 1).unwrap();
-                let end = end_date.and_hms_opt(0, 0, 0).unwrap();
+                let end_date =
+                    NaiveDate::from_ymd_opt(end_year, end_month, 1).ok_or_else(|| {
+                        DbError::Other(format!(
+                            "Invalid quarterly partition end date: {}-{:02}-01",
+                            end_year, end_month
+                        ))
+                    })?;
+                let end = end_date.and_hms_opt(0, 0, 0).ok_or_else(|| {
+                    DbError::Other("Invalid quarterly partition end time".to_string())
+                })?;
 
-                (
+                Ok((
                     DateTime::from_naive_utc_and_offset(start, Utc),
                     DateTime::from_naive_utc_and_offset(end, Utc),
-                )
+                ))
             }
             Self::Yearly => {
-                let start_date = NaiveDate::from_ymd_opt(date.year(), 1, 1).unwrap();
-                let start = start_date.and_hms_opt(0, 0, 0).unwrap();
-                let end_date = NaiveDate::from_ymd_opt(date.year() + 1, 1, 1).unwrap();
-                let end = end_date.and_hms_opt(0, 0, 0).unwrap();
-                (
+                let start_date = NaiveDate::from_ymd_opt(date.year(), 1, 1).ok_or_else(|| {
+                    DbError::Other(format!(
+                        "Invalid yearly partition start date: {}-01-01",
+                        date.year()
+                    ))
+                })?;
+                let start = start_date.and_hms_opt(0, 0, 0).ok_or_else(|| {
+                    DbError::Other("Invalid yearly partition start time".to_string())
+                })?;
+                let end_date = NaiveDate::from_ymd_opt(date.year() + 1, 1, 1).ok_or_else(|| {
+                    DbError::Other(format!(
+                        "Invalid yearly partition end date: {}-01-01",
+                        date.year() + 1
+                    ))
+                })?;
+                let end = end_date.and_hms_opt(0, 0, 0).ok_or_else(|| {
+                    DbError::Other("Invalid yearly partition end time".to_string())
+                })?;
+                Ok((
                     DateTime::from_naive_utc_and_offset(start, Utc),
                     DateTime::from_naive_utc_and_offset(end, Utc),
-                )
+                ))
             }
         }
     }
@@ -129,8 +194,11 @@ impl PartitionInterval {
 /// Partition definition
 #[derive(Debug, Clone)]
 pub struct PartitionDefinition {
+    /// Name of the parent partitioned table.
     pub table_name: String,
+    /// Name of this specific partition.
     pub partition_name: String,
+    /// Partitioning strategy applied.
     pub strategy: PartitioningStrategy,
 }
 
@@ -238,7 +306,7 @@ impl PartitionManager {
     ) -> Result<String> {
         let suffix = interval.partition_suffix(date);
         let partition_name = format!("{}_{}", table_name, suffix);
-        let (start, end) = interval.partition_bounds(date);
+        let (start, end) = interval.partition_bounds(date)?;
 
         let from_value = start.format("%Y-%m-%d %H:%M:%S").to_string();
         let to_value = end.format("%Y-%m-%d %H:%M:%S").to_string();
@@ -371,9 +439,13 @@ impl PartitionManager {
 /// Partition statistics
 #[derive(Debug, Clone)]
 pub struct PartitionStats {
+    /// Number of partitions in the table.
     pub partition_count: usize,
+    /// Total row count across all partitions.
     pub total_rows: usize,
+    /// Total size in bytes across all partitions.
     pub total_size_bytes: usize,
+    /// Names of all individual partitions.
     pub partitions: Vec<String>,
 }
 
@@ -415,30 +487,33 @@ mod tests {
     }
 
     #[test]
-    fn test_partition_bounds_daily() {
+    fn test_partition_bounds_daily() -> crate::error::Result<()> {
         let date = Utc.with_ymd_and_hms(2024, 3, 15, 12, 30, 45).unwrap();
-        let (start, end) = PartitionInterval::Daily.partition_bounds(date);
+        let (start, end) = PartitionInterval::Daily.partition_bounds(date)?;
 
         assert_eq!(start, Utc.with_ymd_and_hms(2024, 3, 15, 0, 0, 0).unwrap());
         assert_eq!(end, Utc.with_ymd_and_hms(2024, 3, 16, 0, 0, 0).unwrap());
+        Ok(())
     }
 
     #[test]
-    fn test_partition_bounds_monthly() {
+    fn test_partition_bounds_monthly() -> crate::error::Result<()> {
         let date = Utc.with_ymd_and_hms(2024, 3, 15, 12, 0, 0).unwrap();
-        let (start, end) = PartitionInterval::Monthly.partition_bounds(date);
+        let (start, end) = PartitionInterval::Monthly.partition_bounds(date)?;
 
         assert_eq!(start, Utc.with_ymd_and_hms(2024, 3, 1, 0, 0, 0).unwrap());
         assert_eq!(end, Utc.with_ymd_and_hms(2024, 4, 1, 0, 0, 0).unwrap());
+        Ok(())
     }
 
     #[test]
-    fn test_partition_bounds_yearly() {
+    fn test_partition_bounds_yearly() -> crate::error::Result<()> {
         let date = Utc.with_ymd_and_hms(2026, 6, 15, 12, 0, 0).unwrap();
-        let (start, end) = PartitionInterval::Yearly.partition_bounds(date);
+        let (start, end) = PartitionInterval::Yearly.partition_bounds(date)?;
 
         assert_eq!(start, Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap());
         assert_eq!(end, Utc.with_ymd_and_hms(2027, 1, 1, 0, 0, 0).unwrap());
+        Ok(())
     }
 
     #[test]

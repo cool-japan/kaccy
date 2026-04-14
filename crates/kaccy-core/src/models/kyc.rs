@@ -11,7 +11,9 @@ use super::user::{KycStatus, ValidationError};
 /// KYC submission with detailed information
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct KycSubmission {
+    /// Unique identifier for this KYC submission
     pub submission_id: Uuid,
+    /// User who submitted this KYC information
     pub user_id: Uuid,
     /// Full legal name
     pub full_name: String,
@@ -63,7 +65,9 @@ pub struct KycSubmission {
     pub submission_ip: Option<String>,
     /// User agent at time of submission
     pub submission_user_agent: Option<String>,
+    /// Timestamp when the submission was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp when the submission was last updated
     pub updated_at: DateTime<Utc>,
 }
 
@@ -162,26 +166,44 @@ impl KycSubmission {
 /// Request to submit KYC information
 #[derive(Debug, Clone, Deserialize)]
 pub struct SubmitKycRequest {
+    /// Full legal name as it appears on the identity document
     pub full_name: String,
+    /// Applicant's date of birth
     pub date_of_birth: chrono::NaiveDate,
+    /// Applicant's nationality/citizenship
     pub nationality: String,
+    /// Applicant's country of residence
     pub country_of_residence: String,
+    /// Primary address line
     pub address_line1: String,
+    /// Secondary address line (apartment, suite, etc.)
     pub address_line2: Option<String>,
+    /// City of residence
     pub city: String,
+    /// State or province of residence
     pub state_province: Option<String>,
+    /// Postal or ZIP code
     pub postal_code: String,
+    /// Type of the submitted identity document
     pub id_document_type: IdDocumentType,
+    /// Document number as printed on the identity document
     pub id_document_number: String,
+    /// Country that issued the identity document
     pub id_issuing_country: String,
+    /// Expiry date of the identity document
     pub id_expiry_date: Option<chrono::NaiveDate>,
+    /// URL to the front image of the identity document
     pub id_document_front_url: String,
+    /// URL to the back image of the identity document (where applicable)
     pub id_document_back_url: Option<String>,
+    /// URL to a selfie photo holding the identity document
     pub selfie_url: String,
+    /// URL to a proof-of-address document
     pub proof_of_address_url: Option<String>,
 }
 
 impl SubmitKycRequest {
+    /// Validate the KYC submission request fields
     pub fn validate(&self) -> Result<(), ValidationError> {
         // Name validation
         if self.full_name.is_empty() {
@@ -284,13 +306,18 @@ impl SubmitKycRequest {
 /// Request to review KYC submission (admin only)
 #[derive(Debug, Deserialize)]
 pub struct ReviewKycRequest {
+    /// New KYC status to assign (must not be `Pending`).
     pub status: KycStatus,
+    /// Optional reviewer notes explaining the decision.
     pub notes: Option<String>,
+    /// Optional risk level assigned after review.
     pub risk_level: Option<RiskLevel>,
+    /// Whether enhanced due diligence is required.
     pub requires_edd: bool,
 }
 
 impl ReviewKycRequest {
+    /// Validate that the review request contains a valid status transition.
     pub fn validate(&self) -> Result<(), ValidationError> {
         // Only allow Verified or Rejected status in review
         if self.status == KycStatus::Pending {
@@ -321,12 +348,19 @@ impl ReviewKycRequest {
 /// Summary of KYC statistics for admin dashboard
 #[derive(Debug, Serialize)]
 pub struct KycStats {
+    /// Total number of KYC submissions.
     pub total_submissions: i64,
+    /// Submissions awaiting review.
     pub pending_submissions: i64,
+    /// Submissions that have been verified.
     pub verified_submissions: i64,
+    /// Submissions that have been rejected.
     pub rejected_submissions: i64,
+    /// Average review time in hours, if enough data exists.
     pub avg_review_time_hours: Option<f64>,
+    /// Submissions received in the last 7 days.
     pub submissions_last_7_days: i64,
+    /// Submissions received in the last 30 days.
     pub submissions_last_30_days: i64,
 }
 

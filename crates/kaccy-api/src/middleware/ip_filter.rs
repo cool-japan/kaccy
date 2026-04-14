@@ -247,9 +247,13 @@ pub async fn ip_filter_middleware(
 /// IP filter statistics
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IpFilterStats {
+    /// Number of dynamically blacklisted IP addresses
     pub blacklisted_ips: usize,
+    /// Total number of IP addresses with tracked requests
     pub total_requests_tracked: usize,
+    /// Number of IPs in the whitelist
     pub whitelist_size: usize,
+    /// Number of IPs in the permanent blacklist
     pub permanent_blacklist_size: usize,
 }
 

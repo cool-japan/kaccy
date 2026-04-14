@@ -39,10 +39,15 @@ impl HealthStatus {
 /// Component health information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComponentHealth {
+    /// Name of the component being monitored
     pub name: String,
+    /// Current health status of the component
     pub status: HealthStatus,
+    /// Optional message describing the health state
     pub message: Option<String>,
+    /// Timestamp of the most recent health check
     pub last_check: DateTime<Utc>,
+    /// Additional metadata about the component's health
     pub metadata: serde_json::Value,
 }
 
@@ -90,7 +95,9 @@ impl ComponentHealth {
 /// Dependency health check result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DependencyHealth {
+    /// Health status of the Bitcoin Core node
     pub bitcoin_core: ComponentHealth,
+    /// Health status of the Lightning node, if configured
     pub lightning_node: Option<ComponentHealth>,
 }
 
@@ -110,11 +117,17 @@ pub struct ResourceUtilization {
 /// Overall health check report
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthReport {
+    /// Overall health status of the system
     pub status: HealthStatus,
+    /// Timestamp when this report was generated
     pub timestamp: DateTime<Utc>,
+    /// Health status of individual application components
     pub components: Vec<ComponentHealth>,
+    /// Health status of external dependencies
     pub dependencies: DependencyHealth,
+    /// Current resource utilization metrics
     pub resource_utilization: ResourceUtilization,
+    /// Number of seconds the service has been running
     pub uptime_seconds: u64,
 }
 

@@ -293,8 +293,11 @@ impl ChurnFeatures {
 /// Churn risk level
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChurnRiskLevel {
+    /// Low probability of churn.
     Low,
+    /// Moderate probability of churn.
     Medium,
+    /// High probability of churn requiring intervention.
     High,
 }
 

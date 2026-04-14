@@ -158,9 +158,9 @@
   - [x] Custom agent registration and management
   - [x] Tier-based agent limits
   - [x] Agent configuration (system prompt, model, temperature)
-  - [ ] Trained on issuer's content (requires external ML infrastructure)
-  - [ ] Personalized assistance (future enhancement)
-  - [ ] Custom model endpoints (future enhancement)
+  - [x] Trained on issuer's content (via IssuerPersonalization.context_documents in custom_endpoint.rs)
+  - [x] Personalized assistance (IssuerPersonalization, ResponseStyle, build_system_prompt in custom_endpoint.rs)
+  - [x] Custom model endpoints (CustomEndpointConfig, CustomEndpointClient, CustomEndpointRegistry in custom_endpoint.rs)
 
 ### Model Fine-tuning
 

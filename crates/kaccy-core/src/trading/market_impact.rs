@@ -33,6 +33,7 @@ pub struct AlmgrenChrissModel {
 }
 
 impl AlmgrenChrissModel {
+    /// Creates a new `AlmgrenChrissModel` with default impact parameters.
     pub fn new(daily_volume: Decimal, volatility: f64) -> Self {
         Self {
             daily_volume,
@@ -42,6 +43,7 @@ impl AlmgrenChrissModel {
         }
     }
 
+    /// Sets custom temporary and permanent impact parameters.
     pub fn with_parameters(mut self, eta: f64, gamma: f64) -> Self {
         self.eta = eta;
         self.gamma = gamma;
@@ -137,6 +139,7 @@ pub struct SquareRootImpactModel {
 }
 
 impl SquareRootImpactModel {
+    /// Creates a new `SquareRootImpactModel` with default impact coefficient.
     pub fn new(market_depth: Decimal) -> Self {
         Self {
             market_depth,
@@ -192,6 +195,7 @@ pub struct LinearImpactModel {
 }
 
 impl LinearImpactModel {
+    /// Creates a new `LinearImpactModel` with the given daily volume and impact coefficient.
     pub fn new(daily_volume: Decimal, impact_per_percent: f64) -> Self {
         Self {
             impact_per_percent,
@@ -199,6 +203,7 @@ impl LinearImpactModel {
         }
     }
 
+    /// Estimates market impact for the given trade quantity.
     pub fn estimate_impact(&self, quantity: Decimal, current_price: Decimal) -> ImpactEstimate {
         if self.daily_volume == Decimal::ZERO {
             return ImpactEstimate {
@@ -241,6 +246,7 @@ pub struct ImpactDecayModel {
 }
 
 impl ImpactDecayModel {
+    /// Creates a new `ImpactDecayModel` with the given half-life in minutes.
     pub fn new(half_life: f64) -> Self {
         Self { half_life }
     }
@@ -270,6 +276,7 @@ pub struct TransientImpactAnalyzer {
 }
 
 impl TransientImpactAnalyzer {
+    /// Creates a new `TransientImpactAnalyzer` using the given impact half-life in minutes.
     pub fn new(half_life: f64) -> Self {
         Self {
             decay_model: ImpactDecayModel::new(half_life),

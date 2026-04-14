@@ -39,6 +39,7 @@ impl Default for ArbitrageDetector {
 pub struct ArbitrageOpportunity {
     /// Token pair involved
     pub token_a_id: Uuid,
+    /// Second token in the arbitrage pair.
     pub token_b_id: Uuid,
     /// Pool to buy from
     pub buy_pool_id: Uuid,
@@ -61,16 +62,23 @@ pub struct ArbitrageOpportunity {
 /// Arbitrage trade tracking
 #[derive(Debug, Clone)]
 pub struct ArbitrageTrade {
+    /// User who executed the arbitrage
     pub user_id: Uuid,
+    /// First token in the pair
     pub token_a_id: Uuid,
+    /// Second token in the pair
     pub token_b_id: Uuid,
+    /// Amount traded
     pub amount: Decimal,
+    /// Profit realised
     pub profit: Decimal,
+    /// Timestamp when the trade was executed
     pub executed_at: DateTime<Utc>,
 }
 
 /// Arbitrage prevention state
 pub struct ArbitragePreventor {
+    /// Configuration for detection thresholds
     detector: ArbitrageDetector,
     /// Recent arbitrage trades per user
     recent_trades: HashMap<Uuid, Vec<ArbitrageTrade>>,
@@ -321,21 +329,31 @@ impl ArbitragePreventor {
     }
 }
 
+/// Per-user arbitrage activity summary
 #[derive(Debug, Serialize)]
 pub struct ArbitrageUserStats {
+    /// User identifier
     pub user_id: Uuid,
+    /// Number of arbitrage trades in the current rate-limit window
     pub trade_count_in_window: i32,
+    /// Total profit from arbitrage in the current window
     pub total_profit_in_window: Decimal,
+    /// Whether the user has hit the rate limit
     pub is_rate_limited: bool,
+    /// Whether the user has been manually flagged
     pub is_flagged: bool,
 }
 
 /// Configuration for arbitrage prevention
 #[derive(Debug, Deserialize)]
 pub struct ArbitragePreventionConfig {
+    /// Override for maximum allowed price discrepancy
     pub max_price_discrepancy: Option<Decimal>,
+    /// Override for minimum profit threshold to flag
     pub min_profit_threshold: Option<Decimal>,
+    /// Override for rate limit window duration in seconds
     pub rate_limit_window_seconds: Option<i64>,
+    /// Override for maximum trades allowed per rate-limit window
     pub max_trades_per_window: Option<i32>,
 }
 

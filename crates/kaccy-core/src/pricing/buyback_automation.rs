@@ -90,28 +90,44 @@ pub struct TreasuryBuybackConfig {
 /// Buyback execution record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuybackExecution {
+    /// Unique identifier for this execution
     pub execution_id: String,
+    /// Time when the buyback was executed
     pub timestamp: SystemTime,
+    /// Token that was bought back
     pub token_id: String,
+    /// BTC spent on the buyback
     pub btc_spent: Decimal,
+    /// Number of tokens purchased
     pub tokens_bought: Decimal,
+    /// Weighted average price paid per token
     pub average_price: Decimal,
+    /// Whether the bought-back tokens were burned
     pub burned: bool,
+    /// Strategy that triggered this buyback
     pub strategy: BuybackStrategy,
 }
 
 /// Automated buyback manager
 pub struct AutomatedBuybackManager {
+    /// Base buyback configuration
     base_config: BuybackConfig,
+    /// Scheduled buyback configuration, if enabled
     scheduled_config: Option<ScheduledBuybackConfig>,
+    /// Price-triggered buyback configuration, if enabled
     price_triggered_config: Option<PriceTriggeredBuybackConfig>,
+    /// Treasury-based buyback configuration, if enabled
     treasury_config: Option<TreasuryBuybackConfig>,
+    /// Rolling history of recent executions
     execution_history: VecDeque<BuybackExecution>,
+    /// Time of the most recent buyback
     last_buyback_time: Option<SystemTime>,
+    /// Monotonically increasing counter for execution IDs
     execution_counter: u64,
 }
 
 impl AutomatedBuybackManager {
+    /// Create a new buyback manager with the given base configuration
     pub fn new(base_config: BuybackConfig) -> Self {
         Self {
             base_config,
@@ -124,6 +140,7 @@ impl AutomatedBuybackManager {
         }
     }
 
+    /// Create a buyback manager with default configuration
     pub fn with_defaults() -> Self {
         Self::new(BuybackConfig::default())
     }
@@ -329,29 +346,41 @@ impl AutomatedBuybackManager {
 /// Buyback recommendation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuybackRecommendation {
+    /// Strategy that generated the recommendation
     pub strategy: BuybackStrategy,
+    /// Recommended amount to spend (in BTC)
     pub recommended_amount: Decimal,
+    /// Human-readable explanation for the recommendation
     pub reason: String,
 }
 
 /// Buyback statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuybackStatistics {
+    /// Number of buyback executions in history
     pub total_executions: usize,
+    /// Total BTC spent on buybacks
     pub total_btc_spent: Decimal,
+    /// Total tokens bought back
     pub total_tokens_bought: Decimal,
+    /// Total tokens burned after buyback
     pub total_tokens_burned: Decimal,
+    /// Lifetime average price paid per token
     pub average_price: Decimal,
 }
 
 /// Treasury manager for buybacks
 pub struct TreasuryManager {
+    /// Current treasury balance in BTC
     total_balance: Decimal,
+    /// Amount already earmarked for upcoming buybacks
     allocated_for_buyback: Decimal,
+    /// Minimum balance to keep in reserve
     min_reserve: Decimal,
 }
 
 impl TreasuryManager {
+    /// Create a new treasury manager with an initial balance and reserve requirement
     pub fn new(total_balance: Decimal, min_reserve: Decimal) -> Self {
         Self {
             total_balance,

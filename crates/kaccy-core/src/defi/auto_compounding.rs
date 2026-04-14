@@ -264,10 +264,15 @@ impl AutoCompoundingVault {
 /// Vault statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VaultStats {
+    /// Total amount staked in the vault.
     pub total_staked: Decimal,
+    /// Base annual percentage rate before compounding.
     pub base_apr: Decimal,
+    /// Effective annual percentage yield after compounding.
     pub effective_apy: Decimal,
+    /// Number of compounding events per year.
     pub compounds_per_year: u32,
+    /// Total rewards distributed to stakers.
     pub total_rewards_distributed: Decimal,
 }
 
@@ -445,11 +450,17 @@ impl AutoCompoundingManager {
 /// Projected returns for a vault
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectedReturns {
+    /// Initial principal amount invested.
     pub principal: Decimal,
+    /// Final value after compounding over the projection period.
     pub final_value: Decimal,
+    /// Total absolute return (final_value - principal).
     pub total_return: Decimal,
+    /// Total return expressed as a percentage of principal.
     pub total_return_percentage: Decimal,
+    /// Number of years used for projection.
     pub years: u32,
+    /// Effective annual percentage yield applied.
     pub effective_apy: Decimal,
 }
 

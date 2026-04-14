@@ -17,10 +17,15 @@ use std::collections::HashMap;
 /// User tier for position limits
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum UserTier {
+    /// Entry-level tier with standard limits.
     Basic,
+    /// Silver tier with 2x position multiplier.
     Silver,
+    /// Gold tier with 5x position multiplier.
     Gold,
+    /// Platinum tier with 10x position multiplier.
     Platinum,
+    /// Top-tier with 20x position multiplier.
     Diamond,
 }
 

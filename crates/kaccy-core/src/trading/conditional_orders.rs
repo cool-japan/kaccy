@@ -74,12 +74,19 @@ pub enum ConditionalOrderStatus {
 /// Conditional order with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConditionalOrder {
+    /// Unique identifier of this conditional order.
     pub id: Uuid,
+    /// User who placed this order.
     pub user_id: Uuid,
+    /// Specific conditional order type (OCO, OTO, bracket, etc.).
     pub order_type: ConditionalOrderType,
+    /// Current lifecycle status of the order.
     pub status: ConditionalOrderStatus,
+    /// UNIX timestamp when the order was created.
     pub created_at: i64,
+    /// UNIX timestamp of the last status update.
     pub updated_at: i64,
+    /// Arbitrary key-value metadata attached to the order.
     pub metadata: HashMap<String, String>,
 }
 
@@ -238,6 +245,7 @@ pub struct ConditionalOrderManager {
 }
 
 impl ConditionalOrderManager {
+    /// Creates a new empty `ConditionalOrderManager`.
     pub fn new() -> Self {
         Self {
             orders: Arc::new(RwLock::new(HashMap::new())),

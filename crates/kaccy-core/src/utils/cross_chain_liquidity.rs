@@ -130,17 +130,26 @@ impl Bridge {
 pub enum RouteSegment {
     /// Swap within a pool
     Swap {
+        /// Liquidity pool used for this swap.
         pool: LiquidityPool,
+        /// Input token symbol.
         input_token: String,
+        /// Output token symbol.
         output_token: String,
+        /// Amount of input token consumed.
         input_amount: Decimal,
+        /// Amount of output token received.
         output_amount: Decimal,
     },
     /// Bridge between chains
     Bridge {
+        /// Bridge protocol used for cross-chain transfer.
         bridge: Bridge,
+        /// Token being bridged.
         token: String,
+        /// Amount sent into the bridge.
         input_amount: Decimal,
+        /// Amount received on the destination chain.
         output_amount: Decimal,
     },
 }

@@ -21,9 +21,13 @@ pub const API_KEY_PREFIX: &str = "kaccy_pk_";
 /// API key authentication result
 #[derive(Debug, Clone)]
 pub struct ApiKeyAuth {
+    /// Unique API key ID
     pub key_id: Uuid,
+    /// User ID who owns this key
     pub user_id: Uuid,
+    /// Granted scopes for this key
     pub scopes: Vec<String>,
+    /// Optional rate limit (requests per hour)
     pub rate_limit_per_hour: Option<i32>,
 }
 

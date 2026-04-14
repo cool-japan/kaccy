@@ -97,6 +97,7 @@ pub struct AtomicPriceStats {
 }
 
 impl AtomicPriceStats {
+    /// Creates a new `AtomicPriceStats` with zeroed counters.
     pub fn new() -> Self {
         Self {
             total_volume_cents: AtomicU64::new(0),
@@ -382,8 +383,11 @@ impl LockFreeOrderBook {
 /// Pool statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PoolStats {
+    /// Maximum number of orders the pool can hold.
     pub capacity: usize,
+    /// Number of order slots currently in use.
     pub allocated: usize,
+    /// Number of order slots available for allocation.
     pub free: usize,
 }
 

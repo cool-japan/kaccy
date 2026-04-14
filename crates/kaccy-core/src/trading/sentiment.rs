@@ -134,10 +134,15 @@ impl SentimentIndicator {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
 pub enum Sentiment {
+    /// Strongly negative market sentiment (score < −50)
     StronglyBearish,
+    /// Moderately negative market sentiment (score −50 to −20)
     Bearish,
+    /// Balanced market sentiment (score −20 to 20)
     Neutral,
+    /// Moderately positive market sentiment (score 20 to 50)
     Bullish,
+    /// Strongly positive market sentiment (score ≥ 50)
     StronglyBullish,
 }
 
@@ -224,10 +229,15 @@ impl FearGreedIndex {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum FearGreedClassification {
+    /// Index 0–24: extreme fear dominates the market
     ExtremeFear,
+    /// Index 25–44: fear is present
     Fear,
+    /// Index 45–54: sentiment is balanced
     Neutral,
+    /// Index 55–74: greed is present
     Greed,
+    /// Index 75–100: extreme greed dominates the market
     ExtremeGreed,
 }
 
@@ -246,9 +256,13 @@ impl fmt::Display for FearGreedClassification {
 /// Contributing factors to fear and greed index
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FearGreedFactors {
+    /// Normalized price momentum component (0–100)
     pub price_momentum: Decimal,
+    /// Normalized volume momentum component (0–100)
     pub volume_momentum: Decimal,
+    /// Normalized market volatility component (0–100, higher = calmer)
     pub market_volatility: Decimal,
+    /// Normalized social sentiment component (0–100)
     pub social_sentiment: Decimal,
 }
 

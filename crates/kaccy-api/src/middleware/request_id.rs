@@ -11,10 +11,12 @@ pub const REQUEST_ID_HEADER: &str = "x-request-id";
 pub struct RequestId(pub String);
 
 impl RequestId {
+    /// Generate a new unique request ID
     pub fn new() -> Self {
         Self(Uuid::new_v4().to_string())
     }
 
+    /// Return the request ID as a string slice
     pub fn as_str(&self) -> &str {
         &self.0
     }

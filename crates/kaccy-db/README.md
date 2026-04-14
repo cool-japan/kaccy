@@ -2,21 +2,28 @@
 
 Comprehensive database layer for Kaccy Protocol with enterprise-grade features.
 
+**Version:** 0.2.0 | **Tests:** 520 passing
+
 ## Overview
 
 This crate provides a complete PostgreSQL database solution with:
 
-- Connection pooling with retry logic and health monitoring
-- Repository pattern for all domain entities
+- Connection pooling with autoscaling, retry logic, and health monitoring
+- Repository pattern for all domain entities (15 repositories)
 - Redis caching layer with rate limiting and distributed locks
-- Read replica support with automatic query routing and load balancing
+- Multi-tier cache (DashMap + Redis) for hot-path acceleration
+- Read replica support with automatic query routing, load balancing, and failover
 - Database sharding with consistent hashing
-- Multi-region replication with automatic failover
+- Multi-region replication with automatic failover and proximity routing
 - TimescaleDB integration for time-series analytics
-- Query performance monitoring and index analysis
+- Query performance monitoring, index analysis, and cursor pagination
+- Query streaming and dynamic query builder
 - Transaction management with savepoints
-- Comprehensive audit logging
+- Comprehensive audit logging with OpenTelemetry and Prometheus
+- AES-256-GCM encryption and Argon2 password hashing
+- Input sanitization (regex-based)
 - Backup/recovery automation with PITR support
+- Database partitioning support
 
 ## Core Modules
 
@@ -39,13 +46,31 @@ All repositories provide type-safe, async database operations:
 - **`ReputationEventRepository`** - Reputation scoring and history
 - **`CommitmentRepository`** - User commitments with deadlines
 - **`AuditRepository`** - Compliance reporting and audit logs
+- **`ApiKeyRepository`** - API key lifecycle management
+- **`ApiKeyUsageRepository`** - Per-key usage tracking
+- **`AuditEventRepository`** - Structured audit event records
+- **`SessionRepository`** - User session management
+- **`BackgroundJobRepository`** - Async job queue persistence
+- **`NotificationPreferencesRepository`** - Per-user notification settings
+- **`SystemConfigRepository`** - Dynamic system configuration
 
 ### Performance & Analytics
 
-- **`cache`** - Redis caching with rate limiting and distributed locks
+- **`cache`** - Multi-tier caching (DashMap + Redis) with rate limiting and distributed locks
 - **`query_logger`** - Query performance monitoring and slow query detection
+- **`query_stream`** - Streaming result sets for large query output
+- **`query_builder`** - Dynamic, composable query construction
+- **`cursor_pagination`** - Cursor-based pagination for stable result sets
 - **`index_analyzer`** - Index optimization recommendations
 - **`analytics`** - TimescaleDB integration with materialized views for dashboards
+- **`partitioning`** - Table partitioning strategies
+
+### Security
+
+- **`encryption`** - AES-256-GCM field-level encryption
+- **`password`** - Argon2 password hashing and verification
+- **`sanitization`** - Input sanitization using regex-based validation
+- **`audit_logging`** - Structured audit trails with OpenTelemetry and Prometheus
 
 ### Operations
 
@@ -151,16 +176,24 @@ Environment variables:
 kaccy-db/
 ├── src/
 │   ├── lib.rs                 # Public API
-│   ├── pool.rs                # Connection pooling
-│   ├── cache.rs               # Redis caching
-│   ├── replica.rs             # Read replicas
-│   ├── sharding.rs            # Database sharding
-│   ├── multi_region.rs        # Geographic replication
+│   ├── pool.rs                # Connection pooling with autoscaling
+│   ├── cache.rs               # Multi-tier cache (DashMap + Redis)
+│   ├── replica.rs             # Read replicas with load balancing
+│   ├── sharding.rs            # Consistent-hash sharding
+│   ├── multi_region.rs        # Geographic replication & failover
+│   ├── partitioning.rs        # Table partitioning
 │   ├── analytics.rs           # TimescaleDB & materialized views
 │   ├── query_logger.rs        # Performance monitoring
+│   ├── query_stream.rs        # Streaming query results
+│   ├── query_builder.rs       # Dynamic query construction
+│   ├── cursor_pagination.rs   # Cursor-based pagination
 │   ├── index_analyzer.rs      # Index optimization
-│   ├── backup.rs              # Backup/recovery
+│   ├── backup.rs              # Backup/recovery & PITR
 │   ├── transaction.rs         # Transaction management
+│   ├── encryption.rs          # AES-256-GCM encryption
+│   ├── password.rs            # Argon2 hashing
+│   ├── sanitization.rs        # Input sanitization
+│   ├── audit_logging.rs       # Audit trails & observability
 │   ├── error.rs               # Error types
 │   └── repositories/
 │       ├── user.rs
@@ -170,7 +203,14 @@ kaccy-db/
 │       ├── trade.rs
 │       ├── reputation_event.rs
 │       ├── commitment.rs
-│       └── audit.rs
+│       ├── audit.rs
+│       ├── api_key.rs
+│       ├── api_key_usage.rs
+│       ├── audit_event.rs
+│       ├── session.rs
+│       ├── background_job.rs
+│       ├── notification_preferences.rs
+│       └── system_config.rs
 ├── migrations/                # SQL migrations
 └── Cargo.toml
 ```
@@ -199,9 +239,14 @@ See `migrations/` directory for the current schema. Key tables:
 
 ## Testing
 
+The crate ships with **520 passing tests** covering all repositories, connection management, caching, sharding, encryption, and observability.
+
 ```bash
 # Run with test database
 DATABASE_URL=postgresql://test@localhost/kaccy_test cargo test -p kaccy-db
+
+# Run with nextest
+DATABASE_URL=postgresql://test@localhost/kaccy_test cargo nextest run -p kaccy-db
 
 # Run migrations
 sqlx migrate run

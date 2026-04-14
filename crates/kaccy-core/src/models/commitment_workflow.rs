@@ -343,8 +343,11 @@ impl CommitmentWorkflowManager {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum CommitmentComplexity {
+    /// Low-effort commitment with straightforward execution.
     Simple,
+    /// Moderate effort with some conditional steps.
     Medium,
+    /// High-effort commitment requiring multiple coordinated steps.
     Complex,
 }
 
@@ -362,11 +365,17 @@ impl fmt::Display for CommitmentComplexity {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
 pub enum CommitmentUrgency {
+    /// No urgency assigned.
     None,
+    /// Low urgency; can be deferred.
     Low,
+    /// Moderate urgency; should be addressed soon.
     Medium,
+    /// High urgency; requires prompt attention.
     High,
+    /// Critical urgency; requires immediate action.
     Critical,
+    /// The commitment deadline has already passed.
     Overdue,
 }
 

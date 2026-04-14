@@ -43,8 +43,11 @@ use crate::client::BitcoinClient;
 use crate::error::BitcoinError;
 use crate::seed_recovery::Mnemonic;
 use bitcoin::Address;
+use bitcoin::bip32::{DerivationPath, Xpriv};
+use bitcoin::secp256k1::Secp256k1;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::str::FromStr;
 
 /// BIP 44/49/84/86 derivation standards
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -286,44 +289,119 @@ impl WalletRecovery {
         })
     }
 
-    /// Discover addresses for a specific derivation path using gap limit
+    /// Discover addresses for a specific derivation path using gap limit.
+    ///
+    /// Derives addresses using full BIP 32 derivation from the seed bytes.
+    /// The address type produced depends on the `standard`:
+    /// - BIP 44 → P2PKH (legacy)
+    /// - BIP 49 → P2SH-P2WPKH (nested SegWit)
+    /// - BIP 84 → P2WPKH (native SegWit)
+    /// - BIP 86 → P2TR (Taproot)
     fn discover_addresses(
         &self,
-        _seed: &[u8],
+        seed: &[u8],
         base_path: &str,
         is_change: bool,
         standard: DerivationStandard,
     ) -> Result<Vec<DiscoveredAddress>, BitcoinError> {
+        let secp = Secp256k1::new();
+        let network: bitcoin::Network = self.client.network().into();
+
+        // Derive the root extended private key from the raw seed bytes.
+        let root = Xpriv::new_master(network, seed)
+            .map_err(|e| BitcoinError::DerivationFailed(format!("Root key error: {}", e)))?;
+
         let mut addresses = Vec::new();
         let mut gap_count = 0;
-        let mut index = 0;
+        let mut index = 0u32;
 
-        let chain_index = if is_change { 1 } else { 0 };
+        let chain_index: u32 = if is_change { 1 } else { 0 };
 
         while gap_count < self.config.gap_limit && index < self.config.max_addresses_per_chain {
-            // Derive address at this index
-            let path = format!("{}/{}/{}", base_path, chain_index, index);
+            // Full BIP 32 path: e.g. m/84'/0'/0'/0/5
+            let full_path_str = format!("{}/{}/{}", base_path, chain_index, index);
+            let derivation_path = DerivationPath::from_str(&full_path_str).map_err(|e| {
+                BitcoinError::DerivationFailed(format!("Invalid path '{}': {}", full_path_str, e))
+            })?;
 
-            // TODO: Actually derive the address from the seed using the path
-            // For now, this is a placeholder that would need proper BIP 32 derivation
-            let address_str = format!("placeholder_address_{}_{}", standard.purpose(), index);
+            let child_xpriv = root.derive_priv(&secp, &derivation_path).map_err(|e| {
+                BitcoinError::DerivationFailed(format!(
+                    "Derivation failed at '{}': {}",
+                    full_path_str, e
+                ))
+            })?;
 
-            // Check if address has been used
+            let keypair = child_xpriv.to_keypair(&secp);
+            let address_str = match standard {
+                DerivationStandard::Bip44 => {
+                    // P2PKH — legacy address
+                    let public_key = bitcoin::PublicKey::new(keypair.public_key());
+                    Address::p2pkh(public_key, network).to_string()
+                }
+                DerivationStandard::Bip49 => {
+                    // P2SH-P2WPKH — nested SegWit
+                    // CompressedPublicKey::try_from requires bitcoin::PublicKey, not secp256k1::PublicKey
+                    let raw_pk = bitcoin::PublicKey::new(keypair.public_key());
+                    let compressed =
+                        bitcoin::CompressedPublicKey::try_from(raw_pk).map_err(|e| {
+                            BitcoinError::DerivationFailed(format!(
+                                "Public key compression failed: {}",
+                                e
+                            ))
+                        })?;
+                    Address::p2shwpkh(&compressed, network).to_string()
+                }
+                DerivationStandard::Bip84 => {
+                    // P2WPKH — native SegWit (bech32)
+                    let raw_pk = bitcoin::PublicKey::new(keypair.public_key());
+                    let compressed =
+                        bitcoin::CompressedPublicKey::try_from(raw_pk).map_err(|e| {
+                            BitcoinError::DerivationFailed(format!(
+                                "Public key compression failed: {}",
+                                e
+                            ))
+                        })?;
+                    let hrp = match network {
+                        bitcoin::Network::Bitcoin => bitcoin::KnownHrp::Mainnet,
+                        bitcoin::Network::Testnet | bitcoin::Network::Signet => {
+                            bitcoin::KnownHrp::Testnets
+                        }
+                        bitcoin::Network::Regtest => bitcoin::KnownHrp::Regtest,
+                        _ => bitcoin::KnownHrp::Testnets,
+                    };
+                    Address::p2wpkh(&compressed, hrp).to_string()
+                }
+                DerivationStandard::Bip86 => {
+                    // P2TR — Taproot (bech32m)
+                    let internal_key = keypair.x_only_public_key().0;
+                    let hrp = match network {
+                        bitcoin::Network::Bitcoin => bitcoin::KnownHrp::Mainnet,
+                        bitcoin::Network::Testnet | bitcoin::Network::Signet => {
+                            bitcoin::KnownHrp::Testnets
+                        }
+                        bitcoin::Network::Regtest => bitcoin::KnownHrp::Regtest,
+                        _ => bitcoin::KnownHrp::Testnets,
+                    };
+                    Address::p2tr(&secp, internal_key, None, hrp).to_string()
+                }
+            };
+
+            // Check if address has been used (balance or transaction history).
             let (balance, tx_count) = self.check_address_usage(&address_str)?;
 
             if balance > 0 || tx_count > 0 {
-                // Found activity, reset gap counter
+                // Found activity — reset gap counter and record the address.
                 gap_count = 0;
                 addresses.push(DiscoveredAddress {
-                    address: address_str.clone(),
-                    derivation_path: path.clone(),
+                    address: address_str,
+                    derivation_path: full_path_str,
                     standard,
                     balance_sats: balance,
                     tx_count,
                     is_change,
                 });
             } else {
-                // No activity, increment gap counter
+                // No activity at this index — advance the gap counter.
                 gap_count += 1;
             }
 

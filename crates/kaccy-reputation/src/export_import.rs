@@ -52,74 +52,113 @@ type RatingRow = (Uuid, Uuid, Uuid, Uuid, i32, Option<String>, DateTime<Utc>);
 /// Complete export of all reputation data for a user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserReputationExport {
+    /// User whose data is exported.
     pub user_id: Uuid,
+    /// Timestamp of the export operation.
     pub exported_at: DateTime<Utc>,
+    /// Current reputation score snapshot.
     pub score: ReputationScore,
+    /// History of tier changes.
     pub tier_history: Vec<TierHistoryExport>,
+    /// History of score snapshots.
     pub score_history: Vec<ScoreHistoryExport>,
+    /// All reputation events.
     pub events: Vec<EventExport>,
+    /// All commitments created by this user.
     pub commitments: Vec<CommitmentExport>,
+    /// All ratings this user gave to others.
     pub ratings_given: Vec<RatingExport>,
+    /// All ratings this user received.
     pub ratings_received: Vec<RatingExport>,
 }
 
 /// Tier history record for export
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TierHistoryExport {
+    /// Tier the user transitioned to.
     pub tier: ReputationTier,
+    /// Score at the time of the tier change.
     pub score: Decimal,
+    /// When the tier change occurred.
     pub changed_at: DateTime<Utc>,
 }
 
 /// Score history record for export
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScoreHistoryExport {
+    /// Overall score at this snapshot.
     pub score: Decimal,
+    /// Component scores at this snapshot.
     pub components: ScoreComponents,
+    /// Date of the snapshot.
     pub snapshot_date: DateTime<Utc>,
 }
 
 /// Event record for export
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventExport {
+    /// Unique identifier for this event.
     pub event_id: Uuid,
+    /// String representation of the event type.
     pub event_type: String,
+    /// Score delta applied by this event.
     pub delta: Decimal,
+    /// Human-readable reason for the event.
     pub reason: String,
+    /// When this event was recorded.
     pub created_at: DateTime<Utc>,
 }
 
 /// Commitment record for export
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommitmentExport {
+    /// Unique commitment identifier.
     pub commitment_id: Uuid,
+    /// Token associated with the commitment.
     pub token_id: Uuid,
+    /// Short title of the commitment.
     pub title: String,
+    /// Full description of the commitment.
     pub description: String,
+    /// Deadline for the commitment.
     pub deadline: DateTime<Utc>,
+    /// Current status string.
     pub status: String,
+    /// When the commitment was created.
     pub created_at: DateTime<Utc>,
+    /// When the commitment was completed, if applicable.
     pub completed_at: Option<DateTime<Utc>>,
 }
 
 /// Rating record for export
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RatingExport {
+    /// Unique rating identifier.
     pub rating_id: Uuid,
+    /// User who gave the rating.
     pub rater_user_id: Uuid,
+    /// User (token issuer) who received the rating.
     pub issuer_user_id: Uuid,
+    /// Token the rating applies to.
     pub token_id: Uuid,
+    /// Numeric rating value.
     pub rating: i32,
+    /// Optional written feedback.
     pub feedback: Option<String>,
+    /// When the rating was created.
     pub created_at: DateTime<Utc>,
 }
 
 /// Bulk export for multiple users
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BulkReputationExport {
+    /// Timestamp of the export operation.
     pub exported_at: DateTime<Utc>,
+    /// Schema version for this export format.
     pub version: String,
+    /// Number of users included in this export.
     pub user_count: usize,
+    /// Per-user reputation data.
     pub users: Vec<UserReputationExport>,
 }
 
@@ -566,10 +605,15 @@ impl ExportImportService {
 /// Export statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExportStats {
+    /// Number of users included in the export.
     pub total_users: usize,
+    /// Total number of reputation events exported.
     pub total_events: usize,
+    /// Total number of commitment records exported.
     pub total_commitments: usize,
+    /// Total number of rating records exported.
     pub total_ratings: usize,
+    /// Approximate byte size of the serialized export.
     pub export_size_bytes: usize,
 }
 

@@ -11,19 +11,30 @@ use uuid::Uuid;
 /// Order event for HFT analysis
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrderEvent {
+    /// Identifier of the order this event belongs to
     pub order_id: Uuid,
+    /// Type of lifecycle event
     pub event_type: OrderEventType,
+    /// Timestamp when the event occurred
     pub timestamp: DateTime<Utc>,
+    /// Price associated with this event (if applicable)
     pub price: Option<Decimal>,
+    /// Quantity associated with this event (if applicable)
     pub quantity: Option<Decimal>,
 }
 
+/// Type of order lifecycle event
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum OrderEventType {
+    /// Order was submitted to the exchange
     Submitted,
+    /// Order was fully filled
     Filled,
+    /// Order was partially filled
     PartiallyFilled,
+    /// Order was cancelled
     Cancelled,
+    /// Order was rejected by the exchange
     Rejected,
 }
 
@@ -45,11 +56,14 @@ pub struct HftMetrics {
 /// HFT metrics analyzer
 #[derive(Debug)]
 pub struct HftAnalyzer {
+    /// Sliding window of recent order events
     events: Vec<OrderEvent>,
+    /// Maximum number of events to retain
     window_size: usize,
 }
 
 impl HftAnalyzer {
+    /// Create a new HFT analyzer with the given event window size
     pub fn new(window_size: usize) -> Self {
         Self {
             events: Vec::new(),
@@ -57,6 +71,7 @@ impl HftAnalyzer {
         }
     }
 
+    /// Add an order event to the analyzer's window
     pub fn add_event(&mut self, event: OrderEvent) {
         self.events.push(event);
 
@@ -183,11 +198,14 @@ impl HftAnalyzer {
 /// Latency tracker
 #[derive(Debug)]
 pub struct LatencyTracker {
+    /// Sliding window of latency measurements in microseconds
     samples: VecDeque<f64>,
+    /// Maximum number of samples to retain
     max_samples: usize,
 }
 
 impl LatencyTracker {
+    /// Create a new latency tracker with the given sample window
     pub fn new(max_samples: usize) -> Self {
         Self {
             samples: VecDeque::with_capacity(max_samples),
@@ -195,6 +213,7 @@ impl LatencyTracker {
         }
     }
 
+    /// Record a latency sample in microseconds
     pub fn record(&mut self, latency_us: f64) {
         if self.samples.len() >= self.max_samples {
             self.samples.pop_front();
@@ -202,6 +221,7 @@ impl LatencyTracker {
         self.samples.push_back(latency_us);
     }
 
+    /// Return the mean latency of all samples
     pub fn mean(&self) -> f64 {
         if self.samples.is_empty() {
             return 0.0;
@@ -209,6 +229,7 @@ impl LatencyTracker {
         self.samples.iter().sum::<f64>() / self.samples.len() as f64
     }
 
+    /// Return the `p`th percentile latency (p is 0–100)
     pub fn percentile(&self, p: f64) -> f64 {
         if self.samples.is_empty() {
             return 0.0;
@@ -221,6 +242,7 @@ impl LatencyTracker {
         sorted[idx.min(sorted.len() - 1)]
     }
 
+    /// Return the maximum latency sample
     pub fn max(&self) -> f64 {
         self.samples
             .iter()
@@ -229,6 +251,7 @@ impl LatencyTracker {
             .unwrap_or(0.0)
     }
 
+    /// Return the minimum latency sample
     pub fn min(&self) -> f64 {
         self.samples
             .iter()
@@ -241,6 +264,7 @@ impl LatencyTracker {
 /// Adverse selection detector
 #[derive(Debug)]
 pub struct AdverseSelectionDetector {
+    /// Historical trade records used to compute adverse selection cost
     trades: Vec<TradeRecord>,
 }
 
@@ -262,6 +286,7 @@ enum TradeSide {
 }
 
 impl AdverseSelectionDetector {
+    /// Create a new adverse selection detector
     pub fn new() -> Self {
         Self { trades: Vec::new() }
     }
@@ -312,6 +337,7 @@ pub struct InventoryRiskCalculator {
 }
 
 impl InventoryRiskCalculator {
+    /// Create a new inventory risk calculator
     pub fn new(target_inventory: Decimal, max_deviation: Decimal) -> Self {
         Self {
             target_inventory,

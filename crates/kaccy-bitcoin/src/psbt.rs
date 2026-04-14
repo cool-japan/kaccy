@@ -32,9 +32,13 @@ pub struct PsbtBuilder {
 /// UTXO input for transaction
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UtxoInput {
+    /// Transaction ID of the UTXO
     pub txid: String,
+    /// Output index within the transaction
     pub vout: u32,
+    /// Amount in satoshis
     pub amount_sats: u64,
+    /// Locking script of the UTXO
     pub script_pubkey: String,
     /// Optional redeem script for P2SH
     pub redeem_script: Option<String>,
@@ -45,7 +49,9 @@ pub struct UtxoInput {
 /// Transaction output
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TxOutput {
+    /// Destination address
     pub address: String,
+    /// Amount in satoshis
     pub amount_sats: u64,
 }
 
@@ -310,11 +316,14 @@ fn base64_encode(data: &[u8]) -> String {
 
 /// PSBT manager for handling withdrawals and payouts
 pub struct PsbtManager {
+    /// Bitcoin network to operate on
     network: Network,
+    /// Default fee rate in sat/vB when not specified
     default_fee_rate: u64,
 }
 
 impl PsbtManager {
+    /// Create a new PSBT manager for the given network
     pub fn new(network: Network) -> Self {
         Self {
             network,
@@ -520,26 +529,37 @@ fn base64_decode(input: &str) -> Result<Vec<u8>> {
 /// Signed transaction ready for broadcast
 #[derive(Debug, Clone, Serialize)]
 pub struct SignedTransaction {
+    /// Transaction ID
     pub txid: String,
+    /// Raw transaction hex
     pub raw_hex: String,
+    /// Virtual size in vBytes
     pub vsize: u64,
+    /// Transaction weight units
     pub weight: u64,
 }
 
 /// Withdrawal request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WithdrawalRequest {
+    /// User requesting the withdrawal
     pub user_id: Uuid,
+    /// Destination Bitcoin address
     pub destination_address: String,
+    /// Amount to withdraw in satoshis
     pub amount_sats: u64,
+    /// Optional fee rate override in sat/vB
     pub fee_rate: Option<u64>,
 }
 
 /// Withdrawal result
 #[derive(Debug, Clone, Serialize)]
 pub struct WithdrawalResult {
+    /// Unique identifier for this withdrawal
     pub withdrawal_id: Uuid,
+    /// The created PSBT details
     pub psbt: PsbtResult,
+    /// Current status of the withdrawal
     pub status: WithdrawalStatus,
 }
 

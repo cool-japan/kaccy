@@ -44,35 +44,55 @@ fn default_per_page() -> i64 {
 /// Response for jobs list
 #[derive(Debug, Serialize)]
 pub struct ListJobsResponse {
+    /// List of background jobs for this page
     pub jobs: Vec<BackgroundJob>,
+    /// Total number of matching jobs
     pub total: i64,
+    /// Current page number (1-indexed)
     pub page: i64,
+    /// Number of items per page
     pub per_page: i64,
+    /// Total number of pages
     pub total_pages: i64,
 }
 
 /// Job statistics response
 #[derive(Debug, Serialize)]
 pub struct JobStatsResponse {
+    /// Total number of jobs in the system
     pub total_jobs: i64,
+    /// Number of jobs waiting to be processed
     pub pending_jobs: i64,
+    /// Number of jobs currently running
     pub running_jobs: i64,
+    /// Number of jobs that completed successfully
     pub completed_jobs: i64,
+    /// Number of jobs that failed
     pub failed_jobs: i64,
+    /// Per-type job statistics breakdown
     pub type_statistics: Vec<JobTypeStats>,
+    /// Current number of jobs waiting in the queue
     pub queue_depth: i64,
 }
 
 /// Create job request
 #[derive(Debug, Deserialize)]
 pub struct CreateJobRequest {
+    /// The type of job to create
     pub job_type: String,
+    /// Job-specific payload data
     pub payload: serde_json::Value,
+    /// Job priority (higher values run first)
     pub priority: Option<i32>,
+    /// Maximum number of retry attempts on failure
     pub max_retries: Option<i32>,
+    /// Backoff delay between retries in milliseconds
     pub retry_backoff_ms: Option<i32>,
+    /// Optional future timestamp to delay job execution
     pub scheduled_at: Option<DateTime<Utc>>,
+    /// Optional expiry timestamp after which the job will not run
     pub expires_at: Option<DateTime<Utc>>,
+    /// Optional correlation ID for tracing related jobs
     pub correlation_id: Option<String>,
 }
 

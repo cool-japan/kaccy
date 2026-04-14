@@ -311,12 +311,19 @@ impl LiquidStakingPool {
 /// Pool statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PoolStats {
+    /// Total amount of native tokens staked in the pool.
     pub total_staked: Decimal,
+    /// Total supply of the liquid staking token.
     pub st_token_supply: Decimal,
+    /// Current exchange rate between staking token and native token.
     pub exchange_rate: Decimal,
+    /// Current annual percentage yield for stakers.
     pub apy: Decimal,
+    /// Total rewards accumulated but not yet distributed.
     pub accumulated_rewards: Decimal,
+    /// Total amount slashed from validators.
     pub total_slashed: Decimal,
+    /// Number of slashing events that have occurred.
     pub slashing_events_count: usize,
 }
 

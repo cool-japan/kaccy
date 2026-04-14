@@ -10,6 +10,7 @@ use uuid::Uuid;
 /// Audit log entry for tracking all important system actions
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AuditLog {
+    /// Unique identifier of this audit log entry.
     pub log_id: Uuid,
     /// User who performed the action (None for system actions)
     pub user_id: Option<Uuid>,
@@ -35,6 +36,7 @@ pub struct AuditLog {
     pub request_id: Option<String>,
     /// Severity level
     pub severity: AuditSeverity,
+    /// Timestamp when this log entry was created
     pub created_at: DateTime<Utc>,
 }
 
@@ -44,75 +46,126 @@ pub struct AuditLog {
 #[derive(Default)]
 pub enum AuditAction {
     // User actions
+    /// New user registration
     UserRegister,
+    /// User login
     UserLogin,
+    /// User logout
     UserLogout,
+    /// User profile updated
     UserUpdate,
+    /// User account deleted
     UserDelete,
+    /// Password changed
     PasswordChange,
+    /// Password reset requested
     PasswordReset,
+    /// Email address verified
     EmailVerify,
+    /// Two-factor authentication enabled
     TwoFactorEnable,
+    /// Two-factor authentication disabled
     TwoFactorDisable,
 
     // KYC actions
+    /// KYC documents submitted
     KycSubmit,
+    /// KYC submission approved
     KycApprove,
+    /// KYC submission rejected
     KycReject,
+    /// KYC information updated
     KycUpdate,
 
     // Token actions
+    /// New token created
     TokenCreate,
+    /// Token metadata or parameters updated
     TokenUpdate,
+    /// Token trading paused
     TokenPause,
+    /// Token closed
     TokenClose,
+    /// Token metadata updated
     TokenMetadataUpdate,
 
     // Order/Trade actions
+    /// Order placed
     OrderCreate,
+    /// Order cancelled
     OrderCancel,
+    /// Order filled
     OrderFill,
+    /// Trade executed
     TradeExecute,
 
     // Payment actions
+    /// Payment created
     PaymentCreate,
+    /// Payment transaction detected on chain
     PaymentDetected,
+    /// Payment confirmed by sufficient block confirmations
     PaymentConfirmed,
+    /// Payment expired
     PaymentExpired,
+    /// Payment refunded
     PaymentRefund,
 
     // Balance actions
+    /// Funds deposited
     BalanceDeposit,
+    /// Funds withdrawn
     BalanceWithdraw,
+    /// Funds transferred between accounts
     BalanceTransfer,
+    /// Manual balance adjustment by admin
     BalanceAdjustment,
 
     // Reputation actions
+    /// New commitment created
     CommitmentCreate,
+    /// Evidence submitted for a commitment
     CommitmentSubmitEvidence,
+    /// Commitment verified
     CommitmentVerify,
+    /// Reputation score manually adjusted
     ReputationAdjust,
 
     // Admin actions
+    /// Admin access granted to a user
     AdminAccessGrant,
+    /// Admin access revoked from a user
     AdminAccessRevoke,
+    /// Generic admin action performed (default)
     #[default]
     AdminActionPerformed,
+    /// System configuration updated
     SystemConfigUpdate,
+    /// Emergency stop triggered
     EmergencyStop,
+    /// Emergency stop lifted
     EmergencyResume,
 
     // Security events
+    /// Login attempt failed
     LoginFailed,
+    /// Access denied to a resource
     AccessDenied,
+    /// Suspicious activity detected
     SuspiciousActivity,
+    /// Rate limit exceeded
     RateLimitExceeded,
+    /// Security alert triggered
     SecurityAlert,
 
     // Compliance actions
+    /// AML screening performed
     AmlScreening,
+    /// Compliance report generated
     ComplianceReport,
+    /// User data exported
     DataExport,
+    /// User data deleted per retention policy
     DataDelete,
 }
 
@@ -244,6 +297,7 @@ pub struct AuditLogBuilder {
 }
 
 impl AuditLogBuilder {
+    /// Create a new builder with default values
     pub fn new() -> Self {
         Self {
             user_id: None,
@@ -261,63 +315,75 @@ impl AuditLogBuilder {
         }
     }
 
+    /// Set the user who performed the action
     pub fn user_id(mut self, user_id: Uuid) -> Self {
         self.user_id = Some(user_id);
         self
     }
 
+    /// Set the type of action being audited
     pub fn action(mut self, action: AuditAction) -> Self {
         self.action = Some(action);
         self
     }
 
+    /// Set the resource type and optional resource ID
     pub fn resource(mut self, resource_type: String, resource_id: Option<Uuid>) -> Self {
         self.resource_type = Some(resource_type);
         self.resource_id = resource_id;
         self
     }
 
+    /// Attach arbitrary JSON details
     pub fn details(mut self, details: JsonValue) -> Self {
         self.details = Some(details);
         self
     }
 
+    /// Set the result of the action
     pub fn result(mut self, result: AuditResult) -> Self {
         self.result = result;
         self
     }
 
+    /// Record an error message and mark the result as failure
     pub fn error(mut self, error_message: String) -> Self {
         self.error_message = Some(error_message);
         self.result = AuditResult::Failure;
         self
     }
 
+    /// Set the originating IP address
     pub fn ip_address(mut self, ip: String) -> Self {
         self.ip_address = Some(ip);
         self
     }
 
+    /// Set the user-agent string
     pub fn user_agent(mut self, ua: String) -> Self {
         self.user_agent = Some(ua);
         self
     }
 
+    /// Set the API endpoint that was called
     pub fn endpoint(mut self, endpoint: String) -> Self {
         self.endpoint = Some(endpoint);
         self
     }
 
+    /// Set a correlation request ID
     pub fn request_id(mut self, request_id: String) -> Self {
         self.request_id = Some(request_id);
         self
     }
 
+    /// Set the severity level of this audit entry
     pub fn severity(mut self, severity: AuditSeverity) -> Self {
         self.severity = severity;
         self
     }
 
+    /// Build the [`AuditLog`], returning an error if required fields are missing
     pub fn build(self) -> Result<AuditLog, String> {
         let action = self
             .action
@@ -351,40 +417,64 @@ impl Default for AuditLogBuilder {
 /// Query parameters for searching audit logs
 #[derive(Debug, Deserialize)]
 pub struct AuditLogQuery {
+    /// Filter by user ID
     pub user_id: Option<Uuid>,
+    /// Filter by action type
     pub action: Option<AuditAction>,
+    /// Filter by resource type string
     pub resource_type: Option<String>,
+    /// Filter by specific resource ID
     pub resource_id: Option<Uuid>,
+    /// Filter by action result
     pub result: Option<AuditResult>,
+    /// Filter by severity level
     pub severity: Option<AuditSeverity>,
+    /// Lower bound of the date range
     pub start_date: Option<DateTime<Utc>>,
+    /// Upper bound of the date range
     pub end_date: Option<DateTime<Utc>>,
+    /// Page number for pagination
     pub page: Option<u32>,
+    /// Maximum number of results per page
     pub limit: Option<u32>,
 }
 
-/// Audit log statistics
+/// Aggregate statistics over a set of audit logs
 #[derive(Debug, Serialize)]
 pub struct AuditStats {
+    /// Total number of audit events
     pub total_events: i64,
+    /// Per-severity event counts
     pub events_by_severity: Vec<SeverityCount>,
+    /// Per-action event counts
     pub events_by_action: Vec<ActionCount>,
+    /// Percentage of events that succeeded
     pub success_rate_percent: f64,
+    /// Total security events
     pub security_events_count: i64,
+    /// Total compliance events
     pub compliance_events_count: i64,
+    /// Number of failed login attempts
     pub failed_login_attempts: i64,
+    /// Critical events in the last 24 hours
     pub critical_events_last_24h: i64,
 }
 
+/// Count of audit events for a specific severity level
 #[derive(Debug, Serialize)]
 pub struct SeverityCount {
+    /// Severity level
     pub severity: AuditSeverity,
+    /// Number of events at this severity
     pub count: i64,
 }
 
+/// Count of audit events for a specific action type
 #[derive(Debug, Serialize)]
 pub struct ActionCount {
+    /// Action type
     pub action: AuditAction,
+    /// Number of events for this action
     pub count: i64,
 }
 

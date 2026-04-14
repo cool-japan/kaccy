@@ -52,7 +52,9 @@ pub enum TapscriptNode {
     Leaf(TapscriptLeaf),
     /// Branch node with left and right children
     Branch {
+        /// Left child of the branch
         left: Box<TapscriptNode>,
+        /// Right child of the branch
         right: Box<TapscriptNode>,
     },
 }

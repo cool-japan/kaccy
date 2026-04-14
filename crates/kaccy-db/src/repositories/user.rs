@@ -10,17 +10,29 @@ use crate::helpers::calculate_offset;
 /// User data from database
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct UserRow {
+    /// Unique identifier of the user.
     pub user_id: Uuid,
+    /// User's email address (unique, used for login).
     pub email: String,
+    /// Bcrypt or Argon2 hash of the user's password.
     pub password_hash: String,
+    /// Unique username chosen by the user.
     pub username: String,
+    /// Optional human-readable display name.
     pub display_name: Option<String>,
+    /// Optional user bio or description.
     pub bio: Option<String>,
+    /// Optional URL of the user's avatar image.
     pub avatar_url: Option<String>,
+    /// Optional BTC address for withdrawals.
     pub btc_withdrawal_address: Option<String>,
+    /// Timestamp when the account was created.
     pub created_at: chrono::DateTime<chrono::Utc>,
+    /// KYC verification status (e.g. "pending", "verified", "rejected").
     pub kyc_status: String,
+    /// Reputation score in range [0, 1000].
     pub reputation_score: Decimal,
+    /// User role (e.g. "user", "admin", "deleted").
     pub role: String,
 }
 
@@ -30,6 +42,7 @@ pub struct UserRepository {
 }
 
 impl UserRepository {
+    /// Create a new `UserRepository` backed by the given connection pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -579,12 +592,19 @@ impl UserRepository {
 /// User statistics summary
 #[derive(Debug, Clone)]
 pub struct UserStatistics {
+    /// Total number of non-deleted users.
     pub total_active: i64,
+    /// Number of users with the "admin" role.
     pub total_admins: i64,
+    /// Number of users with the "user" role.
     pub total_users: i64,
+    /// Number of soft-deleted users.
     pub total_deleted: i64,
+    /// Number of users awaiting KYC review.
     pub kyc_pending: i64,
+    /// Number of users who passed KYC verification.
     pub kyc_verified: i64,
+    /// Number of users whose KYC was rejected.
     pub kyc_rejected: i64,
 }
 

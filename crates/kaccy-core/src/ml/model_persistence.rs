@@ -34,6 +34,7 @@ pub struct ModelMetadata {
 }
 
 impl ModelMetadata {
+    /// Create a new model metadata record with version 1.0.0
     pub fn new(name: String, model_type: String) -> Self {
         let now = Utc::now();
         Self {
@@ -50,36 +51,43 @@ impl ModelMetadata {
         }
     }
 
+    /// Set the version string on this metadata
     pub fn with_version(mut self, version: String) -> Self {
         self.version = version;
         self
     }
 
+    /// Add a named hyperparameter to this metadata
     pub fn with_parameter(mut self, key: String, value: String) -> Self {
         self.parameters.insert(key, value);
         self
     }
 
+    /// Add a named performance metric to this metadata
     pub fn with_metric(mut self, key: String, value: f64) -> Self {
         self.metrics.insert(key, value);
         self
     }
 
+    /// Set a human-readable description on this metadata
     pub fn with_description(mut self, description: String) -> Self {
         self.description = Some(description);
         self
     }
 
+    /// Set the categorization tags on this metadata
     pub fn with_tags(mut self, tags: Vec<String>) -> Self {
         self.tags = tags;
         self
     }
 
+    /// Update the version string and refresh the `updated_at` timestamp
     pub fn update_version(&mut self, new_version: String) {
         self.version = new_version;
         self.updated_at = Utc::now();
     }
 
+    /// Replace all performance metrics and refresh the `updated_at` timestamp
     pub fn update_metrics(&mut self, metrics: HashMap<String, f64>) {
         self.metrics = metrics;
         self.updated_at = Utc::now();
@@ -124,12 +132,16 @@ pub struct ModelVersionManager {
 /// Model version information
 #[derive(Debug, Clone)]
 pub struct ModelVersion {
+    /// Metadata describing this version
     pub metadata: ModelMetadata,
+    /// Filesystem path to the serialized model file
     pub path: PathBuf,
+    /// Whether this is the currently active version
     pub is_active: bool,
 }
 
 impl ModelVersionManager {
+    /// Create a new model version manager rooted at the given directory
     pub fn new<P: AsRef<Path>>(base_dir: P) -> Self {
         Self {
             base_dir: base_dir.as_ref().to_path_buf(),
@@ -187,9 +199,13 @@ impl ModelVersionManager {
 /// Model comparison result
 #[derive(Debug, Clone)]
 pub struct ModelComparison {
+    /// Name of the first model
     pub model_a: String,
+    /// Name of the second model
     pub model_b: String,
+    /// Per-metric differences (model_a value minus model_b value)
     pub metric_diffs: HashMap<String, f64>,
+    /// Name of the model that performed better on the comparison metric, if any
     pub better_model: Option<String>,
 }
 
@@ -241,6 +257,7 @@ pub struct ModelRegistry {
 }
 
 impl ModelRegistry {
+    /// Create a new empty model registry
     pub fn new() -> Self {
         Self {
             models: HashMap::new(),

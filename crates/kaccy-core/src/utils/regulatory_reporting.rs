@@ -65,21 +65,32 @@ pub struct TradeReport {
 /// Instrument type for regulatory classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum InstrumentType {
+    /// Stock or share
     Equity,
+    /// Fixed-income instrument
     Bond,
+    /// Options, futures, or other derivative
     Derivative,
+    /// Physical commodity
     Commodity,
+    /// Foreign-exchange pair
     Forex,
+    /// Cryptocurrency or digital asset
     Crypto,
+    /// Instrument that does not fit another category
     Other,
 }
 
 /// Trade type classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TradeType {
+    /// Purchase of an instrument
     Buy,
+    /// Sale of an instrument
     Sell,
+    /// Exchange of one asset for another
     Exchange,
+    /// Transfer of ownership without a market transaction
     Transfer,
 }
 
@@ -113,21 +124,32 @@ pub struct TransactionReport {
 /// Transaction type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TransactionType {
+    /// Funds deposited into the platform
     Deposit,
+    /// Funds withdrawn from the platform
     Withdrawal,
+    /// Trade execution
     Trade,
+    /// Internal transfer between accounts
     Transfer,
+    /// Platform fee charged
     Fee,
+    /// Reward or incentive payment
     Reward,
+    /// Transaction that does not fit another category
     Other,
 }
 
 /// Transaction status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TransactionStatus {
+    /// Transaction submitted but not yet processed
     Pending,
+    /// Transaction successfully completed
     Completed,
+    /// Transaction encountered an error
     Failed,
+    /// Transaction was cancelled before processing
     Cancelled,
 }
 
@@ -157,8 +179,11 @@ pub struct PositionReport {
 /// Position type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PositionType {
+    /// Net long position (owns more than owed)
     Long,
+    /// Net short position (owes more than owned)
     Short,
+    /// Zero net position
     Neutral,
 }
 
@@ -308,31 +333,47 @@ impl RegulatoryReportGenerator {
 /// Report submission tracker
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReportSubmission {
+    /// Unique identifier for this submission attempt
     pub submission_id: String,
+    /// Kind of regulatory report being submitted
     pub report_type: ReportType,
+    /// Regulatory regime this submission targets
     pub regime: RegulatoryRegime,
+    /// When the report was submitted
     pub submission_timestamp: DateTime<Utc>,
+    /// Current status of the submission
     pub status: SubmissionStatus,
+    /// Reference number returned by the regulatory authority on acknowledgment
     pub acknowledgment_ref: Option<String>,
+    /// Error description if the submission was rejected or failed
     pub error_message: Option<String>,
 }
 
 /// Report type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ReportType {
+    /// Trade-level regulatory report
     Trade,
+    /// Transaction-level report
     Transaction,
+    /// Position-level report
     Position,
+    /// Best execution report (MiFID II RTS 27/28)
     BestExecution,
 }
 
 /// Submission status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SubmissionStatus {
+    /// Report queued for submission
     Pending,
+    /// Report sent to the regulatory authority
     Submitted,
+    /// Regulatory authority confirmed receipt
     Acknowledged,
+    /// Regulatory authority rejected the report
     Rejected,
+    /// Submission failed due to a technical error
     Failed,
 }
 

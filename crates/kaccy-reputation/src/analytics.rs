@@ -18,6 +18,7 @@ pub struct AnalyticsService {
 }
 
 impl AnalyticsService {
+    /// Create a new [`AnalyticsService`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -320,61 +321,92 @@ impl AnalyticsService {
 /// Overall system statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemStats {
+    /// Total number of registered users.
     pub total_users: i32,
+    /// Number of users active within the last 30 days.
     pub active_users_30d: i32,
+    /// Distribution of users across reputation tiers.
     pub tier_distribution: Vec<TierCount>,
+    /// Average reputation score across all users.
     pub average_score: Decimal,
+    /// Total number of commitments ever created.
     pub total_commitments: i32,
+    /// Number of commitments that have been completed.
     pub completed_commitments: i32,
+    /// Fraction of commitments that were completed (0.0–1.0).
     pub completion_rate: f64,
+    /// Timestamp when these statistics were generated.
     pub generated_at: DateTime<Utc>,
 }
 
 /// User count per tier
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TierCount {
+    /// Reputation tier.
     pub tier: ReputationTier,
+    /// Number of users in this tier.
     pub count: i32,
 }
 
 /// Growth metrics over a period
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GrowthMetrics {
+    /// Length of the measurement period in days.
     pub period_days: i32,
+    /// Number of new users registered during the period.
     pub new_users: i32,
+    /// Number of new commitments created during the period.
     pub new_commitments: i32,
+    /// Average new users per day over the period.
     pub avg_daily_new_users: f64,
+    /// Average new commitments per day over the period.
     pub avg_daily_commitments: f64,
 }
 
 /// User ranking information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserRanking {
+    /// User's position in the leaderboard (1-based).
     pub rank: i32,
+    /// User identifier.
     pub user_id: Uuid,
+    /// User's reputation score.
     pub score: Decimal,
+    /// User's current reputation tier.
     pub tier: ReputationTier,
 }
 
 /// User-specific commitment analytics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserCommitmentAnalytics {
+    /// User these analytics belong to.
     pub user_id: Uuid,
+    /// Total number of commitments created by this user.
     pub total_commitments: i32,
+    /// Number of commitments that have been verified as fulfilled.
     pub verified: i32,
+    /// Number of commitments that failed.
     pub failed: i32,
+    /// Number of commitments currently pending verification.
     pub pending: i32,
+    /// Number of commitments that expired without being fulfilled.
     pub expired: i32,
+    /// Fraction of commitments that were verified (0.0–1.0).
     pub success_rate: f64,
 }
 
 /// Score distribution across ranges
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScoreDistribution {
+    /// Number of users with scores 0–199.
     pub range_0_199: i64,
+    /// Number of users with scores 200–399.
     pub range_200_399: i64,
+    /// Number of users with scores 400–599.
     pub range_400_599: i64,
+    /// Number of users with scores 600–799.
     pub range_600_799: i64,
+    /// Number of users with scores 800 or above.
     pub range_800_plus: i64,
 }
 

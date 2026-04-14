@@ -15,15 +15,22 @@ use uuid::Uuid;
 /// P2P peer node
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Peer {
+    /// Unique identifier for this peer
     pub id: Uuid,
+    /// Network address (IP or hostname) of the peer
     pub address: String,
+    /// TCP/UDP port the peer listens on
     pub port: u16,
+    /// Timestamp of the most recent contact with this peer
     pub last_seen: DateTime<Utc>,
+    /// Trust score for this peer (0.0 – 1.0, higher is better)
     pub reputation: f64,
+    /// Set of peer IDs currently connected to this node
     pub connected_peers: HashSet<Uuid>,
 }
 
 impl Peer {
+    /// Create a new peer with the given address and port
     pub fn new(address: String, port: u16) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -35,6 +42,7 @@ impl Peer {
         }
     }
 
+    /// Record a connection to the given peer and refresh last-seen timestamp
     pub fn connect_to(&mut self, peer_id: Uuid) {
         self.connected_peers.insert(peer_id);
         self.last_seen = Utc::now();
@@ -44,39 +52,60 @@ impl Peer {
 /// P2P order for direct peer-to-peer trading
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct P2POrder {
+    /// Unique identifier for this order
     pub id: Uuid,
+    /// Peer that submitted this order
     pub peer_id: Uuid,
+    /// Trading pair symbol (e.g. "BTC")
     pub token_symbol: String,
+    /// Whether this is a buy or sell order
     pub side: OrderSide,
+    /// Token quantity to trade
     pub amount: Decimal,
+    /// Limit price per unit
     pub price: Decimal,
+    /// When this order was created
     pub created_at: DateTime<Utc>,
+    /// Current lifecycle state of the order
     pub status: OrderStatus,
 }
 
+/// Side of a P2P trade order
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OrderSide {
+    /// Intent to purchase tokens
     Buy,
+    /// Intent to sell tokens
     Sell,
 }
 
+/// Lifecycle state of a P2P order
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OrderStatus {
+    /// Order is active and awaiting a match
     Open,
+    /// Order has been matched with a counterparty but not yet settled
     Matched,
+    /// Order has been fully executed
     Filled,
+    /// Order was cancelled before fill
     Cancelled,
 }
 
 /// Distributed order book across P2P network
 pub struct DistributedOrderBook {
+    /// Trading pair symbol this book tracks
     pub token_symbol: String,
+    /// All known orders in this distributed book
     pub orders: HashMap<Uuid, P2POrder>,
+    /// ID of the peer running this local node
     pub local_peer_id: Uuid,
+    /// Remote peers contributing to this order book
     pub known_peers: Vec<Peer>,
 }
 
 impl DistributedOrderBook {
+    /// Create a new distributed order book for the given token
     pub fn new(token_symbol: String, local_peer_id: Uuid) -> Self {
         Self {
             token_symbol,
@@ -128,13 +157,18 @@ impl DistributedOrderBook {
 
 /// Gossip protocol for price discovery
 pub struct GossipProtocol {
+    /// ID of the local peer running this gossip instance
     pub peer_id: Uuid,
+    /// All peers known to this gossip node
     pub known_peers: HashMap<Uuid, Peer>,
+    /// How often gossip rounds fire, in milliseconds
     pub gossip_interval_ms: u64,
-    pub fanout: usize, // Number of peers to gossip to
+    /// Number of peers to forward each gossip message to
+    pub fanout: usize,
 }
 
 impl GossipProtocol {
+    /// Create a new gossip protocol with the given peer ID and fanout
     pub fn new(peer_id: Uuid, fanout: usize) -> Self {
         Self {
             peer_id,
@@ -187,27 +221,39 @@ impl GossipProtocol {
     }
 }
 
-/// Price gossip message
+/// Price gossip message propagated between peers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriceGossip {
+    /// Unique identifier for this gossip message
     pub id: Uuid,
+    /// Peer that originated or last forwarded this message
     pub from_peer: Uuid,
+    /// Peer this message is addressed to
     pub to_peer: Uuid,
+    /// Token whose price is being gossiped
     pub token: String,
+    /// Reported price for the token
     pub price: Decimal,
+    /// When this gossip message was created
     pub timestamp: DateTime<Utc>,
+    /// Number of hops this message has travelled; discarded after 10
     pub hop_count: u8,
 }
 
 /// Distributed Hash Table for decentralized data storage
 pub struct DHT {
+    /// ID of the local node in the DHT network
     pub node_id: Uuid,
+    /// Key-value pairs stored on this node
     pub storage: HashMap<String, Vec<u8>>,
+    /// Kademlia-style routing table mapping peer IDs to peer info
     pub routing_table: HashMap<Uuid, Peer>,
-    pub k_bucket_size: usize, // Kademlia k-bucket size
+    /// Maximum number of entries per Kademlia k-bucket
+    pub k_bucket_size: usize,
 }
 
 impl DHT {
+    /// Create a new DHT node with the given node ID
     pub fn new(node_id: Uuid) -> Self {
         Self {
             node_id,
@@ -244,11 +290,14 @@ impl DHT {
 
 /// P2P order matching engine
 pub struct P2PMatchingEngine {
+    /// Distributed order books indexed by token symbol
     pub order_books: HashMap<String, DistributedOrderBook>,
+    /// The local peer operating this matching engine
     pub local_peer: Peer,
 }
 
 impl P2PMatchingEngine {
+    /// Create a new matching engine for the given local peer
     pub fn new(local_peer: Peer) -> Self {
         Self {
             order_books: HashMap::new(),

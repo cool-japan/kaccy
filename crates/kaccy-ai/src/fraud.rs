@@ -239,6 +239,7 @@ pub struct SybilDetector {
 }
 
 impl SybilDetector {
+    /// Create a `SybilDetector` with default thresholds.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -247,6 +248,7 @@ impl SybilDetector {
         }
     }
 
+    /// Create a `SybilDetector` with custom thresholds.
     #[must_use]
     pub fn with_config(similarity_threshold: f64, min_cluster_size: usize) -> Self {
         Self {
@@ -417,6 +419,7 @@ pub struct WashTradingDetector {
 }
 
 impl WashTradingDetector {
+    /// Create a `WashTradingDetector` with default thresholds.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -633,6 +636,7 @@ pub struct ImageManipulationDetector {
 }
 
 impl ImageManipulationDetector {
+    /// Create a new `ImageManipulationDetector` backed by the given LLM client.
     #[must_use]
     pub fn new(llm: LlmClient) -> Self {
         Self { llm }
@@ -711,6 +715,7 @@ pub struct ImageAnalysisResult {
 pub struct ReputationGamingDetector;
 
 impl ReputationGamingDetector {
+    /// Create a new `ReputationGamingDetector`.
     #[must_use]
     pub fn new() -> Self {
         Self

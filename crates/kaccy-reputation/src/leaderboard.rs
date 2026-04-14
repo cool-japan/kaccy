@@ -18,6 +18,7 @@ pub struct LeaderboardService {
 }
 
 impl LeaderboardService {
+    /// Create a new [`LeaderboardService`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -360,24 +361,33 @@ impl LeaderboardService {
 /// Leaderboard with entries
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Leaderboard {
+    /// Ordered list of leaderboard entries (rank 1 first).
     pub entries: Vec<LeaderboardEntry>,
+    /// Whether this is the global leaderboard or tier-scoped.
     pub leaderboard_type: LeaderboardType,
+    /// Timestamp when this leaderboard was generated.
     pub generated_at: DateTime<Utc>,
 }
 
 /// Single leaderboard entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LeaderboardEntry {
+    /// Position in the leaderboard (1-based).
     pub rank: i32,
+    /// User identifier.
     pub user_id: Uuid,
+    /// User's reputation score.
     pub score: Decimal,
+    /// User's reputation tier.
     pub tier: ReputationTier,
 }
 
 /// Type of leaderboard
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LeaderboardType {
+    /// Leaderboard spanning all users regardless of tier.
     Global,
+    /// Leaderboard restricted to users within a specific tier.
     Tier(ReputationTier),
 }
 
@@ -421,30 +431,45 @@ impl std::str::FromStr for LeaderboardType {
 /// User rank information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserRankInfo {
+    /// User identifier.
     pub user_id: Uuid,
+    /// User's position in the global leaderboard (1-based).
     pub rank: i32,
+    /// User's current reputation score.
     pub score: Decimal,
+    /// User's reputation tier.
     pub tier: ReputationTier,
+    /// Percentage of users this user outranks (0.0–100.0).
     pub percentile: f64,
+    /// Total number of users in the leaderboard.
     pub total_users: i32,
 }
 
 /// Achievement definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Achievement {
+    /// Classification of this achievement.
     pub achievement_type: AchievementType,
+    /// Display name for the achievement.
     pub name: String,
+    /// Human-readable description of how to earn this achievement.
     pub description: String,
+    /// Icon identifier or URL for visual display.
     pub icon: String,
 }
 
 /// Achievement type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AchievementType {
+    /// Achievement related to reaching a score milestone.
     Score,
+    /// Achievement related to commitment activity.
     Commitment,
+    /// Achievement related to reaching a tier.
     Tier,
+    /// Achievement for maintaining a streak of fulfilled commitments.
     Streak,
+    /// Special or one-off achievement.
     Special,
 }
 
@@ -478,8 +503,11 @@ impl std::str::FromStr for AchievementType {
 /// Awarded achievement with timestamp
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AwardedAchievement {
+    /// Classification of the awarded achievement.
     pub achievement_type: AchievementType,
+    /// Display name of the achievement.
     pub name: String,
+    /// Timestamp when the achievement was awarded.
     pub awarded_at: DateTime<Utc>,
 }
 

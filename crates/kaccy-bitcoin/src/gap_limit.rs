@@ -31,11 +31,17 @@ impl Default for GapLimitConfig {
 /// Address usage information
 #[derive(Debug, Clone)]
 pub struct AddressUsage {
+    /// The Bitcoin address string
     pub address: String,
+    /// Derivation index for this address
     pub index: u32,
+    /// Whether this is an external (receiving) address
     pub is_external: bool,
+    /// Whether any transactions have been seen for this address
     pub has_transactions: bool,
+    /// Total satoshis received at this address
     pub received_amount: u64,
+    /// Number of confirmations of the most recent transaction
     pub confirmations: u32,
 }
 
@@ -252,12 +258,19 @@ impl GapLimitTracker {
 /// Gap limit statistics
 #[derive(Debug, Clone)]
 pub struct GapLimitStats {
+    /// Highest derivation index used on the external chain
     pub highest_used_external: u32,
+    /// Highest derivation index used on the internal (change) chain
     pub highest_used_internal: u32,
+    /// Total number of addresses scanned
     pub total_addresses_scanned: u32,
+    /// Number of external addresses with activity
     pub external_addresses_used: u32,
+    /// Number of internal addresses with activity
     pub internal_addresses_used: u32,
+    /// Total satoshis received across all scanned addresses
     pub total_received_sats: u64,
+    /// Configured gap limit value
     pub gap_limit: u32,
 }
 
@@ -347,8 +360,11 @@ impl AddressDiscovery {
 /// Result of address discovery
 #[derive(Debug, Clone)]
 pub struct DiscoveryResult {
+    /// Discovered external (receiving) addresses with activity
     pub external_addresses: Vec<AddressUsage>,
+    /// Discovered internal (change) addresses with activity
     pub internal_addresses: Vec<AddressUsage>,
+    /// Summary statistics for the discovery scan
     pub stats: GapLimitStats,
 }
 

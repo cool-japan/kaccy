@@ -301,9 +301,13 @@ impl TokenHolderAnalysis {
 /// Transaction graph node (wallet)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphNode {
+    /// On-chain wallet address.
     pub address: String,
+    /// Set of addresses this wallet has directly interacted with.
     pub connections: HashSet<String>,
+    /// Total number of on-chain interactions.
     pub total_interactions: u64,
+    /// Cumulative value transferred to/from this wallet.
     pub total_value_transferred: Decimal,
 }
 
@@ -433,18 +437,26 @@ pub struct SmartMoneyTracker {
 /// Smart money trade record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SmartMoneyTrade {
+    /// Wallet address that executed the trade.
     pub wallet: String,
+    /// Token symbol or address traded.
     pub token: String,
+    /// Buy or sell direction.
     pub side: TradeSide,
+    /// Trade size.
     pub amount: Decimal,
+    /// Execution price.
     pub price: Decimal,
+    /// Time the trade was recorded on-chain.
     pub timestamp: DateTime<Utc>,
 }
 
 /// Trade side
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TradeSide {
+    /// Token was purchased.
     Buy,
+    /// Token was sold.
     Sell,
 }
 

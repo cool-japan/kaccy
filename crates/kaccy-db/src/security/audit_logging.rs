@@ -8,17 +8,29 @@ use crate::Result;
 /// Enhanced audit log entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditLogEntry {
+    /// Unique identifier for this audit entry.
     pub id: Uuid,
+    /// Timestamp when the action occurred.
     pub timestamp: DateTime<Utc>,
+    /// User who performed the action, if authenticated.
     pub user_id: Option<Uuid>,
+    /// Type of action that was performed.
     pub action: AuditAction,
+    /// Type of resource that was acted upon.
     pub resource_type: String,
+    /// Identifier of the specific resource, if applicable.
     pub resource_id: Option<String>,
+    /// State of the resource before the action.
     pub old_value: Option<serde_json::Value>,
+    /// State of the resource after the action.
     pub new_value: Option<serde_json::Value>,
+    /// IP address of the client, if known.
     pub ip_address: Option<String>,
+    /// User-Agent header from the client request, if known.
     pub user_agent: Option<String>,
+    /// Session identifier associated with the action, if any.
     pub session_id: Option<String>,
+    /// Additional contextual metadata.
     pub metadata: Option<serde_json::Value>,
 }
 
@@ -26,16 +38,27 @@ pub struct AuditLogEntry {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AuditAction {
+    /// A new resource was created.
     Create,
+    /// A resource was read or accessed.
     Read,
+    /// An existing resource was modified.
     Update,
+    /// A resource was deleted.
     Delete,
+    /// A user logged in.
     Login,
+    /// A user logged out.
     Logout,
+    /// A user changed their password.
     PasswordChange,
+    /// A user's permissions were changed.
     PermissionChange,
+    /// User data was exported.
     DataExport,
+    /// Data was imported into the system.
     DataImport,
+    /// A custom action not covered by the standard variants.
     Custom(String),
 }
 
@@ -60,13 +83,18 @@ impl std::fmt::Display for AuditAction {
 /// Audit context for tracking user actions
 #[derive(Debug, Clone)]
 pub struct AuditContext {
+    /// User performing the action, if authenticated.
     pub user_id: Option<Uuid>,
+    /// IP address of the client.
     pub ip_address: Option<String>,
+    /// User-Agent string from the HTTP request.
     pub user_agent: Option<String>,
+    /// Session token or identifier.
     pub session_id: Option<String>,
 }
 
 impl AuditContext {
+    /// Create a new audit context for the given user.
     pub fn new(user_id: Option<Uuid>) -> Self {
         Self {
             user_id,
@@ -76,16 +104,19 @@ impl AuditContext {
         }
     }
 
+    /// Attach an IP address to the context.
     pub fn with_ip(mut self, ip: String) -> Self {
         self.ip_address = Some(ip);
         self
     }
 
+    /// Attach a User-Agent string to the context.
     pub fn with_user_agent(mut self, ua: String) -> Self {
         self.user_agent = Some(ua);
         self
     }
 
+    /// Attach a session identifier to the context.
     pub fn with_session(mut self, session: String) -> Self {
         self.session_id = Some(session);
         self
@@ -380,6 +411,7 @@ pub struct ComplianceManager {
 }
 
 impl ComplianceManager {
+    /// Create a new compliance manager backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self {
             logger: AuditLogger::new(pool),
@@ -444,11 +476,17 @@ impl ComplianceManager {
 /// Compliance report structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComplianceReport {
+    /// Start of the reporting period.
     pub start_date: DateTime<Utc>,
+    /// End of the reporting period.
     pub end_date: DateTime<Utc>,
+    /// Total number of audited actions in the period.
     pub total_actions: i64,
+    /// Number of distinct users with recorded actions.
     pub unique_users: i64,
+    /// Number of data access events logged.
     pub data_access_count: i64,
+    /// Number of data export events logged.
     pub data_export_count: i64,
 }
 

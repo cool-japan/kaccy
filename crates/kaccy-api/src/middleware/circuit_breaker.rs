@@ -8,8 +8,10 @@ use tokio::sync::RwLock;
 /// Circuit breaker error
 #[derive(Error, Debug, Clone)]
 pub enum CircuitBreakerError {
+    /// Circuit is open and requests are being rejected
     #[error("Circuit breaker is open")]
     Open,
+    /// Too many failures caused the circuit to open
     #[error("Too many failures: {0}")]
     TooManyFailures(String),
 }

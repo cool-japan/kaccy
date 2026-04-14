@@ -13,67 +13,104 @@ use uuid::Uuid;
 /// Audit event entry representing an event from the event-driven architecture
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct AuditEvent {
+    /// Unique identifier for this event.
     pub id: Uuid,
+    /// Timestamp when the event occurred.
     pub timestamp: DateTime<Utc>,
+    /// Type name of the event (e.g., "UserCreated").
     pub event_type: String,
+    /// Event payload as JSON.
     pub event_data: JsonValue,
+    /// Service or component that emitted the event.
     pub source: String,
+    /// Distributed tracing correlation ID.
     pub correlation_id: Option<String>,
+    /// User associated with the event, if any.
     pub user_id: Option<Uuid>,
+    /// Timestamp when the record was persisted.
     pub created_at: DateTime<Utc>,
 }
 
 /// Create audit event parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateAuditEvent {
+    /// Client-supplied identifier for idempotent writes.
     pub id: Uuid,
+    /// Event type name.
     pub event_type: String,
+    /// Event payload.
     pub event_data: JsonValue,
+    /// Originating service.
     pub source: String,
+    /// Tracing correlation ID.
     pub correlation_id: Option<String>,
+    /// Associated user.
     pub user_id: Option<Uuid>,
 }
 
 /// Event type statistics
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct EventTypeStats {
+    /// Event type name.
     pub event_type: String,
+    /// Total number of events of this type.
     pub event_count: i64,
+    /// Number of distinct users associated with these events.
     pub unique_users: i64,
+    /// Number of distinct correlation IDs seen.
     pub unique_correlations: i64,
+    /// Timestamp of the earliest event of this type.
     pub first_occurrence: DateTime<Utc>,
+    /// Timestamp of the most recent event of this type.
     pub last_occurrence: DateTime<Utc>,
 }
 
 /// Daily event summary
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct DailyEventSummary {
+    /// Date of this summary bucket.
     pub event_date: NaiveDate,
+    /// Total events on this date.
     pub total_events: i64,
+    /// Number of distinct event types seen.
     pub unique_event_types: i64,
+    /// Number of distinct sources seen.
     pub unique_sources: i64,
+    /// Number of distinct users seen.
     pub unique_users: i64,
 }
 
 /// User event activity summary
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct UserEventActivity {
+    /// User identifier.
     pub user_id: Uuid,
+    /// Total events associated with this user.
     pub total_events: i64,
+    /// Number of distinct event types.
     pub unique_event_types: i64,
+    /// Timestamp of the first event.
     pub first_event: DateTime<Utc>,
+    /// Timestamp of the most recent event.
     pub last_event: DateTime<Utc>,
 }
 
 /// Correlation trace for distributed tracing
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct CorrelationTrace {
+    /// Correlation identifier shared across related events.
     pub correlation_id: String,
+    /// Total number of events with this correlation ID.
     pub event_count: i64,
+    /// Distinct event types in this trace.
     pub event_types: Vec<String>,
+    /// Distinct sources in this trace.
     pub sources: Vec<String>,
+    /// Timestamp of the first event in the trace.
     pub start_time: DateTime<Utc>,
+    /// Timestamp of the last event in the trace.
     pub end_time: DateTime<Utc>,
+    /// Total trace duration in milliseconds.
     pub duration_ms: f64,
 }
 

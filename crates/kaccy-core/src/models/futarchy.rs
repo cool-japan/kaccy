@@ -431,11 +431,17 @@ impl FutarchyGovernor {
 /// Market statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketStats {
+    /// Total liquidity available in the prediction market.
     pub liquidity: Decimal,
+    /// Number of distinct participants who have traded.
     pub num_participants: usize,
+    /// Market-implied expected value of the outcome.
     pub predicted_value: Decimal,
+    /// Variance of predictions across participants.
     pub prediction_variance: Decimal,
+    /// Whether the market has been resolved.
     pub resolved: bool,
+    /// Actual outcome value after resolution, if resolved.
     pub actual_value: Option<Decimal>,
 }
 

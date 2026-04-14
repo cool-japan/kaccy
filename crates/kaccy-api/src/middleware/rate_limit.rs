@@ -133,9 +133,17 @@ impl Default for RateLimiter {
 #[derive(Debug)]
 pub enum RateLimitResult {
     /// Request is allowed
-    Allowed { remaining: u32, reset_in: Duration },
+    Allowed {
+        /// Number of requests remaining in the current window
+        remaining: u32,
+        /// Duration until the rate limit window resets
+        reset_in: Duration,
+    },
     /// Request is rate limited
-    Limited { retry_after: Duration },
+    Limited {
+        /// Duration to wait before retrying the request
+        retry_after: Duration,
+    },
 }
 
 /// Rate limiting middleware

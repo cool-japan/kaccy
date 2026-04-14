@@ -11,20 +11,32 @@ use uuid::Uuid;
 /// Trade execution record for TCA
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionRecord {
+    /// Unique identifier for this trade
     pub trade_id: Uuid,
+    /// Token that was traded
     pub token_id: Uuid,
+    /// Whether this was a buy or sell
     pub side: ExecutionSide,
+    /// Timestamp when the trading decision was made
     pub decision_time: DateTime<Utc>,
+    /// Price at the time the decision was made
     pub decision_price: Decimal,
+    /// Timestamp when the order was actually executed
     pub execution_time: DateTime<Utc>,
+    /// Actual execution price
     pub execution_price: Decimal,
+    /// Quantity traded
     pub quantity: Decimal,
+    /// Benchmark price used for comparison (e.g. mid-point at decision time)
     pub benchmark_price: Decimal,
 }
 
+/// Side of a trade execution
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ExecutionSide {
+    /// Buy order
     Buy,
+    /// Sell order
     Sell,
 }
 
@@ -62,6 +74,7 @@ pub struct TradeCostAnalyzer {
 }
 
 impl TradeCostAnalyzer {
+    /// Create a new trade cost analyzer
     pub fn new() -> Self {
         Self {
             executions: Vec::new(),
@@ -276,9 +289,13 @@ impl Default for TradeCostAnalyzer {
 /// Execution statistics summary
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionStatistics {
+    /// Number of executions analysed
     pub total_executions: usize,
+    /// Total traded volume
     pub total_volume: Decimal,
+    /// Average slippage across all executions in basis points
     pub average_slippage_bps: f64,
+    /// Average time from decision to execution in milliseconds
     pub average_execution_time_ms: f64,
 }
 

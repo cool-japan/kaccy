@@ -5,18 +5,27 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 
+/// Scores and feedback from a quality evaluation run.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EvaluationResult {
-    pub quality_score: f64,     // 0-100
-    pub complexity_score: f64,  // 0-100
-    pub originality_score: f64, // 0-100
-    pub overall_score: f64,     // 0-100
+    /// Code/content quality score (0-100).
+    pub quality_score: f64,
+    /// Complexity score (0-100).
+    pub complexity_score: f64,
+    /// Originality score (0-100).
+    pub originality_score: f64,
+    /// Weighted average of all dimension scores (0-100).
+    pub overall_score: f64,
+    /// Human-readable feedback from the evaluator.
     pub feedback: String,
 }
 
+/// Trait for evaluating the quality of code or content.
 #[async_trait]
 pub trait QualityEvaluator: Send + Sync {
+    /// Evaluate a code snippet written in `language`.
     async fn evaluate_code(&self, code: &str, language: &str) -> Result<EvaluationResult>;
+    /// Evaluate a piece of content identified by `content_type`.
     async fn evaluate_content(&self, content: &str, content_type: &str)
     -> Result<EvaluationResult>;
 }

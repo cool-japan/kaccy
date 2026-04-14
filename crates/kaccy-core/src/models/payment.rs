@@ -13,6 +13,7 @@ use super::user::ValidationError;
 /// Bitcoin payment order tracking
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PaymentOrder {
+    /// Unique identifier for this payment order
     pub payment_order_id: Uuid,
     /// Associated order ID
     pub order_id: Uuid,
@@ -46,7 +47,9 @@ pub struct PaymentOrder {
     pub derivation_path: Option<String>,
     /// Notes or error messages
     pub notes: Option<String>,
+    /// Timestamp when this payment order was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp when this payment order was last updated
     pub updated_at: DateTime<Utc>,
 }
 
@@ -169,12 +172,16 @@ impl PaymentOrder {
 /// Request to create a payment order
 #[derive(Debug, Deserialize)]
 pub struct CreatePaymentOrderRequest {
+    /// Trade order this payment will fulfil
     pub order_id: Uuid,
+    /// BTC amount expected from the payer
     pub expected_amount_btc: Decimal,
+    /// Override for the number of required confirmations (uses default if omitted)
     pub required_confirmations: Option<i32>,
 }
 
 impl CreatePaymentOrderRequest {
+    /// Validate that the request has valid parameters
     pub fn validate(&self) -> Result<(), ValidationError> {
         if self.expected_amount_btc <= dec!(0) {
             return Err(ValidationError(
@@ -200,7 +207,9 @@ impl CreatePaymentOrderRequest {
 /// Bitcoin transaction confirmation event
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PaymentConfirmation {
+    /// Unique identifier for this confirmation event
     pub confirmation_id: Uuid,
+    /// Payment order this confirmation belongs to
     pub payment_order_id: Uuid,
     /// Transaction ID
     pub txid: String,
@@ -216,6 +225,7 @@ pub struct PaymentConfirmation {
     pub block_time: Option<DateTime<Utc>>,
     /// Transaction fee paid
     pub fee_btc: Option<Decimal>,
+    /// Timestamp when this confirmation was detected
     pub detected_at: DateTime<Utc>,
 }
 
@@ -232,6 +242,7 @@ impl fmt::Display for PaymentConfirmation {
 /// Bitcoin address pool for pre-generated addresses
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct BitcoinAddress {
+    /// Unique identifier for this address record
     pub address_id: Uuid,
     /// Bitcoin address
     pub address: String,
@@ -245,6 +256,7 @@ pub struct BitcoinAddress {
     pub assigned_at: Option<DateTime<Utc>>,
     /// Address type (p2pkh, p2wpkh, p2sh, etc.)
     pub address_type: BitcoinAddressType,
+    /// Timestamp when this address record was created
     pub created_at: DateTime<Utc>,
 }
 
@@ -338,25 +350,40 @@ impl PaymentMonitorConfig {
 /// Payment statistics for admin dashboard
 #[derive(Debug, Serialize)]
 pub struct PaymentStats {
+    /// Total number of payment orders created
     pub total_orders: i64,
+    /// Number of orders currently awaiting payment
     pub pending_orders: i64,
+    /// Number of orders that completed successfully
     pub completed_orders: i64,
+    /// Number of orders that expired
     pub expired_orders: i64,
+    /// Number of orders that failed
     pub failed_orders: i64,
+    /// Total BTC volume across completed orders
     pub total_volume_btc: Decimal,
+    /// Average time to confirmation in minutes
     pub avg_confirmation_time_minutes: Option<f64>,
+    /// Percentage of orders that completed successfully
     pub success_rate_percent: Decimal,
 }
 
 /// Payment webhook event (for external integrations)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaymentWebhookEvent {
+    /// Type of payment event being signalled
     pub event_type: PaymentEventType,
+    /// Payment order this event relates to
     pub payment_order_id: Uuid,
+    /// Bitcoin address of the payment
     pub btc_address: String,
+    /// BTC amount involved in this event
     pub amount_btc: Decimal,
+    /// Number of confirmations at the time of this event
     pub confirmations: i32,
+    /// Bitcoin transaction ID (if available)
     pub txid: Option<String>,
+    /// Timestamp when this event was generated
     pub timestamp: DateTime<Utc>,
 }
 

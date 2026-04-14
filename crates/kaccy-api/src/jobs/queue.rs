@@ -258,10 +258,15 @@ impl JobQueue {
 /// Queue statistics
 #[derive(Debug, Clone)]
 pub struct QueueStats {
+    /// Total jobs in the queue (all states)
     pub total: usize,
+    /// Jobs waiting to be processed
     pub pending: usize,
+    /// Jobs currently being processed
     pub processing: usize,
+    /// Jobs that completed successfully
     pub completed: usize,
+    /// Jobs that failed
     pub failed: usize,
 }
 

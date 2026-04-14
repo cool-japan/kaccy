@@ -58,8 +58,11 @@ impl Default for FlashLoanConfig {
 /// Flash loan request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FlashLoanRequest {
+    /// Unique identifier for this loan
     pub loan_id: Uuid,
+    /// User who initiated the loan
     pub borrower_id: Uuid,
+    /// Token being borrowed
     pub token_id: Uuid,
     /// Amount to borrow
     pub amount: Decimal,
@@ -67,6 +70,7 @@ pub struct FlashLoanRequest {
     pub fee: Decimal,
     /// Total amount to repay (amount + fee)
     pub repay_amount: Decimal,
+    /// Timestamp when the loan was initiated
     pub timestamp: DateTime<Utc>,
     /// Status of the loan
     pub status: FlashLoanStatus,
@@ -88,11 +92,17 @@ pub enum FlashLoanStatus {
 /// Flash loan execution result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FlashLoanResult {
+    /// Identifier of the loan this result belongs to
     pub loan_id: Uuid,
+    /// Whether the loan was repaid successfully
     pub success: bool,
+    /// Amount that was borrowed
     pub amount_borrowed: Decimal,
+    /// Fee paid to the pool
     pub fee_paid: Decimal,
+    /// Net profit after repayment, if successful
     pub profit: Option<Decimal>,
+    /// Error message if the loan failed
     pub error: Option<String>,
 }
 
@@ -143,7 +153,7 @@ pub struct FlashLoanPool {
     pub failed_loans: u64,
     /// Configuration
     pub config: FlashLoanConfig,
-    /// Active loans (for reentrancy protection)
+    /// Active loans keyed by borrower ID (for reentrancy protection)
     active_loans: HashMap<Uuid, FlashLoanRequest>,
 }
 
@@ -355,20 +365,30 @@ impl FlashLoanPool {
 /// Flash loan pool statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FlashLoanPoolStats {
+    /// Pool identifier
     pub pool_id: Uuid,
+    /// Token this pool lends
     pub token_id: Uuid,
+    /// Currently available liquidity
     pub available_liquidity: Decimal,
+    /// Cumulative lifetime borrowed amount
     pub total_borrowed: Decimal,
+    /// Cumulative fees collected
     pub total_fees_collected: Decimal,
+    /// Number of successfully completed loans
     pub successful_loans: u64,
+    /// Number of failed loans
     pub failed_loans: u64,
+    /// Percentage of loans that succeeded
     pub success_rate: f64,
+    /// Number of currently in-flight loans
     pub active_loan_count: u64,
 }
 
 /// Flash loan manager for multiple tokens
 #[derive(Debug)]
 pub struct FlashLoanManager {
+    /// Pools keyed by token ID
     pools: HashMap<Uuid, FlashLoanPool>,
 }
 

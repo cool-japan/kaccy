@@ -93,7 +93,9 @@ impl SarimaParams {
 /// Time-series observation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimeSeriesObservation {
+    /// Timestamp of this observation.
     pub timestamp: DateTime<Utc>,
+    /// Observed value at this timestamp.
     pub value: Decimal,
 }
 

@@ -14,19 +14,29 @@ use crate::error::{ReputationError, Result};
 /// Dispute against a commitment verification
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Dispute {
+    /// Unique identifier for this dispute.
     pub id: Uuid,
+    /// Commitment being disputed.
     pub commitment_id: Uuid,
+    /// User who raised the dispute.
     pub disputer_id: Uuid,
+    /// Token associated with the disputed commitment.
     pub token_id: Uuid,
+    /// Reason for the dispute.
     pub reason: String,
+    /// Evidence supporting the dispute claim.
     pub evidence: String,
+    /// String representation of the current status.
     pub status: String,
+    /// Timestamp when the dispute was created.
     pub created_at: DateTime<Utc>,
+    /// Timestamp when the dispute was last updated.
     pub updated_at: DateTime<Utc>,
     /// When voting period ends
     pub voting_deadline: DateTime<Utc>,
     /// Final resolution if resolved
     pub resolution: Option<String>,
+    /// Timestamp when the dispute was resolved.
     pub resolved_at: Option<DateTime<Utc>>,
 }
 
@@ -51,13 +61,19 @@ pub enum DisputeStatus {
 /// Vote on a dispute
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct DisputeVote {
+    /// Unique identifier for this vote.
     pub id: Uuid,
+    /// Dispute this vote was cast on.
     pub dispute_id: Uuid,
+    /// User who cast the vote.
     pub voter_id: Uuid,
+    /// String representation of the vote choice.
     pub vote: String,
     /// Voting power (based on token holdings)
     pub voting_power: Decimal,
+    /// Optional explanation for the vote.
     pub reason: Option<String>,
+    /// Timestamp when the vote was cast.
     pub created_at: DateTime<Utc>,
 }
 
@@ -76,17 +92,27 @@ pub enum VoteChoice {
 /// Appeal by an issuer against a negative decision
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Appeal {
+    /// Unique identifier for this appeal.
     pub id: Uuid,
+    /// Commitment whose dispute resolution is being appealed.
     pub commitment_id: Uuid,
+    /// Token issuer filing the appeal.
     pub issuer_id: Uuid,
+    /// Reason for the appeal.
     pub reason: String,
+    /// Additional evidence presented in the appeal.
     pub additional_evidence: String,
+    /// String representation of the current appeal status.
     pub status: String,
+    /// Timestamp when the appeal was filed.
     pub created_at: DateTime<Utc>,
+    /// Timestamp when the appeal was last updated.
     pub updated_at: DateTime<Utc>,
     /// Appeal must be filed within this window
     pub appeal_deadline: DateTime<Utc>,
+    /// Resolution text once the appeal is decided.
     pub resolution: Option<String>,
+    /// Timestamp when the appeal was resolved.
     pub resolved_at: Option<DateTime<Utc>>,
 }
 
@@ -111,40 +137,60 @@ pub enum AppealStatus {
 /// Request to create a dispute
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateDisputeRequest {
+    /// Commitment being disputed.
     pub commitment_id: Uuid,
+    /// User raising the dispute.
     pub disputer_id: Uuid,
+    /// Token associated with the commitment.
     pub token_id: Uuid,
+    /// Reason for the dispute.
     pub reason: String,
+    /// Evidence supporting the dispute claim.
     pub evidence: String,
 }
 
 /// Request to vote on a dispute
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VoteDisputeRequest {
+    /// Dispute being voted on.
     pub dispute_id: Uuid,
+    /// User casting the vote.
     pub voter_id: Uuid,
+    /// The vote choice.
     pub vote: VoteChoice,
+    /// Optional explanation for the vote.
     pub reason: Option<String>,
 }
 
 /// Request to create an appeal
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateAppealRequest {
+    /// Commitment whose dispute resolution is being appealed.
     pub commitment_id: Uuid,
+    /// Token issuer filing the appeal.
     pub issuer_id: Uuid,
+    /// Reason for the appeal.
     pub reason: String,
+    /// Additional evidence to support the appeal.
     pub additional_evidence: String,
 }
 
 /// Dispute voting results
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DisputeResults {
+    /// Dispute these results belong to.
     pub dispute_id: Uuid,
+    /// Total number of votes cast.
     pub total_votes: i32,
+    /// Weighted voting power in favour of upholding the dispute.
     pub uphold_votes: Decimal,
+    /// Weighted voting power in favour of rejecting the dispute.
     pub reject_votes: Decimal,
+    /// Weighted voting power of abstentions.
     pub abstain_votes: Decimal,
+    /// Total voting power across all cast votes.
     pub total_voting_power: Decimal,
+    /// Final outcome of the dispute.
     pub outcome: DisputeOutcome,
 }
 
@@ -198,6 +244,7 @@ pub struct DisputeService {
 }
 
 impl DisputeService {
+    /// Create a new [`DisputeService`] with default quorum (1000 tokens), 72h voting, 48h appeal window.
     pub fn new(pool: PgPool) -> Self {
         Self {
             pool,
@@ -207,6 +254,7 @@ impl DisputeService {
         }
     }
 
+    /// Create a [`DisputeService`] with custom quorum and time-window configuration.
     pub fn with_config(
         pool: PgPool,
         quorum_threshold: Decimal,

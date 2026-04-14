@@ -164,13 +164,21 @@ impl HTLC {
 /// HTLC error types
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HTLCError {
+    /// The contract is not in a valid state for the requested operation
     InvalidState,
+    /// The time lock has expired
     Expired,
+    /// The time lock has not yet expired
     NotExpired,
+    /// The provided preimage does not match the hash lock
     InvalidSecret,
+    /// Insufficient funds to create the HTLC
     InsufficientFunds,
+    /// The referenced order was not found
     OrderNotFound,
+    /// The order has already been matched
     OrderAlreadyMatched,
+    /// A swap with the given ID already exists
     SwapAlreadyExists,
 }
 
@@ -231,7 +239,7 @@ pub struct AtomicSwap {
     pub htlc_a: HTLC,
     /// HTLC on chain B
     pub htlc_b: HTLC,
-    /// Secret (known only to initiator initially)
+    /// Preimage secret — known only to the initiator until step 1 executes
     secret: Option<String>,
     /// Hash lock (SHA256 of secret)
     pub hash_lock: String,
@@ -310,7 +318,7 @@ impl AtomicSwap {
 
     /// Generate a random secret
     fn generate_secret() -> String {
-        use rand::Rng;
+        use rand::RngExt;
         let mut rng = rand::rng();
         let bytes: Vec<u8> = (0..32).map(|_| rng.random()).collect();
         hex::encode(bytes)
@@ -374,9 +382,9 @@ impl AtomicSwap {
 
 /// Cross-chain order matcher
 pub struct OrderMatcher {
-    /// Open orders
+    /// Open swap orders indexed by order ID
     orders: HashMap<String, SwapOrder>,
-    /// Active swaps
+    /// Active atomic swaps indexed by swap ID
     swaps: HashMap<String, AtomicSwap>,
 }
 
@@ -550,11 +558,17 @@ impl Default for OrderMatcher {
 /// Order matcher statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrderMatcherStats {
+    /// Total number of orders ever submitted
     pub total_orders: usize,
+    /// Number of orders currently open and awaiting a match
     pub open_orders: usize,
+    /// Number of orders that have been matched
     pub matched_orders: usize,
+    /// Number of swaps that completed successfully
     pub completed_swaps: usize,
+    /// Number of swaps that failed or were refunded
     pub failed_swaps: usize,
+    /// Number of swaps currently pending or locked
     pub active_swaps: usize,
 }
 

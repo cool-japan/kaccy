@@ -14,17 +14,24 @@ use uuid::Uuid;
 /// Trade classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TradeDirection {
+    /// Buyer-initiated trade.
     Buy,
+    /// Seller-initiated trade.
     Sell,
 }
 
 /// Trade for toxicity analysis
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToxicityTrade {
+    /// Unix timestamp of the trade in milliseconds.
     pub timestamp: i64,
+    /// Execution price of the trade.
     pub price: Decimal,
+    /// Trade volume.
     pub volume: Decimal,
+    /// Buyer- or seller-initiated direction.
     pub direction: TradeDirection,
+    /// Whether the order was aggressive (crossed the spread).
     pub is_aggressive: bool,
 }
 

@@ -64,6 +64,7 @@ pub async fn logging_middleware(req: Request, next: Next) -> Response {
 
 /// Extension trait for Request to check content type
 pub trait RequestExt {
+    /// Returns true if the request has a JSON content type
     fn is_json(&self) -> bool;
 }
 

@@ -69,6 +69,7 @@ impl VelocityMetrics {
     }
 }
 
+/// Classification of token circulation velocity
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VelocityLevel {
     /// Low velocity (good for store of value)
@@ -269,6 +270,7 @@ pub struct StakingIncentiveOptimizer {
     target_ratio: Decimal,
 }
 
+/// Active staking position held by a user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StakePosition {
     /// User ID
@@ -405,6 +407,7 @@ impl StakingIncentiveOptimizer {
     }
 }
 
+/// Staking tier definition with APY and lock requirements
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StakingTier {
     /// Tier name
@@ -427,6 +430,7 @@ pub struct BurnRateManager {
     burn_history: Vec<BurnEvent>,
 }
 
+/// Record of a token burn transaction
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BurnEvent {
     /// Burn date

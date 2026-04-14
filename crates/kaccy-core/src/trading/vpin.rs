@@ -27,12 +27,19 @@ pub enum VolumeClass {
 /// Trade with volume classification for VPIN calculation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClassifiedTrade {
+    /// Unique trade identifier.
     pub trade_id: Uuid,
+    /// Token involved in this trade.
     pub token_id: Uuid,
+    /// Buyer- or seller-initiated direction.
     pub side: OrderSide,
+    /// Execution price.
     pub price: Decimal,
+    /// Trade size.
     pub amount: Decimal,
+    /// Time the trade occurred.
     pub timestamp: DateTime<Utc>,
+    /// Volume bucket classification for VPIN buckets.
     pub volume_class: VolumeClass,
 }
 

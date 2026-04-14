@@ -32,11 +32,17 @@
 /// );
 /// manager.send(notification).await?;
 /// ```
+/// Notification channel abstractions and trait definitions
 pub mod channels;
+/// Email notification sending via SMTP
 pub mod email;
+/// In-application notification storage and delivery
 pub mod in_app;
+/// Push notification delivery to mobile devices
 pub mod push;
+/// SMS notification delivery
 pub mod sms;
+/// Notification type definitions and core data structures
 pub mod types;
 
 pub use channels::NotificationChannel;

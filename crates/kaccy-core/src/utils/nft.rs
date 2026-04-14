@@ -1,4 +1,4 @@
-// NFT integration for gated access and trading benefits
+//! NFT integration for gated access and trading benefits
 use crate::error::CoreError;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -8,11 +8,17 @@ use uuid::Uuid;
 /// NFT rarity tiers
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NftRarity {
+    /// Most abundant rarity tier
     Common,
+    /// Second rarity tier
     Uncommon,
+    /// Third rarity tier
     Rare,
+    /// Fourth rarity tier
     Epic,
+    /// Fifth rarity tier with significant benefits
     Legendary,
+    /// Highest and rarest tier with maximum benefits
     Mythic,
 }
 
@@ -45,13 +51,21 @@ impl NftRarity {
 /// NFT collection metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NftCollection {
+    /// Unique identifier of this collection
     pub id: Uuid,
+    /// Human-readable collection name
     pub name: String,
+    /// Short ticker symbol for the collection
     pub symbol: String,
+    /// On-chain smart contract address
     pub contract_address: String,
+    /// Blockchain on which this collection is deployed
     pub chain: String,
+    /// Maximum number of tokens in the collection
     pub total_supply: u64,
+    /// Whether the collection has been platform-verified
     pub verified: bool,
+    /// When this collection record was created
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -85,12 +99,19 @@ impl NftCollection {
 /// NFT ownership record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NftOwnership {
+    /// Unique identifier of this ownership record
     pub id: Uuid,
+    /// User who owns the token
     pub user_id: Uuid,
+    /// Collection this token belongs to
     pub collection_id: Uuid,
+    /// On-chain token identifier within the collection
     pub token_id: String,
+    /// Rarity tier of the token
     pub rarity: NftRarity,
+    /// When ownership was recorded
     pub acquired_at: chrono::DateTime<chrono::Utc>,
+    /// Whether on-chain ownership has been verified
     pub verified: bool,
 }
 
@@ -117,30 +138,44 @@ impl NftOwnership {
 /// NFT-gated access levels
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NftAccessLevel {
+    /// Collection that gates this access
     pub collection_id: Uuid,
+    /// Minimum rarity required to unlock this access level
     pub required_rarity: NftRarity,
+    /// Category of access being gated
     pub access_type: AccessType,
+    /// Concrete benefits that come with this access level
     pub benefits: Vec<AccessBenefit>,
 }
 
 /// Types of gated access
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AccessType {
-    PrivatePool,       // Access to exclusive liquidity pools
-    EarlyTokenAccess,  // Early access to new token launches
-    PremiumFeatures,   // Access to premium platform features
-    ExclusiveEvents,   // Access to exclusive events/airdrops
-    ReducedFees,       // Reduced trading fees
-    PrioritySupport,   // Priority customer support
-    AdvancedAnalytics, // Advanced analytics and data
+    /// Access to exclusive liquidity pools
+    PrivatePool,
+    /// Early access to new token launches
+    EarlyTokenAccess,
+    /// Access to premium platform features
+    PremiumFeatures,
+    /// Access to exclusive events and airdrops
+    ExclusiveEvents,
+    /// Reduced trading fees
+    ReducedFees,
+    /// Priority customer support
+    PrioritySupport,
+    /// Advanced analytics and market data
+    AdvancedAnalytics,
 }
 
-/// Specific benefits provided by NFT access
+/// Specific benefit provided by NFT access
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccessBenefit {
+    /// Machine-readable benefit type identifier
     pub benefit_type: String,
+    /// Human-readable description of the benefit
     pub description: String,
-    pub value: Decimal, // Quantified value (e.g., % discount, priority level)
+    /// Quantified benefit value (e.g. fee discount %, priority level)
+    pub value: Decimal,
 }
 
 impl NftAccessLevel {
@@ -181,6 +216,7 @@ impl NftAccessLevel {
 /// NFT verification system
 #[derive(Debug, Clone)]
 pub struct NftVerifier {
+    /// Platform-verified collections that can be checked for ownership
     verified_collections: HashMap<Uuid, NftCollection>,
 }
 
@@ -235,22 +271,36 @@ impl Default for NftVerifier {
 /// NFT marketplace integration models
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NftListing {
+    /// Unique identifier of the listing
     pub id: Uuid,
+    /// Collection the listed token belongs to
     pub collection_id: Uuid,
+    /// Token being listed for sale
     pub token_id: String,
+    /// User selling the token
     pub seller_id: Uuid,
+    /// Asking price
     pub price: Decimal,
+    /// Currency denomination of the price
     pub currency: String,
+    /// Current lifecycle status of the listing
     pub status: ListingStatus,
+    /// When the listing was created
     pub created_at: chrono::DateTime<chrono::Utc>,
+    /// When the listing expires (None = no expiry)
     pub expires_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
+/// Status of an NFT marketplace listing
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ListingStatus {
+    /// Listing is live and available for purchase
     Active,
+    /// Token has been sold
     Sold,
+    /// Seller cancelled the listing
     Cancelled,
+    /// Listing has passed its expiry time
     Expired,
 }
 
@@ -307,6 +357,7 @@ impl NftListing {
 /// NFT-based fee discount calculator
 #[derive(Debug, Clone)]
 pub struct NftFeeDiscountCalculator {
+    /// Access levels that may grant fee discounts
     access_levels: Vec<NftAccessLevel>,
 }
 
@@ -378,12 +429,19 @@ impl Default for NftFeeDiscountCalculator {
 /// Exclusive trading pool for NFT holders
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NftGatedPool {
+    /// Unique identifier of the pool
     pub id: Uuid,
+    /// Human-readable name
     pub name: String,
+    /// NFT collection required for entry
     pub required_collection: Uuid,
+    /// Minimum rarity level required for entry
     pub required_rarity: NftRarity,
+    /// Trading pairs available in this pool
     pub token_pairs: Vec<(Uuid, Uuid)>,
+    /// Total liquidity deposited
     pub total_liquidity: Decimal,
+    /// When the pool was created
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 

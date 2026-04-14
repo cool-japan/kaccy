@@ -277,10 +277,14 @@ impl Default for MemoryProfiler {
     }
 }
 
+/// Aggregated memory usage statistics
 #[derive(Debug, Clone)]
 pub struct MemoryStats {
+    /// Total number of tracked allocations.
     pub allocation_count: usize,
+    /// Combined size in bytes across all allocations.
     pub total_bytes: usize,
+    /// Mean allocation size in bytes.
     pub average_size: usize,
 }
 

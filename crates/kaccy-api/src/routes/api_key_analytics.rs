@@ -16,21 +16,32 @@ use crate::{error::ApiError, state::AppState};
 /// API key usage statistics
 #[derive(Debug, Serialize, FromRow)]
 pub struct ApiKeyUsageStats {
+    /// API key ID
     pub api_key_id: Uuid,
+    /// Total number of requests made with this key
     pub total_requests: i64,
+    /// Number of successful requests (2xx status codes)
     pub successful_requests: i64,
+    /// Number of failed requests (non-2xx status codes)
     pub failed_requests: i64,
+    /// Timestamp of most recent use
     pub last_used_at: Option<DateTime<Utc>>,
+    /// List of endpoints that have been accessed
     pub endpoints_used: Option<Vec<String>>,
 }
 
 /// Detailed usage entry
 #[derive(Debug, Serialize, FromRow)]
 pub struct UsageEntry {
+    /// Request timestamp
     pub timestamp: DateTime<Utc>,
+    /// API endpoint path
     pub endpoint: String,
+    /// HTTP method
     pub method: String,
+    /// HTTP response status code
     pub status_code: i32,
+    /// Response time in milliseconds
     pub response_time_ms: Option<i32>,
 }
 
@@ -63,46 +74,66 @@ fn default_per_page() -> i64 {
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum GroupByInterval {
+    /// Group by hour
     Hour,
+    /// Group by day (default)
     #[default]
     Day,
+    /// Group by week
     Week,
 }
 
 /// Aggregated usage data
 #[derive(Debug, Serialize, FromRow)]
 pub struct AggregatedUsage {
+    /// Time bucket start
     pub time_bucket: DateTime<Utc>,
+    /// Number of requests in this time bucket
     pub request_count: i64,
+    /// Percentage of successful requests (0-100)
     pub success_rate: f64,
+    /// Average response time in milliseconds
     pub avg_response_time_ms: Option<f64>,
 }
 
 /// API key usage summary
 #[derive(Debug, Serialize)]
 pub struct UsageSummary {
+    /// API key ID
     pub api_key_id: Uuid,
+    /// Start of the reporting period
     pub period_start: DateTime<Utc>,
+    /// End of the reporting period
     pub period_end: DateTime<Utc>,
+    /// Total requests in the period
     pub total_requests: i64,
+    /// Overall success rate (0-100)
     pub success_rate: f64,
+    /// Most frequently accessed endpoints
     pub top_endpoints: Vec<EndpointUsage>,
+    /// Request distribution over time
     pub hourly_distribution: Vec<AggregatedUsage>,
+    /// Distribution of HTTP status codes
     pub status_code_distribution: Vec<StatusCodeCount>,
 }
 
 /// Endpoint usage statistics
 #[derive(Debug, Serialize, FromRow)]
 pub struct EndpointUsage {
+    /// Endpoint path
     pub endpoint: String,
+    /// Number of requests to this endpoint
     pub request_count: i64,
+    /// Average response time in milliseconds
     pub avg_response_time_ms: Option<f64>,
 }
 
 /// Status code distribution
 #[derive(Debug, Serialize, FromRow)]
 pub struct StatusCodeCount {
+    /// HTTP status code
     pub status_code: i32,
+    /// Number of responses with this status code
     pub count: i64,
 }
 
@@ -336,19 +367,24 @@ pub async fn get_all_api_keys_usage(
     Ok(Json(stats))
 }
 
-/// Get quota usage for an API key
-///
-/// Returns current usage against configured quotas
+/// API key quota usage information
 #[derive(Debug, Serialize)]
 pub struct QuotaUsage {
+    /// API key ID
     pub api_key_id: Uuid,
+    /// Quota period (monthly, daily, etc.)
     pub period: String,
+    /// Current usage count in this period
     pub current_usage: i64,
+    /// Maximum allowed requests (None if unlimited)
     pub quota_limit: Option<i64>,
+    /// Percentage of quota used (0-100)
     pub percentage_used: Option<f64>,
+    /// Timestamp when quota resets
     pub reset_at: Option<DateTime<Utc>>,
 }
 
+/// Get the current quota usage for a specific API key
 #[allow(dead_code)]
 pub async fn get_api_key_quota(
     Extension(user_id): Extension<Uuid>,

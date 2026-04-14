@@ -43,6 +43,7 @@ pub struct SubscriberHandle {
 }
 
 impl SubscriberHandle {
+    /// Creates a new `SubscriberHandle` with a generated UUID and the given name.
     pub fn new(name: String) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -50,10 +51,12 @@ impl SubscriberHandle {
         }
     }
 
+    /// Returns the unique identifier of this subscriber handle.
     pub fn id(&self) -> Uuid {
         self.id
     }
 
+    /// Returns the human-readable name of this subscriber.
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -91,6 +94,7 @@ pub struct NotificationSubscriber {
 }
 
 impl NotificationSubscriber {
+    /// Creates a new `NotificationSubscriber` that listens for the specified event types.
     pub fn new(event_types: Vec<&'static str>) -> Self {
         Self { event_types }
     }
@@ -211,6 +215,7 @@ pub struct MetricsSubscriber {
 }
 
 impl MetricsSubscriber {
+    /// Creates a new `MetricsSubscriber` with empty event count tracking.
     pub fn new() -> Self {
         Self {
             event_counts: std::sync::Arc::new(std::sync::Mutex::new(

@@ -45,3 +45,6 @@ coverage/
 **/CLAUDE.md
 **/claude_config.json
 **/.claude/
+
+# Rustc ICE dumps
+rustc-ice-*.txt

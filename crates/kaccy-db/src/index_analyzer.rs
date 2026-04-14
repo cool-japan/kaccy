@@ -27,25 +27,51 @@ pub enum Priority {
 #[derive(Debug, Clone, Serialize)]
 pub enum IndexSuggestionType {
     /// Create a new single-column index
-    SingleColumn { table: String, column: String },
+    SingleColumn {
+        /// Target table name.
+        table: String,
+        /// Column to index.
+        column: String,
+    },
     /// Create a composite index
-    Composite { table: String, columns: Vec<String> },
+    Composite {
+        /// Target table name.
+        table: String,
+        /// Ordered list of columns to include in the index.
+        columns: Vec<String>,
+    },
     /// Create a partial index
     Partial {
+        /// Target table name.
         table: String,
+        /// Column to index.
         column: String,
+        /// WHERE condition for the partial index.
         condition: String,
     },
     /// Create a covering index (INCLUDE)
     Covering {
+        /// Target table name.
         table: String,
+        /// Columns used in index key.
         index_columns: Vec<String>,
+        /// Additional columns to include (INCLUDE clause).
         include_columns: Vec<String>,
     },
     /// Create a GIN index for full-text search
-    FullText { table: String, column: String },
+    FullText {
+        /// Target table name.
+        table: String,
+        /// Column to index with GIN.
+        column: String,
+    },
     /// Create a BRIN index for range queries on sorted data
-    Brin { table: String, column: String },
+    Brin {
+        /// Target table name.
+        table: String,
+        /// Column to index with BRIN.
+        column: String,
+    },
 }
 
 /// Index suggestion

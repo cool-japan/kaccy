@@ -21,6 +21,7 @@ pub struct MaintenanceService {
 }
 
 impl MaintenanceService {
+    /// Create a new [`MaintenanceService`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         let batch_service = BatchService::new(pool.clone());
         let engine = ReputationEngine::new(pool.clone());
@@ -323,26 +324,42 @@ impl MaintenanceService {
 /// Maintenance task report
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct MaintenanceReport {
+    /// Names of maintenance tasks that completed successfully.
     pub tasks_completed: Vec<String>,
+    /// Names of maintenance tasks that encountered errors.
     pub tasks_failed: Vec<String>,
+    /// Number of commitments marked as expired.
     pub commitments_expired: i32,
+    /// Number of users who had time-decay applied.
     pub users_decayed: i32,
+    /// Number of daily score snapshots created.
     pub snapshots_created: i32,
+    /// Number of user scores recalculated from events.
     pub scores_recalculated: i32,
+    /// Number of stale or orphaned records cleaned up.
     pub records_cleaned: i32,
+    /// Number of old records archived.
     pub records_archived: i32,
+    /// Total wall-clock duration of the maintenance run in seconds.
     pub duration_seconds: i32,
+    /// Timestamp when the maintenance run completed.
     pub completed_at: Option<DateTime<Utc>>,
 }
 
 /// Health check report
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct HealthCheckReport {
+    /// Overall health status of the system.
     pub healthy: bool,
+    /// Whether the database connection is healthy.
     pub database_healthy: bool,
+    /// Number of score values that are outside expected ranges.
     pub score_anomalies: i32,
+    /// Number of commitments stuck in a transitional state.
     pub stuck_commitments: i32,
+    /// Number of orphaned records found.
     pub orphaned_records: i32,
+    /// Timestamp when the health check was performed.
     pub checked_at: DateTime<Utc>,
 }
 

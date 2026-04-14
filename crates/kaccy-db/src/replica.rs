@@ -84,10 +84,15 @@ pub enum LoadBalanceStrategy {
 /// Replica pool status
 #[derive(Debug, Clone, Serialize)]
 pub struct ReplicaStatus {
+    /// Masked URL of the replica (sensitive credentials removed).
     pub url_masked: String,
+    /// Whether the replica is currently responding to health checks.
     pub is_healthy: bool,
+    /// Total number of connections in the pool.
     pub pool_size: u32,
+    /// Number of idle connections available.
     pub pool_idle: u32,
+    /// Round-trip query latency in milliseconds.
     pub latency_ms: Option<u64>,
 }
 
@@ -258,10 +263,15 @@ impl ReplicaPoolManager {
 /// Health status for the replica setup
 #[derive(Debug, Serialize)]
 pub struct ReplicaHealthStatus {
+    /// Aggregate health status derived from primary and replica checks.
     pub overall_status: HealthStatus,
+    /// Health check result for the primary pool.
     pub primary: HealthCheck,
+    /// Health check results for each replica pool.
     pub replicas: Vec<ReplicaStatus>,
+    /// Number of replicas that are currently healthy.
     pub healthy_replica_count: usize,
+    /// Total number of configured replicas.
     pub total_replica_count: usize,
 }
 
@@ -312,12 +322,14 @@ pub struct SmartDbClient {
 }
 
 impl SmartDbClient {
+    /// Create a new `SmartDbClient` wrapping the given pool manager.
     pub fn new(manager: ReplicaPoolManager) -> Self {
         Self {
             manager: Arc::new(manager),
         }
     }
 
+    /// Create a `SmartDbClient` from a shared `Arc` reference to a pool manager.
     pub fn from_arc(manager: Arc<ReplicaPoolManager>) -> Self {
         Self { manager }
     }
@@ -357,32 +369,38 @@ pub struct SmartDbClientBuilder {
 }
 
 impl SmartDbClientBuilder {
+    /// Create a new builder configured with the given primary database URL.
     pub fn new(primary_url: impl Into<String>) -> Self {
         Self {
             config: ReplicaConfig::primary_only(primary_url),
         }
     }
 
+    /// Add a read replica URL to the builder configuration.
     pub fn add_replica(mut self, url: impl Into<String>) -> Self {
         self.config.replica_urls.push(url.into());
         self
     }
 
+    /// Set the maximum number of connections per pool.
     pub fn max_connections(mut self, max: u32) -> Self {
         self.config.max_connections = max;
         self
     }
 
+    /// Set the minimum number of connections per pool.
     pub fn min_connections(mut self, min: u32) -> Self {
         self.config.min_connections = min;
         self
     }
 
+    /// Set the load balancing strategy for read replicas.
     pub fn strategy(mut self, strategy: LoadBalanceStrategy) -> Self {
         self.config.load_balance_strategy = strategy;
         self
     }
 
+    /// Build and connect the `SmartDbClient`, establishing all pools.
     pub async fn build(self) -> Result<SmartDbClient> {
         let manager = ReplicaPoolManager::new(self.config).await?;
         Ok(SmartDbClient::new(manager))

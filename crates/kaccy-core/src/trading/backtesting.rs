@@ -13,49 +13,74 @@ use std::time::{Duration, SystemTime};
 /// Order book snapshot for historical replay
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrderBookSnapshot {
+    /// When this snapshot was captured
     pub timestamp: SystemTime,
+    /// Token this order book belongs to
     pub token_id: String,
+    /// Bid (buy) price levels, best bid first
     pub bids: Vec<PriceLevel>,
+    /// Ask (sell) price levels, best ask first
     pub asks: Vec<PriceLevel>,
 }
 
+/// A single price level in an order book
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriceLevel {
+    /// Price at this level
     pub price: Decimal,
+    /// Quantity available at this price
     pub quantity: Decimal,
 }
 
 /// Historical trade tick
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeTick {
+    /// When the trade occurred
     pub timestamp: SystemTime,
+    /// Token that was traded
     pub token_id: String,
+    /// Execution price
     pub price: Decimal,
+    /// Trade quantity
     pub quantity: Decimal,
+    /// Whether the buyer was the passive (maker) side
     pub is_buyer_maker: bool,
 }
 
 /// Backtest configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BacktestConfig {
+    /// Starting cash balance for the backtest
     pub initial_balance: Decimal,
+    /// Start of the backtesting period
     pub start_time: SystemTime,
+    /// End of the backtesting period
     pub end_time: SystemTime,
+    /// Fee applied to maker orders
     pub maker_fee: Decimal,
+    /// Fee applied to taker orders
     pub taker_fee: Decimal,
+    /// Model used to estimate execution slippage
     pub slippage_model: SlippageModel,
+    /// Whether to simulate market-impact costs
     pub enable_market_impact: bool,
 }
 
+/// Slippage model used during backtesting.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SlippageModel {
     /// No slippage
     None,
     /// Fixed percentage slippage
-    Fixed { percentage: Decimal },
+    Fixed {
+        /// Slippage applied as a fixed percentage of trade value.
+        percentage: Decimal,
+    },
     /// Volume-based slippage
     VolumeBased {
+        /// Base slippage percentage at minimal volume.
         base_pct: Decimal,
+        /// Multiplier applied as volume increases.
         volume_factor: Decimal,
     },
     /// Realistic order book slippage
@@ -64,34 +89,54 @@ pub enum SlippageModel {
 
 /// Backtest execution engine
 pub struct BacktestEngine {
+    /// Configuration for this backtest run
     config: BacktestConfig,
+    /// Current simulated time
     current_time: SystemTime,
+    /// Available cash balance
     balance: Decimal,
+    /// Open positions (token_id → quantity)
     positions: HashMap<String, Decimal>,
+    /// Chronological history of executed orders
     order_history: Vec<BacktestOrder>,
+    /// Historical trade ticks used for price lookups
     price_history: Vec<TradeTick>,
+    /// Rolling window of order book snapshots
     orderbook_snapshots: VecDeque<OrderBookSnapshot>,
 }
 
+/// An order executed during a backtest run
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BacktestOrder {
+    /// Simulated execution time
     pub timestamp: SystemTime,
+    /// Token traded
     pub token_id: String,
+    /// Buy or sell
     pub side: OrderSide,
+    /// Number of tokens traded
     pub quantity: Decimal,
+    /// Actual execution price (including slippage)
     pub price: Decimal,
+    /// Fee charged for this order
     pub fee: Decimal,
+    /// Slippage incurred relative to the mid-price
     pub slippage: Decimal,
+    /// Realised P&L for this order (populated on sell)
     pub pnl: Option<Decimal>,
 }
 
+/// Order direction
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OrderSide {
+    /// Buy (long) order
     Buy,
+    /// Sell (short/close) order
     Sell,
 }
 
 impl BacktestEngine {
+    /// Create a new backtest engine with the given configuration
     pub fn new(config: BacktestConfig) -> Self {
         Self {
             current_time: config.start_time,
@@ -495,18 +540,31 @@ impl BacktestEngine {
 /// Backtest results summary
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BacktestResults {
+    /// Cash balance at the start of the backtest
     pub initial_balance: Decimal,
+    /// Cash balance at the end of the backtest
     pub final_balance: Decimal,
+    /// Total portfolio value (cash + open positions) at the end
     pub final_portfolio_value: Decimal,
+    /// Net return as a fraction of the initial balance
     pub total_return: Decimal,
+    /// Total number of orders executed
     pub total_trades: usize,
+    /// Number of profitable sell orders
     pub winning_trades: usize,
+    /// Number of loss-making sell orders
     pub losing_trades: usize,
+    /// Win rate as a fraction (winning / total sell orders)
     pub win_rate: Decimal,
+    /// Total fees paid across all orders
     pub total_fees: Decimal,
+    /// Maximum peak-to-trough drawdown observed
     pub max_drawdown: Decimal,
+    /// Annualised Sharpe ratio
     pub sharpe_ratio: Decimal,
+    /// Start of the backtesting period
     pub start_time: SystemTime,
+    /// End of the backtesting period
     pub end_time: SystemTime,
 }
 

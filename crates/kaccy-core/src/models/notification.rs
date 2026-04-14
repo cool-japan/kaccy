@@ -10,7 +10,9 @@ use uuid::Uuid;
 /// User notification
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Notification {
+    /// Unique identifier of the notification
     pub notification_id: Uuid,
+    /// Recipient user
     pub user_id: Uuid,
     /// Type of notification
     pub notification_type: NotificationType,
@@ -34,6 +36,7 @@ pub struct Notification {
     pub action_url: Option<String>,
     /// Expiration time (for time-sensitive notifications)
     pub expires_at: Option<DateTime<Utc>>,
+    /// Timestamp when the notification was created.
     pub created_at: DateTime<Utc>,
 }
 
@@ -43,61 +46,100 @@ pub struct Notification {
 #[derive(Default)]
 pub enum NotificationType {
     // Order/Trade notifications
+    /// An order was placed
     OrderCreated,
+    /// An order was fully filled
     OrderFilled,
+    /// An order was cancelled
     OrderCancelled,
+    /// An order expired without being filled
     OrderExpired,
+    /// A trade was executed
     TradeExecuted,
 
     // Payment notifications
+    /// A payment was received
     PaymentReceived,
+    /// A payment was confirmed
     PaymentConfirmed,
+    /// A payment expired
     PaymentExpired,
+    /// A payment was refunded
     PaymentRefund,
 
     // Token notifications
+    /// A new token was created
     TokenCreated,
+    /// A token was updated
     TokenUpdated,
+    /// A token was paused
     TokenPaused,
+    /// A token price alert was triggered
     TokenPriceAlert,
+    /// A new holder acquired the token
     NewTokenHolder,
 
     // Reputation/Commitment notifications
+    /// A commitment deadline is approaching
     CommitmentDeadlineApproaching,
+    /// A commitment deadline has passed
     CommitmentDeadlinePassed,
+    /// A commitment was verified
     CommitmentVerified,
+    /// A commitment was rejected
     CommitmentRejected,
+    /// Reputation score changed
     ReputationChanged,
 
     // KYC notifications
+    /// KYC documents were submitted
     KycSubmitted,
+    /// KYC was approved
     KycApproved,
+    /// KYC was rejected
     KycRejected,
+    /// Additional KYC documents are required
     KycDocumentRequired,
 
     // Governance notifications
+    /// A new governance proposal was created
     ProposalCreated,
+    /// A vote was cast on a proposal
     ProposalVoted,
+    /// A governance proposal passed
     ProposalPassed,
+    /// A governance proposal was rejected
     ProposalRejected,
 
     // Security notifications
+    /// Login from a previously unseen device
     LoginFromNewDevice,
+    /// Password was changed
     PasswordChanged,
+    /// Two-factor authentication was enabled
     TwoFactorEnabled,
+    /// A security alert was triggered
     SecurityAlert,
+    /// Account was locked
     AccountLocked,
 
     // System notifications
+    /// Scheduled maintenance announcement
     MaintenanceScheduled,
+    /// System update announcement
     SystemUpdate,
+    /// General platform announcement (default)
     #[default]
     AnnouncementGeneral,
+    /// Important platform announcement
     AnnouncementImportant,
 
     // Social notifications
+    /// A new follower
     NewFollower,
+    /// A new direct message
     NewMessage,
+    /// Mentioned in a comment
     MentionedInComment,
 }
 
@@ -114,10 +156,14 @@ impl fmt::Display for NotificationType {
 #[sqlx(type_name = "varchar", rename_all = "lowercase")]
 #[derive(Default)]
 pub enum NotificationPriority {
+    /// Low-importance notification
     Low,
+    /// Normal importance (default)
     #[default]
     Normal,
+    /// High-importance notification
     High,
+    /// Urgent, time-sensitive notification
     Urgent,
 }
 
@@ -189,6 +235,7 @@ pub struct NotificationBuilder {
 }
 
 impl NotificationBuilder {
+    /// Create a new notification builder with default values
     pub fn new() -> Self {
         Self {
             user_id: None,
@@ -204,52 +251,62 @@ impl NotificationBuilder {
         }
     }
 
+    /// Set the recipient user
     pub fn user_id(mut self, user_id: Uuid) -> Self {
         self.user_id = Some(user_id);
         self
     }
 
+    /// Set the notification type
     pub fn notification_type(mut self, notification_type: NotificationType) -> Self {
         self.notification_type = Some(notification_type);
         self
     }
 
+    /// Set the notification title
     pub fn title(mut self, title: String) -> Self {
         self.title = Some(title);
         self
     }
 
+    /// Set the notification message body
     pub fn message(mut self, message: String) -> Self {
         self.message = Some(message);
         self
     }
 
+    /// Attach optional JSON data
     pub fn data(mut self, data: JsonValue) -> Self {
         self.data = Some(data);
         self
     }
 
+    /// Set the priority level
     pub fn priority(mut self, priority: NotificationPriority) -> Self {
         self.priority = priority;
         self
     }
 
+    /// Associate a resource with this notification
     pub fn resource(mut self, resource_type: String, resource_id: Uuid) -> Self {
         self.resource_type = Some(resource_type);
         self.resource_id = Some(resource_id);
         self
     }
 
+    /// Set an action URL for clickable notifications
     pub fn action_url(mut self, url: String) -> Self {
         self.action_url = Some(url);
         self
     }
 
+    /// Set when this notification expires
     pub fn expires_at(mut self, expires_at: DateTime<Utc>) -> Self {
         self.expires_at = Some(expires_at);
         self
     }
 
+    /// Build the [`Notification`], returning an error if required fields are missing
     pub fn build(self) -> Result<Notification, String> {
         Ok(Notification {
             notification_id: Uuid::new_v4(),
@@ -285,6 +342,7 @@ impl Default for NotificationBuilder {
 /// User notification preferences
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct NotificationPreferences {
+    /// User these preferences belong to.
     pub user_id: Uuid,
     /// Receive email notifications
     pub email_enabled: bool,
@@ -300,6 +358,7 @@ pub struct NotificationPreferences {
     pub quiet_hours_start: Option<chrono::NaiveTime>,
     /// Quiet hours end (UTC)
     pub quiet_hours_end: Option<chrono::NaiveTime>,
+    /// Timestamp of the most recent preferences update
     pub updated_at: DateTime<Utc>,
 }
 
@@ -376,9 +435,13 @@ impl NotificationPreferences {
 /// Email template for notifications
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmailTemplate {
+    /// Identifier for this template.
     pub template_name: String,
+    /// Email subject line.
     pub subject: String,
+    /// HTML body of the email.
     pub body_html: String,
+    /// Plain-text body of the email.
     pub body_text: String,
     /// Variables to replace in template (e.g., {{username}}, {{amount}})
     pub variables: Vec<String>,
@@ -387,10 +450,15 @@ pub struct EmailTemplate {
 /// Notification statistics
 #[derive(Debug, Serialize)]
 pub struct NotificationStats {
+    /// User these statistics are for.
     pub user_id: Uuid,
+    /// Total number of notifications received.
     pub total_notifications: i64,
+    /// Number of notifications not yet read.
     pub unread_notifications: i64,
+    /// Notifications received in the last 24 hours.
     pub notifications_last_24h: i64,
+    /// Most frequently received notification type, if any.
     pub most_common_type: Option<NotificationType>,
 }
 

@@ -1,4 +1,4 @@
-// Cross-chain bridge integration for asset transfers
+//! Cross-chain bridge integration for asset transfers
 use crate::error::CoreError;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -8,12 +8,19 @@ use uuid::Uuid;
 /// Supported blockchain networks
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Chain {
+    /// Bitcoin mainnet
     Bitcoin,
+    /// Ethereum mainnet
     Ethereum,
+    /// Polygon PoS
     Polygon,
+    /// Arbitrum One
     Arbitrum,
+    /// Optimism
     Optimism,
+    /// Base
     Base,
+    /// Stacks
     Stacks,
 }
 
@@ -48,12 +55,18 @@ impl Chain {
 /// Bridge provider abstraction
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BridgeProvider {
-    Native,     // Our native bridge
-    LayerZero,  // LayerZero omnichain protocol
-    Wormhole,   // Wormhole bridge
-    Stargate,   // Stargate Finance
-    Axelar,     // Axelar Network
-    Multichain, // Multichain (formerly Anyswap)
+    /// Our native bridge
+    Native,
+    /// LayerZero omnichain protocol
+    LayerZero,
+    /// Wormhole bridge
+    Wormhole,
+    /// Stargate Finance
+    Stargate,
+    /// Axelar Network
+    Axelar,
+    /// Multichain (formerly Anyswap)
+    Multichain,
 }
 
 impl BridgeProvider {
@@ -101,30 +114,50 @@ impl BridgeProvider {
 /// Status of a bridge transfer
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BridgeTransferStatus {
+    /// Transfer is queued but not yet submitted
     Pending,
+    /// Awaiting block confirmations on the source chain
     Confirming,
+    /// Transfer is being processed by the bridge
     InProgress,
+    /// Transfer completed successfully
     Completed,
+    /// Transfer failed
     Failed,
+    /// Transfer was refunded to the sender
     Refunded,
 }
 
 /// Bridge transfer record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BridgeTransfer {
+    /// Unique identifier of this transfer
     pub id: Uuid,
+    /// User initiating the transfer
     pub user_id: Uuid,
+    /// Token being transferred
     pub token_id: Uuid,
+    /// Chain the transfer originates from
     pub source_chain: Chain,
+    /// Chain the transfer is destined for
     pub destination_chain: Chain,
+    /// Bridge protocol to use
     pub provider: BridgeProvider,
+    /// Amount being transferred
     pub amount: Decimal,
+    /// Bridge fee charged
     pub fee: Decimal,
+    /// Current status of the transfer
     pub status: BridgeTransferStatus,
+    /// Transaction hash on the source chain
     pub source_tx_hash: Option<String>,
+    /// Transaction hash on the destination chain
     pub destination_tx_hash: Option<String>,
+    /// Timestamp when the transfer was created
     pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Timestamp of the most recent status update
     pub updated_at: chrono::DateTime<chrono::Utc>,
+    /// Timestamp when the transfer completed
     pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
@@ -192,9 +225,13 @@ impl BridgeTransfer {
 /// Multi-chain token tracking
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultiChainToken {
+    /// Token identifier
     pub token_id: Uuid,
+    /// Token ticker symbol
     pub symbol: String,
+    /// Contract addresses per chain
     pub chain_addresses: HashMap<Chain, String>,
+    /// Total circulating supply per chain
     pub total_supply_by_chain: HashMap<Chain, Decimal>,
 }
 
@@ -234,14 +271,23 @@ impl MultiChainToken {
 /// Cross-chain arbitrage opportunity detection
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrossChainArbitrage {
+    /// Token with the price discrepancy
     pub token_id: Uuid,
+    /// Chain where the token is cheaper (buy side)
     pub buy_chain: Chain,
+    /// Chain where the token is more expensive (sell side)
     pub sell_chain: Chain,
+    /// Price on the buy chain
     pub buy_price: Decimal,
+    /// Price on the sell chain
     pub sell_price: Decimal,
+    /// Expected profit as a percentage of cost
     pub profit_percentage: Decimal,
+    /// Bridge provider to use for the transfer
     pub bridge_provider: BridgeProvider,
+    /// Estimated net profit after fees
     pub estimated_profit: Decimal,
+    /// Timestamp when this opportunity was detected
     pub detected_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -333,8 +379,11 @@ impl CrossChainArbitrage {
 /// Multi-chain portfolio view
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultiChainPortfolio {
+    /// User who owns this portfolio
     pub user_id: Uuid,
+    /// Token balances indexed by chain, then token ID
     pub balances_by_chain: HashMap<Chain, HashMap<Uuid, Decimal>>,
+    /// Timestamp of the most recent balance update
     pub last_updated: chrono::DateTime<chrono::Utc>,
 }
 
@@ -409,20 +458,30 @@ impl MultiChainPortfolio {
 /// Cross-chain risk analysis
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrossChainRiskMetrics {
+    /// Portfolio identifier (matches user_id in MultiChainPortfolio)
     pub portfolio_id: Uuid,
-    pub chain_concentration: HashMap<Chain, Decimal>, // % of portfolio on each chain
-    pub bridge_risk_score: Decimal,                   // 0-100, higher = riskier
-    pub chain_diversification_score: Decimal,         // 0-100, higher = better
+    /// Percentage of portfolio value concentrated on each chain
+    pub chain_concentration: HashMap<Chain, Decimal>,
+    /// Bridge risk score (0-100, higher = riskier)
+    pub bridge_risk_score: Decimal,
+    /// Chain diversification score (0-100, higher = better)
+    pub chain_diversification_score: Decimal,
+    /// Suggested rebalance actions to improve diversification
     pub recommended_rebalance: Vec<RebalanceAction>,
 }
 
 /// Recommended rebalance action for cross-chain portfolio
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RebalanceAction {
+    /// Token to be moved
     pub token_id: Uuid,
+    /// Source chain for the transfer
     pub from_chain: Chain,
+    /// Destination chain for the transfer
     pub to_chain: Chain,
+    /// Amount to transfer
     pub amount: Decimal,
+    /// Human-readable reason for the recommendation
     pub reason: String,
 }
 
@@ -508,10 +567,15 @@ impl CrossChainRiskMetrics {
 /// Chain-specific fee optimization
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChainFeeOptimizer {
+    /// Chain for which fees were optimized
     pub chain: Chain,
+    /// Current observed gas price
     pub current_gas_price: Decimal,
+    /// Recommended gas price to use
     pub recommended_gas_price: Decimal,
+    /// Estimated total transaction cost at the recommended price
     pub estimated_cost: Decimal,
+    /// Optimal time to submit the transaction
     pub optimal_execution_time: chrono::DateTime<chrono::Utc>,
 }
 
@@ -545,8 +609,11 @@ impl ChainFeeOptimizer {
 /// Transaction urgency level
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TransactionUrgency {
+    /// Must confirm in the next block
     Immediate,
+    /// Normal priority — confirm within a few minutes
     Normal,
+    /// Low priority — can wait for cheaper fees
     Low,
 }
 

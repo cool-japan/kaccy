@@ -58,8 +58,11 @@ pub async fn get_pool_stats(State(state): State<AppState>) -> Result<Json<PoolSt
 /// Pool health recommendations
 #[derive(Debug, Serialize)]
 pub struct PoolHealthRecommendation {
+    /// Overall pool health status (e.g. "healthy", "degraded")
     pub status: String,
+    /// Tuning recommendations for the connection pool
     pub recommendations: Vec<String>,
+    /// Active warnings about pool health
     pub warnings: Vec<String>,
 }
 

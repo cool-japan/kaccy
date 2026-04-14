@@ -43,12 +43,16 @@ pub enum ColumnType {
 /// Report column definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReportColumn {
+    /// Internal identifier for this column
     pub name: String,
+    /// Display label shown in the report header
     pub label: String,
+    /// Data type identifier (e.g. "text", "decimal", "number")
     pub data_type: String,
 }
 
 impl ReportColumn {
+    /// Create a new report column
     pub fn new(
         name: impl Into<String>,
         label: impl Into<String>,
@@ -68,15 +72,22 @@ pub type ReportRow = HashMap<String, ColumnType>;
 /// Report data container
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReportData {
+    /// Report title
     pub title: String,
+    /// Optional description of the report
     pub description: Option<String>,
+    /// Column schema definitions
     pub columns: Vec<ReportColumn>,
+    /// Data rows
     pub rows: Vec<ReportRow>,
+    /// Timestamp when the report was generated
     pub generated_at: DateTime<Utc>,
+    /// Arbitrary key-value metadata
     pub metadata: HashMap<String, String>,
 }
 
 impl ReportData {
+    /// Create a new empty report data container
     pub fn new(title: impl Into<String>) -> Self {
         Self {
             title: title.into(),
@@ -88,19 +99,23 @@ impl ReportData {
         }
     }
 
+    /// Set the optional description
     pub fn with_description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
     }
 
+    /// Append a column definition
     pub fn add_column(&mut self, column: ReportColumn) {
         self.columns.push(column);
     }
 
+    /// Append a data row
     pub fn add_row(&mut self, row: ReportRow) {
         self.rows.push(row);
     }
 
+    /// Insert a metadata entry
     pub fn add_metadata(&mut self, key: impl Into<String>, value: impl Into<String>) {
         self.metadata.insert(key.into(), value.into());
     }
@@ -108,21 +123,25 @@ impl ReportData {
 
 /// Report builder for creating custom reports
 pub struct ReportBuilder {
+    /// Accumulated report data
     data: ReportData,
 }
 
 impl ReportBuilder {
+    /// Create a new report builder with the given title
     pub fn new(title: impl Into<String>) -> Self {
         Self {
             data: ReportData::new(title),
         }
     }
 
+    /// Set the report description
     pub fn description(mut self, description: impl Into<String>) -> Self {
         self.data.description = Some(description.into());
         self
     }
 
+    /// Add a column to the report schema
     pub fn add_column(
         mut self,
         name: impl Into<String>,
@@ -134,16 +153,19 @@ impl ReportBuilder {
         self
     }
 
+    /// Append a data row
     pub fn add_row(mut self, row: ReportRow) -> Self {
         self.data.add_row(row);
         self
     }
 
+    /// Attach a metadata key-value pair
     pub fn metadata(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.data.add_metadata(key, value);
         self
     }
 
+    /// Finalise and return the report data
     pub fn build(self) -> ReportData {
         self.data
     }
@@ -281,10 +303,15 @@ impl ReportExporter {
 /// Report schedule configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReportSchedule {
+    /// Human-readable name of the scheduled report
     pub report_name: String,
+    /// How often the report should be generated
     pub frequency: ScheduleFrequency,
+    /// Output format for the generated report
     pub format: ReportFormat,
+    /// Email addresses to deliver the report to
     pub recipients: Vec<String>,
+    /// Whether this schedule is active
     pub enabled: bool,
 }
 
@@ -292,11 +319,24 @@ pub struct ReportSchedule {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ScheduleFrequency {
     /// Daily at specific hour
-    Daily { hour: u8 },
+    Daily {
+        /// UTC hour (0–23) to run the report
+        hour: u8,
+    },
     /// Weekly on specific day
-    Weekly { day: u8, hour: u8 },
+    Weekly {
+        /// Day of week (0 = Sunday)
+        day: u8,
+        /// UTC hour (0–23) to run the report
+        hour: u8,
+    },
     /// Monthly on specific day
-    Monthly { day: u8, hour: u8 },
+    Monthly {
+        /// Day of month (1–31)
+        day: u8,
+        /// UTC hour (0–23) to run the report
+        hour: u8,
+    },
     /// Custom cron expression
     Custom,
 }
@@ -306,28 +346,42 @@ pub enum ScheduleFrequency {
 pub enum DashboardWidget {
     /// Metric card showing a single value
     MetricCard {
+        /// Card title
         title: String,
+        /// Formatted value to display
         value: String,
+        /// Percentage change from the previous period, if available
         change: Option<f64>,
+        /// Label for the comparison period (e.g. "24h")
         change_period: Option<String>,
     },
     /// Chart widget
     Chart {
+        /// Chart title
         title: String,
+        /// Visual chart type
         chart_type: ChartType,
+        /// Data series for the chart
         data: Vec<ChartDataPoint>,
     },
     /// Table widget
     Table {
+        /// Table title
         title: String,
+        /// Column header labels
         columns: Vec<String>,
+        /// Data rows (each row is a list of cell strings)
         rows: Vec<Vec<String>>,
     },
     /// Progress bar
     ProgressBar {
+        /// Progress bar title
         title: String,
+        /// Current progress value
         current: f64,
+        /// Total / target value
         total: f64,
+        /// Unit label for the values
         unit: String,
     },
 }
@@ -335,30 +389,42 @@ pub enum DashboardWidget {
 /// Chart type for visualizations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChartType {
+    /// Line chart
     Line,
+    /// Bar chart
     Bar,
+    /// Pie chart
     Pie,
+    /// Area chart
     Area,
+    /// Scatter plot
     Scatter,
 }
 
 /// Chart data point
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChartDataPoint {
+    /// X-axis label for this data point
     pub label: String,
+    /// Y-axis value for this data point
     pub value: f64,
 }
 
 /// Dashboard configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dashboard {
+    /// Unique identifier of the dashboard
     pub id: String,
+    /// Human-readable name
     pub name: String,
+    /// Ordered list of widgets composing the dashboard
     pub layout: Vec<DashboardWidget>,
+    /// Optional auto-refresh interval in seconds
     pub refresh_interval_seconds: Option<u64>,
 }
 
 impl Dashboard {
+    /// Create a new empty dashboard
     pub fn new(id: impl Into<String>, name: impl Into<String>) -> Self {
         Self {
             id: id.into(),
@@ -368,11 +434,13 @@ impl Dashboard {
         }
     }
 
+    /// Add a widget to the dashboard layout
     pub fn add_widget(mut self, widget: DashboardWidget) -> Self {
         self.layout.push(widget);
         self
     }
 
+    /// Set the auto-refresh interval in seconds
     pub fn with_refresh_interval(mut self, seconds: u64) -> Self {
         self.refresh_interval_seconds = Some(seconds);
         self
@@ -381,12 +449,15 @@ impl Dashboard {
 
 /// Report generator trait for custom report types
 pub trait ReportGenerator {
+    /// Generate the report data
     fn generate(&self) -> Result<ReportData>;
 }
 
 /// Trading volume report generator
 pub struct TradingVolumeReport {
+    /// Start of the reporting period
     pub start_date: DateTime<Utc>,
+    /// End of the reporting period
     pub end_date: DateTime<Utc>,
 }
 

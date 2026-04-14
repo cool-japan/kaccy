@@ -13,7 +13,9 @@ use crate::error::{CoreError, Result};
 /// Liquidity mining program for a pool
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct LiquidityMiningProgram {
+    /// Unique identifier for this program
     pub program_id: Uuid,
+    /// Liquidity pool this program incentivises
     pub pool_id: Uuid,
     /// Reward token ID (usually $KACCY)
     pub reward_token_id: Uuid,
@@ -33,17 +35,23 @@ pub struct LiquidityMiningProgram {
     pub status: ProgramStatus,
     /// Last reward calculation time
     pub last_update_time: DateTime<Utc>,
+    /// Timestamp when this program was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp when this program was last updated
     pub updated_at: DateTime<Utc>,
 }
 
+/// Status of a liquidity mining program
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "lowercase")]
 #[derive(Default)]
 pub enum ProgramStatus {
+    /// Program is running and distributing rewards
     #[default]
     Active,
+    /// Program is temporarily suspended
     Paused,
+    /// Program has finished and no more rewards are distributed
     Ended,
 }
 
@@ -131,9 +139,13 @@ impl LiquidityMiningProgram {
 /// User's liquidity mining stake
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct LiquidityStake {
+    /// Unique identifier for this stake
     pub stake_id: Uuid,
+    /// Mining program this stake participates in
     pub program_id: Uuid,
+    /// User who owns this stake
     pub user_id: Uuid,
+    /// Pool where LP tokens are staked
     pub pool_id: Uuid,
     /// Amount of LP tokens staked
     pub lp_tokens_staked: Decimal,
@@ -149,6 +161,7 @@ pub struct LiquidityStake {
     pub boost_multiplier: Decimal,
     /// Last reward calculation time
     pub last_reward_time: DateTime<Utc>,
+    /// Timestamp when this stake was last updated
     pub updated_at: DateTime<Utc>,
 }
 
@@ -313,13 +326,21 @@ impl RewardDistributor {
 /// Reward distribution summary
 #[derive(Debug, Serialize)]
 pub struct RewardSummary {
+    /// Mining program being summarised
     pub program_id: Uuid,
+    /// Pool associated with the program
     pub pool_id: Uuid,
+    /// Total LP tokens staked across all participants
     pub total_staked_lp: Decimal,
+    /// Total effective stake including boost multipliers
     pub total_effective_stake: Decimal,
+    /// Number of active stakers in the program
     pub total_stakers: i32,
+    /// Annualised percentage rate at current reward rate
     pub current_apr: Decimal,
+    /// Cumulative rewards distributed so far
     pub total_distributed: Decimal,
+    /// Rewards remaining to be distributed
     pub remaining_rewards: Decimal,
 }
 

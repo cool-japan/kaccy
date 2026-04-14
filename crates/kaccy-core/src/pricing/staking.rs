@@ -105,12 +105,19 @@ impl std::fmt::Display for StakingTier {
 /// A user's staking position
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StakingPosition {
+    /// User who owns this staking position
     pub user_id: Uuid,
+    /// Amount of $KACCY currently staked
     pub staked_amount: Decimal,
+    /// Tier computed from the staked amount
     pub tier: StakingTier,
+    /// Timestamp when the stake was created
     pub staked_at: DateTime<Utc>,
+    /// Optional timestamp until which the stake is locked
     pub lock_until: Option<DateTime<Utc>>,
+    /// Total rewards accumulated since last claim
     pub accumulated_rewards: Decimal,
+    /// Timestamp of the most recent reward claim
     pub last_claim_at: Option<DateTime<Utc>>,
 }
 
@@ -163,12 +170,14 @@ impl StakingPosition {
 /// Request to stake $KACCY
 #[derive(Debug, Clone, Deserialize)]
 pub struct StakeRequest {
+    /// Amount of $KACCY to stake
     pub amount: Decimal,
     /// Lock period in days (optional, longer lock = bonus)
     pub lock_days: Option<u32>,
 }
 
 impl StakeRequest {
+    /// Validate the stake request
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.amount <= dec!(0) {
             return Err("Amount must be positive");
@@ -185,24 +194,38 @@ impl StakeRequest {
 /// Fee pool for distribution to stakers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeePool {
+    /// Unique identifier for this fee pool
     pub pool_id: Uuid,
+    /// Total BTC fees accumulated for distribution
     pub total_fees_btc: Decimal,
+    /// Start of the fee collection period
     pub period_start: DateTime<Utc>,
+    /// End of the fee collection period
     pub period_end: DateTime<Utc>,
+    /// Sum of all staker weights at distribution time
     pub total_weight: Decimal,
+    /// Whether fees have already been distributed
     pub distributed: bool,
+    /// When this fee pool was created
     pub created_at: DateTime<Utc>,
 }
 
 /// Distribution record for a staker
 #[derive(Debug, Clone, Serialize)]
 pub struct FeeDistribution {
+    /// User receiving this distribution
     pub user_id: Uuid,
+    /// Fee pool this distribution is from
     pub pool_id: Uuid,
+    /// Amount staked at distribution time
     pub staked_amount: Decimal,
+    /// Staker's weight used to calculate their share
     pub weight: Decimal,
+    /// BTC amount allocated to this staker
     pub share_btc: Decimal,
+    /// Whether the staker has claimed their distribution
     pub claimed: bool,
+    /// Timestamp when the staker claimed their distribution
     pub claimed_at: Option<DateTime<Utc>>,
 }
 
@@ -282,11 +305,17 @@ impl FeeDiscountCalculator {
 /// Breakdown of fee discount
 #[derive(Debug, Clone, Serialize)]
 pub struct DiscountBreakdown {
+    /// User's reputation score used to compute the reputation discount
     pub reputation_score: Decimal,
+    /// Discount percentage earned from reputation (0–30%)
     pub reputation_discount: Decimal,
+    /// User's staked $KACCY amount
     pub staked_amount: Decimal,
+    /// Staking tier derived from the staked amount
     pub staking_tier: StakingTier,
+    /// Discount percentage earned from staking (0–50%)
     pub staking_discount: Decimal,
+    /// Final combined discount after applying the cap
     pub total_discount: Decimal,
 }
 
@@ -303,6 +332,7 @@ impl Default for FeeDistributor {
 }
 
 impl FeeDistributor {
+    /// Create a new fee distributor with no staking positions
     pub fn new() -> Self {
         Self {
             positions: HashMap::new(),
@@ -409,17 +439,24 @@ impl FeeDistributor {
 /// Staking statistics
 #[derive(Debug, Clone, Serialize)]
 pub struct StakingStats {
+    /// Total $KACCY staked across all users
     pub total_staked: Decimal,
+    /// Number of distinct stakers
     pub total_stakers: usize,
+    /// Sum of all staker weights
     pub total_weight: Decimal,
+    /// Per-tier breakdown of staker counts and amounts
     pub by_tier: Vec<TierStats>,
 }
 
 /// Statistics for a single tier
 #[derive(Debug, Clone, Serialize)]
 pub struct TierStats {
+    /// The staking tier this entry describes
     pub tier: StakingTier,
+    /// Number of stakers in this tier
     pub staker_count: usize,
+    /// Total $KACCY staked across all stakers in this tier
     pub total_staked: Decimal,
 }
 
@@ -447,5 +484,546 @@ impl Default for StakingConfig {
             lock_bonus_enabled: true,
             lock_bonus_multiplier: dec!(1.5),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Duration;
+    use rust_decimal_macros::dec;
+
+    // ------------------------------------------------------------------ //
+    // Helper: build a StakingPosition without going through new()        //
+    // ------------------------------------------------------------------ //
+    fn make_position(
+        user_id: Uuid,
+        amount: Decimal,
+        staked_at: DateTime<Utc>,
+        lock_until: Option<DateTime<Utc>>,
+    ) -> StakingPosition {
+        StakingPosition {
+            user_id,
+            staked_amount: amount,
+            tier: StakingTier::from_staked_amount(amount),
+            staked_at,
+            lock_until,
+            accumulated_rewards: dec!(0),
+            last_claim_at: None,
+        }
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 1: Tier classification from staked amount                     //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_tier_from_staked_amount_boundary_values() {
+        assert_eq!(StakingTier::from_staked_amount(dec!(0)), StakingTier::None);
+        assert_eq!(StakingTier::from_staked_amount(dec!(99)), StakingTier::None);
+        assert_eq!(
+            StakingTier::from_staked_amount(dec!(100)),
+            StakingTier::Basic
+        );
+        assert_eq!(
+            StakingTier::from_staked_amount(dec!(999)),
+            StakingTier::Basic
+        );
+        assert_eq!(
+            StakingTier::from_staked_amount(dec!(1_000)),
+            StakingTier::Silver
+        );
+        assert_eq!(
+            StakingTier::from_staked_amount(dec!(9_999)),
+            StakingTier::Silver
+        );
+        assert_eq!(
+            StakingTier::from_staked_amount(dec!(10_000)),
+            StakingTier::Gold
+        );
+        assert_eq!(
+            StakingTier::from_staked_amount(dec!(99_999)),
+            StakingTier::Gold
+        );
+        assert_eq!(
+            StakingTier::from_staked_amount(dec!(100_000)),
+            StakingTier::Platinum
+        );
+        assert_eq!(
+            StakingTier::from_staked_amount(dec!(999_999)),
+            StakingTier::Platinum
+        );
+        assert_eq!(
+            StakingTier::from_staked_amount(dec!(1_000_000)),
+            StakingTier::Diamond
+        );
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 2: Fee discount percentages per tier                          //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_fee_discount_percentages_per_tier() {
+        assert_eq!(StakingTier::None.fee_discount_percent(), dec!(0));
+        assert_eq!(StakingTier::Basic.fee_discount_percent(), dec!(5));
+        assert_eq!(StakingTier::Silver.fee_discount_percent(), dec!(10));
+        assert_eq!(StakingTier::Gold.fee_discount_percent(), dec!(20));
+        assert_eq!(StakingTier::Platinum.fee_discount_percent(), dec!(35));
+        assert_eq!(StakingTier::Diamond.fee_discount_percent(), dec!(50));
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 3: Fee share multipliers ordered correctly                    //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_fee_share_multipliers_increase_with_tier() {
+        let none_mult = StakingTier::None.fee_share_multiplier();
+        let basic_mult = StakingTier::Basic.fee_share_multiplier();
+        let silver_mult = StakingTier::Silver.fee_share_multiplier();
+        let gold_mult = StakingTier::Gold.fee_share_multiplier();
+        let platinum_mult = StakingTier::Platinum.fee_share_multiplier();
+        let diamond_mult = StakingTier::Diamond.fee_share_multiplier();
+
+        assert!(none_mult < basic_mult, "None < Basic multiplier");
+        assert!(basic_mult < silver_mult, "Basic < Silver multiplier");
+        assert!(silver_mult < gold_mult, "Silver < Gold multiplier");
+        assert!(gold_mult < platinum_mult, "Gold < Platinum multiplier");
+        assert!(
+            platinum_mult < diamond_mult,
+            "Platinum < Diamond multiplier"
+        );
+
+        // Exact values
+        assert_eq!(none_mult, dec!(0));
+        assert_eq!(basic_mult, dec!(1));
+        assert_eq!(silver_mult, dec!(1.5));
+        assert_eq!(diamond_mult, dec!(5));
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 4: Minimum stake for each tier                                //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_minimum_stake_per_tier() {
+        assert_eq!(StakingTier::None.minimum_stake(), dec!(0));
+        assert_eq!(StakingTier::Basic.minimum_stake(), dec!(100));
+        assert_eq!(StakingTier::Silver.minimum_stake(), dec!(1_000));
+        assert_eq!(StakingTier::Gold.minimum_stake(), dec!(10_000));
+        assert_eq!(StakingTier::Platinum.minimum_stake(), dec!(100_000));
+        assert_eq!(StakingTier::Diamond.minimum_stake(), dec!(1_000_000));
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 5: StakeRequest validation enforces positive amount            //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_stake_request_validation_positive_amount() {
+        let valid = StakeRequest {
+            amount: dec!(100),
+            lock_days: None,
+        };
+        assert!(valid.validate().is_ok(), "positive amount should be valid");
+
+        let zero_amount = StakeRequest {
+            amount: dec!(0),
+            lock_days: None,
+        };
+        assert!(
+            zero_amount.validate().is_err(),
+            "zero amount should fail validation"
+        );
+
+        let negative = StakeRequest {
+            amount: dec!(-1),
+            lock_days: None,
+        };
+        assert!(
+            negative.validate().is_err(),
+            "negative amount should fail validation"
+        );
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 6: StakeRequest validation rejects lock_days > 365            //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_stake_request_validation_lock_days_cap() {
+        let exactly_365 = StakeRequest {
+            amount: dec!(100),
+            lock_days: Some(365),
+        };
+        assert!(
+            exactly_365.validate().is_ok(),
+            "365 lock days should be valid"
+        );
+
+        let too_long = StakeRequest {
+            amount: dec!(100),
+            lock_days: Some(366),
+        };
+        assert!(
+            too_long.validate().is_err(),
+            "366 lock days should fail validation"
+        );
+
+        let no_lock = StakeRequest {
+            amount: dec!(100),
+            lock_days: None,
+        };
+        assert!(no_lock.validate().is_ok(), "no lock should be valid");
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 7: is_locked() reflects lock_until relative to now            //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_staking_position_is_locked() {
+        let user_id = Uuid::new_v4();
+        let now = Utc::now();
+
+        // Future lock
+        let locked = make_position(
+            user_id,
+            dec!(1000),
+            now - Duration::days(1),
+            Some(now + Duration::days(10)),
+        );
+        assert!(
+            locked.is_locked(),
+            "position with future lock_until should be locked"
+        );
+
+        // Past lock
+        let unlocked = make_position(
+            user_id,
+            dec!(1000),
+            now - Duration::days(30),
+            Some(now - Duration::days(1)),
+        );
+        assert!(
+            !unlocked.is_locked(),
+            "position with past lock_until should not be locked"
+        );
+
+        // No lock
+        let no_lock = make_position(user_id, dec!(1000), now - Duration::days(5), None);
+        assert!(
+            !no_lock.is_locked(),
+            "position without lock should not be locked"
+        );
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 8: loyalty_multiplier() returns correct values by days staked //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_loyalty_multiplier_by_staking_duration() {
+        let user_id = Uuid::new_v4();
+        let now = Utc::now();
+
+        let fresh = make_position(user_id, dec!(100), now - Duration::days(0), None);
+        assert_eq!(fresh.loyalty_multiplier(), dec!(1.0), "0 days => 1.0x");
+
+        let one_month = make_position(user_id, dec!(100), now - Duration::days(30), None);
+        assert_eq!(one_month.loyalty_multiplier(), dec!(1.1), "30 days => 1.1x");
+
+        let three_months = make_position(user_id, dec!(100), now - Duration::days(90), None);
+        assert_eq!(
+            three_months.loyalty_multiplier(),
+            dec!(1.25),
+            "90 days => 1.25x"
+        );
+
+        let six_months = make_position(user_id, dec!(100), now - Duration::days(180), None);
+        assert_eq!(
+            six_months.loyalty_multiplier(),
+            dec!(1.5),
+            "180 days => 1.5x"
+        );
+
+        let one_year = make_position(user_id, dec!(100), now - Duration::days(365), None);
+        assert_eq!(one_year.loyalty_multiplier(), dec!(2.0), "365 days => 2.0x");
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 9: FeeDistributor distributes proportionally to weight        //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_fee_distributor_proportional_distribution() {
+        let now = Utc::now();
+        let user_a = Uuid::new_v4();
+        let user_b = Uuid::new_v4();
+
+        let mut distributor = FeeDistributor::new();
+
+        // Both users at Basic tier (multiplier=1), same staked amount, fresh (loyalty=1)
+        distributor.set_position(make_position(user_a, dec!(100), now, None));
+        distributor.set_position(make_position(user_b, dec!(100), now, None));
+
+        let total_fees = dec!(1000);
+        let distributions = distributor.distribute(total_fees);
+
+        assert_eq!(
+            distributions.len(),
+            2,
+            "should produce one distribution per staker"
+        );
+
+        // Equal weight => equal share
+        let share_a = distributions
+            .iter()
+            .find(|d| d.user_id == user_a)
+            .expect("distribution for user_a must exist")
+            .share_btc;
+        let share_b = distributions
+            .iter()
+            .find(|d| d.user_id == user_b)
+            .expect("distribution for user_b must exist")
+            .share_btc;
+
+        assert_eq!(share_a, share_b, "equal weight => equal share");
+
+        // Shares must sum to exactly total_fees (no rounding leak)
+        let total_distributed: Decimal = distributions.iter().map(|d| d.share_btc).sum();
+        assert_eq!(
+            total_distributed, total_fees,
+            "distributed shares must sum to total fees"
+        );
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 10: Higher tier receives proportionally larger share           //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_fee_distributor_higher_tier_receives_larger_share() {
+        let now = Utc::now();
+        let user_basic = Uuid::new_v4();
+        let user_gold = Uuid::new_v4();
+
+        let mut distributor = FeeDistributor::new();
+
+        // Basic: 100 KACCY (multiplier=1), Gold: 10_000 KACCY (multiplier=2)
+        distributor.set_position(make_position(user_basic, dec!(100), now, None));
+        distributor.set_position(make_position(user_gold, dec!(10_000), now, None));
+
+        let distributions = distributor.distribute(dec!(100));
+
+        let share_basic = distributions
+            .iter()
+            .find(|d| d.user_id == user_basic)
+            .expect("basic distribution must exist")
+            .share_btc;
+        let share_gold = distributions
+            .iter()
+            .find(|d| d.user_id == user_gold)
+            .expect("gold distribution must exist")
+            .share_btc;
+
+        assert!(
+            share_gold > share_basic,
+            "Gold staker (higher amount + multiplier) must receive larger share: gold={share_gold}, basic={share_basic}"
+        );
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 11: Empty distributor returns no distributions                 //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_fee_distributor_empty_returns_no_distributions() {
+        let distributor = FeeDistributor::new();
+        let distributions = distributor.distribute(dec!(1000));
+        assert!(
+            distributions.is_empty(),
+            "empty distributor should return no distributions"
+        );
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 12: get_user_share returns None for empty pool                 //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_get_user_share_none_when_empty() {
+        let distributor = FeeDistributor::new();
+        let result = distributor.get_user_share(Uuid::new_v4(), dec!(100));
+        assert!(
+            result.is_none(),
+            "get_user_share with no positions should return None"
+        );
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 13: Multiplicative fee discount calculation (combine=true)     //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_fee_discount_calculator_multiplicative_combine() {
+        // 20% rep + 20% staking => (1 - 0.8 * 0.8) * 100 = 36%, not 40%
+        let calc = FeeDiscountCalculator {
+            combine_discounts: true,
+            max_discount_percent: dec!(60),
+        };
+        // Score >= 800 => 20% rep discount; 10_000 KACCY => Gold tier => 20% staking discount
+        let breakdown = calc.calculate_discount(dec!(800), dec!(10_000));
+
+        assert_eq!(
+            breakdown.reputation_discount,
+            dec!(20),
+            "rep discount should be 20%"
+        );
+        assert_eq!(
+            breakdown.staking_discount,
+            dec!(20),
+            "staking discount should be 20%"
+        );
+        assert_eq!(
+            breakdown.total_discount,
+            dec!(36),
+            "combined multiplicative discount should be 36%"
+        );
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 14: Max discount cap is enforced                               //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_fee_discount_max_cap_enforced() {
+        // Diamond rep (30%) + Diamond staking (50%) would combine to high value,
+        // cap at max_discount_percent
+        let calc = FeeDiscountCalculator {
+            combine_discounts: true,
+            max_discount_percent: dec!(60),
+        };
+        let breakdown = calc.calculate_discount(dec!(900), dec!(1_000_000));
+
+        assert!(
+            breakdown.total_discount <= dec!(60),
+            "total discount must not exceed max cap of 60%, got {}",
+            breakdown.total_discount
+        );
+        assert_eq!(
+            breakdown.total_discount,
+            dec!(60),
+            "should be exactly capped at 60%"
+        );
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 15: StakingConfig default values are sane                      //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_staking_config_default_values() {
+        let config = StakingConfig::default();
+
+        assert_eq!(config.min_stake, dec!(100), "min_stake should be 100");
+        assert_eq!(
+            config.distribution_period_hours, 24,
+            "distribution period should be daily"
+        );
+        assert_eq!(
+            config.staker_share_percent,
+            dec!(50),
+            "stakers should get 50% of platform fees"
+        );
+        assert!(
+            config.lock_bonus_enabled,
+            "lock bonus should be enabled by default"
+        );
+        assert_eq!(
+            config.lock_bonus_multiplier,
+            dec!(1.5),
+            "lock bonus multiplier should be 1.5x"
+        );
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 16: StakingStats correctly aggregates multiple positions       //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_staking_stats_aggregation() {
+        let now = Utc::now();
+        let mut distributor = FeeDistributor::new();
+
+        distributor.set_position(make_position(Uuid::new_v4(), dec!(100), now, None));
+        distributor.set_position(make_position(Uuid::new_v4(), dec!(100), now, None));
+        distributor.set_position(make_position(Uuid::new_v4(), dec!(1_000), now, None));
+
+        let stats = distributor.get_stats();
+
+        assert_eq!(stats.total_stakers, 3, "should count 3 stakers");
+        assert_eq!(
+            stats.total_staked,
+            dec!(1_200),
+            "total staked = 100 + 100 + 1000"
+        );
+        assert!(
+            stats.total_weight > dec!(0),
+            "total weight must be positive"
+        );
+
+        // Two Basic, one Silver
+        let basic_stats = stats.by_tier.iter().find(|t| t.tier == StakingTier::Basic);
+        let silver_stats = stats.by_tier.iter().find(|t| t.tier == StakingTier::Silver);
+        assert!(basic_stats.is_some(), "Basic tier stats should be present");
+        assert!(
+            silver_stats.is_some(),
+            "Silver tier stats should be present"
+        );
+
+        let basic = basic_stats.expect("basic stats must be present");
+        assert_eq!(basic.staker_count, 2, "2 stakers at Basic tier");
+        assert_eq!(basic.total_staked, dec!(200), "total staked in Basic = 200");
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 17: remove_position removes the staker                         //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_remove_position_removes_staker() {
+        let now = Utc::now();
+        let user_id = Uuid::new_v4();
+        let mut distributor = FeeDistributor::new();
+
+        distributor.set_position(make_position(user_id, dec!(500), now, None));
+        assert!(
+            distributor.get_position(user_id).is_some(),
+            "position should exist before removal"
+        );
+
+        let removed = distributor
+            .remove_position(user_id)
+            .expect("should return removed position");
+        assert_eq!(removed.user_id, user_id);
+        assert!(
+            distributor.get_position(user_id).is_none(),
+            "position should be gone after removal"
+        );
+
+        let stats = distributor.get_stats();
+        assert_eq!(stats.total_stakers, 0);
+    }
+
+    // ------------------------------------------------------------------ //
+    // Test 18: Non-combining discount takes higher of the two             //
+    // ------------------------------------------------------------------ //
+    #[test]
+    fn test_fee_discount_non_combining_takes_higher() {
+        let calc = FeeDiscountCalculator {
+            combine_discounts: false,
+            max_discount_percent: dec!(60),
+        };
+
+        // Score=400 => 5% rep, 10_000 KACCY => 20% staking => higher is 20%
+        let breakdown = calc.calculate_discount(dec!(400), dec!(10_000));
+        assert_eq!(
+            breakdown.total_discount,
+            dec!(20),
+            "non-combining should take max(5%, 20%) = 20%"
+        );
+
+        // Score=900 => 30% rep, 100 KACCY => 5% staking => higher is 30%
+        let breakdown2 = calc.calculate_discount(dec!(900), dec!(100));
+        assert_eq!(
+            breakdown2.total_discount,
+            dec!(30),
+            "non-combining should take max(30%, 5%) = 30%"
+        );
     }
 }

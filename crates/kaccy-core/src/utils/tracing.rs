@@ -54,16 +54,22 @@ pub struct Span {
 /// Span log entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpanLog {
+    /// Timestamp when this log entry was recorded
     pub timestamp: DateTime<Utc>,
+    /// Human-readable log message
     pub message: String,
+    /// Structured key-value fields associated with this log entry
     pub fields: HashMap<String, String>,
 }
 
-/// Span status
+/// Completion status of a span
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SpanStatus {
+    /// Span completed successfully
     Ok,
+    /// Span completed with an error
     Error,
+    /// Span was cancelled before completion
     Cancelled,
 }
 
@@ -95,9 +101,13 @@ pub struct Trace {
 /// Trace context for propagation across service boundaries
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TraceContext {
+    /// Globally unique identifier for the entire trace
     pub trace_id: String,
+    /// Identifier for the current span within the trace
     pub span_id: String,
+    /// Whether this trace is being sampled for collection
     pub sampled: bool,
+    /// Arbitrary key-value metadata propagated with the trace
     pub baggage: HashMap<String, String>,
 }
 
@@ -352,10 +362,15 @@ impl BottleneckAnalyzer {
 /// Bottleneck report
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BottleneckReport {
+    /// Span identifier of the bottleneck
     pub span_id: String,
+    /// Name of the slow operation
     pub operation_name: String,
+    /// Service that owns the slow operation
     pub service_name: String,
+    /// Duration of the span in milliseconds
     pub duration_ms: i64,
+    /// Duration as a percentage of the total trace duration
     pub percentage: i32,
 }
 
@@ -448,23 +463,36 @@ impl LatencyAnalyzer {
 /// Service latency statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceLatency {
+    /// Name of the service
     pub service_name: String,
+    /// Sum of all span durations for this service in microseconds
     pub total_duration_us: i64,
+    /// Number of spans counted
     pub span_count: usize,
+    /// Average span duration in microseconds
     pub avg_duration_us: i64,
+    /// Minimum span duration in microseconds
     pub min_duration_us: i64,
+    /// Maximum span duration in microseconds
     pub max_duration_us: i64,
 }
 
 /// Operation latency statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperationLatency {
+    /// Name of the operation
     pub operation_name: String,
+    /// Sum of all span durations for this operation in microseconds
     pub total_duration_us: i64,
+    /// Number of spans counted
     pub span_count: usize,
+    /// Average duration in microseconds
     pub avg_duration_us: i64,
+    /// 50th-percentile (median) duration in microseconds
     pub p50_duration_us: i64,
+    /// 95th-percentile duration in microseconds
     pub p95_duration_us: i64,
+    /// 99th-percentile duration in microseconds
     pub p99_duration_us: i64,
     #[serde(skip)]
     durations: Vec<i64>,

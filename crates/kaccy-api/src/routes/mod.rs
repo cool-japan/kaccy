@@ -8,6 +8,7 @@ pub mod auth;
 pub mod background_jobs;
 pub mod batch;
 pub mod commitments;
+/// API documentation endpoints (Swagger UI / Redoc)
 pub mod docs;
 pub mod graphql;
 pub mod health;

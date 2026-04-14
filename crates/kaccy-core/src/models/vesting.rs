@@ -13,8 +13,11 @@ use super::user::ValidationError;
 /// Vesting schedule for token allocations
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct VestingSchedule {
+    /// Unique identifier for this vesting schedule
     pub schedule_id: Uuid,
+    /// Token being vested
     pub token_id: Uuid,
+    /// User who will receive the vested tokens
     pub beneficiary_user_id: Uuid,
     /// Total tokens allocated
     pub total_tokens: Decimal,
@@ -34,10 +37,13 @@ pub struct VestingSchedule {
     pub vesting_type: VestingType,
     /// Optional milestone-based conditions
     pub milestone_conditions: Option<String>,
+    /// Timestamp when this schedule was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp when this schedule was last updated
     pub updated_at: DateTime<Utc>,
 }
 
+/// Strategy used to release tokens over time
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "snake_case")]
 #[derive(Default)]
@@ -194,19 +200,29 @@ impl fmt::Display for VestingSchedule {
     }
 }
 
+/// Request to create a new vesting schedule
 #[derive(Debug, Deserialize)]
 pub struct CreateVestingScheduleRequest {
+    /// Token to vest
     pub token_id: Uuid,
+    /// User who will receive the vested tokens
     pub beneficiary_user_id: Uuid,
+    /// Total number of tokens to vest
     pub total_tokens: Decimal,
+    /// Cliff period before any tokens are released (seconds)
     pub cliff_duration_seconds: i64,
+    /// Total vesting duration (seconds)
     pub vesting_duration_seconds: i64,
+    /// Whether the issuer can revoke the schedule
     pub revocable: bool,
+    /// Vesting release strategy
     pub vesting_type: VestingType,
+    /// Optional JSON conditions for milestone-based vesting
     pub milestone_conditions: Option<String>,
 }
 
 impl CreateVestingScheduleRequest {
+    /// Validate that the request parameters are consistent
     pub fn validate(&self) -> Result<(), ValidationError> {
         if self.total_tokens <= dec!(0) {
             return Err(ValidationError("Total tokens must be positive".to_string()));
@@ -233,10 +249,15 @@ impl CreateVestingScheduleRequest {
 /// Record of a vesting release event
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct VestingRelease {
+    /// Unique identifier for this release event
     pub release_id: Uuid,
+    /// Schedule this release belongs to
     pub schedule_id: Uuid,
+    /// User who received the released tokens
     pub user_id: Uuid,
+    /// Amount of tokens released
     pub amount: Decimal,
+    /// Timestamp when the tokens were released
     pub released_at: DateTime<Utc>,
 }
 
@@ -253,12 +274,19 @@ impl fmt::Display for VestingRelease {
 /// Summary of vesting schedules for a user
 #[derive(Debug, Serialize)]
 pub struct VestingSummary {
+    /// User these vesting schedules belong to
     pub user_id: Uuid,
+    /// Total number of vesting schedules
     pub total_schedules: i32,
+    /// Aggregate tokens across all schedules
     pub total_vesting_tokens: Decimal,
+    /// Aggregate vested tokens across all schedules
     pub total_vested_tokens: Decimal,
+    /// Aggregate released tokens across all schedules
     pub total_released_tokens: Decimal,
+    /// Aggregate tokens available to release right now
     pub total_releasable_tokens: Decimal,
+    /// Individual vesting schedules
     pub schedules: Vec<VestingSchedule>,
 }
 

@@ -452,12 +452,18 @@ pub struct HookManager {
     hook_permissions: HashMap<Uuid, HookPermissions>,
 }
 
+/// Permissions controlling which hook callbacks are active for a pool.
 #[derive(Debug, Clone)]
 pub struct HookPermissions {
+    /// Whether the before-swap hook is enabled.
     pub allow_before_swap: bool,
+    /// Whether the after-swap hook is enabled.
     pub allow_after_swap: bool,
+    /// Whether the before-liquidity hook is enabled.
     pub allow_before_liquidity: bool,
+    /// Whether the after-liquidity hook is enabled.
     pub allow_after_liquidity: bool,
+    /// Whether the dynamic fee hook is enabled.
     pub allow_dynamic_fee: bool,
 }
 

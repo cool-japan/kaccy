@@ -11,42 +11,61 @@ use std::time::SystemTime;
 /// Notification channel types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NotificationChannel {
+    /// Delivery via email
     Email,
+    /// Delivery via SMS
     SMS,
+    /// Delivery via mobile push notification
     Push,
+    /// Delivery within the application UI
     InApp,
 }
 
 /// Notification priority levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum NotificationPriority {
+    /// Low-importance notification
     Low = 0,
+    /// Normal importance
     Normal = 1,
+    /// High-importance notification
     High = 2,
+    /// Critical notification, bypasses quiet hours
     Critical = 3,
 }
 
 /// Notification category for user preferences
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NotificationCategory {
+    /// Notifications related to trades and orders
     Trading,
+    /// Notifications related to the user's account
     Account,
+    /// Security and authentication notifications
     Security,
+    /// Marketing and promotional notifications
     Marketing,
+    /// Platform-level system notifications
     System,
 }
 
 /// User notification preferences
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NotificationPreferences {
+    /// User these preferences belong to
     pub user_id: String,
+    /// Preferred delivery channels for each notification category
     pub channel_preferences: HashMap<NotificationCategory, Vec<NotificationChannel>>,
+    /// Optional quiet-hours window during which non-critical notifications are suppressed
     pub quiet_hours: Option<QuietHours>,
+    /// ISO 639-1 language code for notification content
     pub language: String,
+    /// IANA timezone for scheduling digest notifications
     pub timezone: String,
 }
 
 impl NotificationPreferences {
+    /// Create default preferences for a user
     pub fn new(user_id: String) -> Self {
         let mut channel_preferences = HashMap::new();
 
@@ -94,12 +113,16 @@ impl NotificationPreferences {
 /// Quiet hours configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuietHours {
-    pub start_hour: u8, // 0-23
-    pub end_hour: u8,   // 0-23
+    /// Hour (0–23) at which quiet hours begin
+    pub start_hour: u8,
+    /// Hour (0–23) at which quiet hours end
+    pub end_hour: u8,
+    /// Whether quiet hours enforcement is active
     pub enabled: bool,
 }
 
 impl QuietHours {
+    /// Create a new quiet-hours window, returning an error for invalid hours
     pub fn new(start_hour: u8, end_hour: u8) -> Result<Self, CoreError> {
         if start_hour > 23 || end_hour > 23 {
             return Err(CoreError::Validation(
@@ -115,6 +138,7 @@ impl QuietHours {
     }
 
     #[allow(dead_code)]
+    /// Returns true if this notification channel is currently active.
     pub fn is_active(&self) -> bool {
         if !self.enabled {
             return false;
@@ -129,11 +153,17 @@ impl QuietHours {
 /// Notification template
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NotificationTemplate {
+    /// Unique identifier for this template
     pub template_id: String,
+    /// Category the template belongs to
     pub category: NotificationCategory,
+    /// Subject line with `{variable}` placeholders
     pub subject_template: String,
+    /// Body text with `{variable}` placeholders
     pub body_template: String,
+    /// Names of all variables expected in this template
     pub variables: Vec<String>,
+    /// Delivery channels this template supports
     pub supported_channels: Vec<NotificationChannel>,
 }
 
@@ -163,47 +193,73 @@ impl NotificationTemplate {
     }
 }
 
+/// A notification template rendered with concrete values
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RenderedTemplate {
+    /// Rendered subject line
     pub subject: String,
+    /// Rendered body text
     pub body: String,
 }
 
 /// Notification record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Notification {
+    /// Unique identifier of this notification
     pub notification_id: String,
+    /// Recipient user
     pub user_id: String,
+    /// Category of the notification
     pub category: NotificationCategory,
+    /// Priority level
     pub priority: NotificationPriority,
+    /// Delivery channel
     pub channel: NotificationChannel,
+    /// Rendered subject line
     pub subject: String,
+    /// Rendered body text
     pub body: String,
+    /// When the notification was created
     pub created_at: SystemTime,
+    /// When the notification was sent
     pub sent_at: Option<SystemTime>,
+    /// When the notification was read by the user
     pub read_at: Option<SystemTime>,
+    /// Current delivery status
     pub status: NotificationStatus,
+    /// Additional key-value metadata
     pub metadata: HashMap<String, String>,
 }
 
+/// Notification delivery status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NotificationStatus {
+    /// Not yet dispatched
     Pending,
+    /// Handed off to delivery provider
     Sent,
+    /// Confirmed delivered to recipient device
     Delivered,
+    /// Delivery failed
     Failed,
+    /// Notification has been read by the user
     Read,
 }
 
 /// Notification manager
 pub struct NotificationManager {
+    /// Registered notification templates
     templates: HashMap<String, NotificationTemplate>,
+    /// Per-user notification preferences
     preferences: HashMap<String, NotificationPreferences>,
+    /// All notifications, indexed by notification ID
     notifications: HashMap<String, Notification>,
+    /// Monotonic counter for generating unique IDs
     notification_counter: u64,
 }
 
 impl NotificationManager {
+    /// Create a new notification manager with built-in default templates
     pub fn new() -> Self {
         let mut manager = Self {
             templates: HashMap::new(),
@@ -458,9 +514,13 @@ impl Default for NotificationManager {
 /// Notification statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NotificationStats {
+    /// Total number of notifications for the user
     pub total_notifications: usize,
+    /// Number of unread notifications
     pub unread_notifications: usize,
+    /// Notification count broken down by channel
     pub notifications_by_channel: HashMap<NotificationChannel, usize>,
+    /// Notification count broken down by category
     pub notifications_by_category: HashMap<NotificationCategory, usize>,
 }
 

@@ -18,17 +18,28 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum InterestRateModel {
     /// Linear interest rate: base_rate + utilization * slope
-    Linear { base_rate: Decimal, slope: Decimal },
+    Linear {
+        /// Minimum interest rate at zero utilization.
+        base_rate: Decimal,
+        /// Rate increase per unit of utilization.
+        slope: Decimal,
+    },
     /// Exponential interest rate: base_rate * e^(utilization * multiplier)
     Exponential {
+        /// Minimum interest rate at zero utilization.
         base_rate: Decimal,
+        /// Exponential growth multiplier.
         multiplier: Decimal,
     },
     /// Kinked rate model (optimal utilization with kink)
     Kinked {
+        /// Minimum interest rate at zero utilization.
         base_rate: Decimal,
+        /// Rate slope below the optimal utilization point.
         slope1: Decimal,
+        /// Rate slope above the optimal utilization point.
         slope2: Decimal,
+        /// Utilization ratio at which the slope changes.
         optimal_utilization: Decimal,
     },
 }
@@ -67,10 +78,15 @@ impl InterestRateModel {
 /// Lending pool for a specific asset
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LendingPool {
+    /// Unique identifier for this lending pool
     pub pool_id: Uuid,
+    /// Asset supported by this pool
     pub asset_id: Uuid,
+    /// Total amount deposited into the pool
     pub total_deposits: Decimal,
+    /// Total amount currently borrowed from the pool
     pub total_borrows: Decimal,
+    /// Model used to calculate interest rates
     pub interest_rate_model: InterestRateModel,
     /// Collateral factor (0.0 to 1.0) - how much can be borrowed against deposits
     pub collateral_factor: Decimal,
@@ -80,11 +96,14 @@ pub struct LendingPool {
     pub liquidation_penalty: Decimal,
     /// Reserve factor (portion of interest going to reserves)
     pub reserve_factor: Decimal,
+    /// Unix timestamp when the pool was created
     pub created_at: i64,
+    /// Unix timestamp of the most recent pool state update
     pub last_update: i64,
 }
 
 impl LendingPool {
+    /// Create a new lending pool with the given parameters
     pub fn new(
         asset_id: Uuid,
         interest_rate_model: InterestRateModel,
@@ -151,17 +170,24 @@ impl LendingPool {
 /// User position in lending pool
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LendingPosition {
+    /// Unique identifier for this position
     pub position_id: Uuid,
+    /// User who owns this position
     pub user_id: Uuid,
+    /// Pool this position belongs to
     pub pool_id: Uuid,
+    /// Amount the user has deposited into the pool
     pub deposited: Decimal,
+    /// Amount the user has borrowed from the pool
     pub borrowed: Decimal,
     /// Accumulated interest since last update
     pub accrued_interest: Decimal,
+    /// Unix timestamp of the most recent position update
     pub last_update: i64,
 }
 
 impl LendingPosition {
+    /// Create a new empty lending position for the given user and pool
     pub fn new(user_id: Uuid, pool_id: Uuid) -> Self {
         let now = chrono::Utc::now().timestamp();
         Self {
@@ -200,10 +226,15 @@ impl LendingPosition {
 /// Health factor calculation for liquidation monitoring
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthFactor {
+    /// User whose health factor this describes
     pub user_id: Uuid,
+    /// USD/BTC value of all collateral across pools
     pub total_collateral_value: Decimal,
+    /// USD/BTC value of total outstanding debt including accrued interest
     pub total_debt_value: Decimal,
+    /// Computed health factor; below 1.0 the position is liquidatable
     pub health_factor: Decimal,
+    /// Weighted average liquidation threshold across all positions
     pub liquidation_threshold: Decimal,
 }
 
@@ -223,10 +254,12 @@ impl HealthFactor {
         (total_collateral_value * liquidation_threshold) / total_debt_value
     }
 
+    /// Return true if this position can currently be liquidated
     pub fn is_liquidatable(&self) -> bool {
         self.health_factor < dec!(1)
     }
 
+    /// Maximum debt amount that can be repaid in a single liquidation call
     pub fn liquidation_amount(&self) -> Decimal {
         if !self.is_liquidatable() {
             return Decimal::ZERO;
@@ -237,27 +270,39 @@ impl HealthFactor {
     }
 }
 
-/// Liquidation event
+/// Record of a liquidation event
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Liquidation {
+    /// Unique identifier for this liquidation
     pub liquidation_id: Uuid,
+    /// User who performed the liquidation
     pub liquidator_id: Uuid,
+    /// User whose position was liquidated
     pub borrower_id: Uuid,
+    /// Pool in which the liquidation occurred
     pub pool_id: Uuid,
+    /// Debt amount repaid by the liquidator
     pub debt_repaid: Decimal,
+    /// Collateral seized from the borrower
     pub collateral_seized: Decimal,
+    /// Bonus amount earned by the liquidator
     pub liquidation_bonus: Decimal,
+    /// Unix timestamp when the liquidation occurred
     pub timestamp: i64,
 }
 
 /// Lending manager
 pub struct LendingManager {
+    /// All active lending pools indexed by pool ID
     pools: Arc<RwLock<HashMap<Uuid, LendingPool>>>,
-    positions: Arc<RwLock<HashMap<(Uuid, Uuid), LendingPosition>>>, // (user_id, pool_id)
-    asset_prices: Arc<RwLock<HashMap<Uuid, Decimal>>>,              // For health factor calculation
+    /// User positions keyed by (user_id, pool_id)
+    positions: Arc<RwLock<HashMap<(Uuid, Uuid), LendingPosition>>>,
+    /// Current asset prices used for health factor calculation
+    asset_prices: Arc<RwLock<HashMap<Uuid, Decimal>>>,
 }
 
 impl LendingManager {
+    /// Create a new lending manager with no pools or positions
     pub fn new() -> Self {
         Self {
             pools: Arc::new(RwLock::new(HashMap::new())),

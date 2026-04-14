@@ -31,28 +31,46 @@ pub struct ListConfigsQuery {
 /// Response for config list
 #[derive(Debug, Serialize)]
 pub struct ConfigListResponse {
+    /// List of system configurations
     pub configs: Vec<SystemConfigResponse>,
+    /// Total number of configurations
     pub total: usize,
 }
 
 /// System config response (masks sensitive values)
 #[derive(Debug, Serialize)]
 pub struct SystemConfigResponse {
+    /// Unique configuration ID
     pub id: Uuid,
+    /// Configuration key
     pub config_key: String,
+    /// Configuration value (masked if sensitive)
     pub config_value: String,
+    /// Value data type (string, integer, float, boolean, json)
     pub value_type: String,
+    /// Human-readable description
     pub description: Option<String>,
+    /// Configuration category for grouping
     pub category: Option<String>,
+    /// Target environment (production, staging, development)
     pub environment: String,
+    /// Version number (incremented on each update)
     pub version: i32,
+    /// Whether this configuration is currently active
     pub is_active: bool,
+    /// Whether this value should be masked in responses
     pub is_sensitive: bool,
+    /// ID of the user who last changed this configuration
     pub changed_by: Option<Uuid>,
+    /// Reason for the last change
     pub changed_reason: Option<String>,
+    /// Configuration creation timestamp
     pub created_at: DateTime<Utc>,
+    /// Last update timestamp
     pub updated_at: DateTime<Utc>,
+    /// Timestamp from which this configuration is effective
     pub effective_from: Option<DateTime<Utc>>,
+    /// Timestamp until which this configuration is effective
     pub effective_until: Option<DateTime<Utc>>,
 }
 
@@ -88,46 +106,69 @@ impl From<SystemConfig> for SystemConfigResponse {
 /// Create config request
 #[derive(Debug, Deserialize)]
 pub struct CreateConfigRequest {
+    /// Unique configuration key
     pub config_key: String,
+    /// Configuration value
     pub config_value: String,
+    /// Value data type
     pub value_type: ValueType,
+    /// Human-readable description
     pub description: Option<String>,
+    /// Category for grouping
     pub category: Option<String>,
+    /// Target environment (defaults to production)
     pub environment: Option<String>,
+    /// JSON validation rules for the value
     pub validation_rules: Option<serde_json::Value>,
+    /// Whether this value should be masked in responses
     pub is_sensitive: Option<bool>,
+    /// Reason for creating this configuration
     pub changed_reason: Option<String>,
+    /// Timestamp from which this configuration is effective
     pub effective_from: Option<DateTime<Utc>>,
+    /// Timestamp until which this configuration is effective
     pub effective_until: Option<DateTime<Utc>>,
 }
 
 /// Update config request
 #[derive(Debug, Deserialize)]
 pub struct UpdateConfigRequest {
+    /// New configuration value
     pub config_value: String,
+    /// Updated description
     pub description: Option<String>,
+    /// Reason for this update
     pub changed_reason: Option<String>,
+    /// New effective from timestamp
     pub effective_from: Option<DateTime<Utc>>,
+    /// New effective until timestamp
     pub effective_until: Option<DateTime<Utc>>,
 }
 
 /// Rollback request
 #[derive(Debug, Deserialize)]
 pub struct RollbackRequest {
+    /// Version number to roll back to
     pub to_version: i32,
+    /// Reason for rollback
     pub changed_reason: Option<String>,
 }
 
 /// Batch update request
 #[derive(Debug, Deserialize)]
 pub struct BatchUpdateRequest {
+    /// List of configuration updates to apply
     pub updates: Vec<BatchConfigUpdate>,
+    /// Reason applied to all updates in the batch
     pub changed_reason: Option<String>,
 }
 
+/// A single configuration update in a batch
 #[derive(Debug, Deserialize)]
 pub struct BatchConfigUpdate {
+    /// Configuration key to update
     pub config_key: String,
+    /// New value for the configuration
     pub config_value: String,
 }
 

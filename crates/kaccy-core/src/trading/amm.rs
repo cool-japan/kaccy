@@ -16,6 +16,7 @@ use crate::models::{
 /// Oracle price data for pool price bounds
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OraclePrice {
+    /// Pool this oracle price is associated with.
     pub pool_id: Uuid,
     /// Reference price from oracle
     pub reference_price: Decimal,
@@ -47,6 +48,7 @@ impl OraclePrice {
 /// Volatility tracker for dynamic fee adjustment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VolatilityTracker {
+    /// Pool this volatility tracker monitors.
     pub pool_id: Uuid,
     /// Recent price changes (stored as percentages)
     pub recent_changes: Vec<Decimal>,
@@ -132,6 +134,7 @@ impl VolatilityTracker {
 /// Flash swap request for atomic arbitrage
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FlashSwapRequest {
+    /// Pool to execute the flash swap against.
     pub pool_id: Uuid,
     /// Amount to borrow
     pub borrow_amount: Decimal,
@@ -144,6 +147,7 @@ pub struct FlashSwapRequest {
 }
 
 impl FlashSwapRequest {
+    /// Validate the flash swap request parameters.
     pub fn validate(&self) -> Result<()> {
         if self.borrow_amount <= dec!(0) {
             return Err(CoreError::Validation(
@@ -162,9 +166,13 @@ impl FlashSwapRequest {
 /// Flash swap result
 #[derive(Debug, Serialize)]
 pub struct FlashSwapResult {
+    /// Amount of tokens borrowed in the flash swap.
     pub borrowed_amount: Decimal,
+    /// Amount repaid to the pool including fees.
     pub repaid_amount: Decimal,
+    /// Fee charged for the flash swap.
     pub fee_amount: Decimal,
+    /// Net profit after repayment.
     pub profit: Decimal,
 }
 

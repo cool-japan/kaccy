@@ -38,9 +38,13 @@ impl fmt::Display for PQCAlgorithm {
 /// Post-quantum key pair (abstraction)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PQKeyPair {
+    /// Algorithm used to generate this key pair
     pub algorithm: PQCAlgorithm,
+    /// Public key bytes
     pub public_key: Vec<u8>,
+    /// Private key bytes
     pub private_key: Vec<u8>,
+    /// Total key size in bytes
     pub key_size: usize,
 }
 
@@ -111,6 +115,7 @@ pub enum HybridMode {
 }
 
 impl HybridCrypto {
+    /// Create a new hybrid cryptography configuration
     pub fn new(pq_algorithm: PQCAlgorithm, mode: HybridMode) -> Result<Self> {
         Ok(Self {
             classical_public_key: vec![0u8; 256], // Placeholder RSA-2048 key
@@ -153,17 +158,24 @@ impl HybridCrypto {
 /// Hybrid signature containing both classical and PQ components
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HybridSignature {
+    /// Classical (e.g. ECDSA) signature bytes, if present
     pub classical_sig: Option<Vec<u8>>,
+    /// Post-quantum signature bytes, if present
     pub pq_sig: Option<Vec<u8>>,
+    /// Hybrid mode that generated this signature
     pub mode: HybridMode,
 }
 
 /// Migration plan for transitioning to PQC
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PQMigrationPlan {
+    /// Current migration phase
     pub current_phase: MigrationPhase,
+    /// Target PQC algorithm to migrate to
     pub target_algorithm: PQCAlgorithm,
+    /// Total planned timeline in days
     pub timeline_days: u32,
+    /// Whether the migration maintains backward compatibility
     pub backwards_compatible: bool,
 }
 
@@ -183,6 +195,7 @@ pub enum MigrationPhase {
 }
 
 impl PQMigrationPlan {
+    /// Create a new migration plan starting at Phase 1 assessment
     pub fn new(target_algorithm: PQCAlgorithm, timeline_days: u32) -> Self {
         Self {
             current_phase: MigrationPhase::Phase1Assessment,
@@ -192,6 +205,7 @@ impl PQMigrationPlan {
         }
     }
 
+    /// Advance to the next migration phase and return it
     pub fn advance_phase(&mut self) -> MigrationPhase {
         self.current_phase = match self.current_phase {
             MigrationPhase::Phase1Assessment => MigrationPhase::Phase2HybridDeploy,
@@ -203,6 +217,7 @@ impl PQMigrationPlan {
         self.current_phase
     }
 
+    /// Get the recommended hybrid mode for the current migration phase
     pub fn get_recommended_hybrid_mode(&self) -> HybridMode {
         match self.current_phase {
             MigrationPhase::Phase1Assessment => HybridMode::ClassicalPrimary,
@@ -218,22 +233,31 @@ impl PQMigrationPlan {
 /// Quantum threat assessment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuantumThreatAssessment {
+    /// Overall quantum threat level
     pub threat_level: ThreatLevel,
+    /// Estimated years until quantum computers can break current cryptography
     pub estimated_years_until_threat: u8,
+    /// Names of assets that need quantum-safe protection
     pub critical_assets: Vec<String>,
+    /// Recommended PQC algorithm based on threat assessment
     pub recommended_algorithm: PQCAlgorithm,
 }
 
 /// Threat level from quantum computing
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ThreatLevel {
-    Low,      // 10+ years
-    Medium,   // 5-10 years
-    High,     // 2-5 years
-    Critical, // <2 years
+    /// Quantum threat is 10+ years away
+    Low,
+    /// Quantum threat is 5–10 years away
+    Medium,
+    /// Quantum threat is 2–5 years away
+    High,
+    /// Quantum threat is less than 2 years away
+    Critical,
 }
 
 impl QuantumThreatAssessment {
+    /// Build a threat assessment from estimated timeline and secret longevity
     pub fn assess(years_until_threat: u8, has_long_term_secrets: bool) -> Self {
         let threat_level = match years_until_threat {
             0..=2 => ThreatLevel::Critical,
@@ -258,6 +282,7 @@ impl QuantumThreatAssessment {
         }
     }
 
+    /// Add an asset name to the list of critical assets
     pub fn add_critical_asset(&mut self, asset: String) {
         self.critical_assets.push(asset);
     }

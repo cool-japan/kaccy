@@ -31,15 +31,27 @@
 //! - [`sdk_generator`]: Client SDK generation for TypeScript, Python, Rust, Go
 //! - [`state`]: Application state management with database pool, Redis, Bitcoin client
 
+/// User behavior tracking, performance metrics, business intelligence
 pub mod analytics;
+/// Configuration management with validation and environment support
 pub mod config;
+/// Error types and standardized error responses
 pub mod error;
+/// Event-driven architecture with handlers for audit, metrics, notifications, webhooks
 pub mod events;
+/// Code examples for API operations in multiple languages
 pub mod examples;
+/// Background job processing system with worker pools
 pub mod jobs;
+/// Authentication, authorization, rate limiting, logging, tracing, metrics
 pub mod middleware;
+/// Multi-channel notification system (email, SMS, push, in-app)
 pub mod notifications;
+/// OpenAPI/Swagger documentation generation
 pub mod openapi;
+/// HTTP route handlers for all API endpoints
 pub mod routes;
+/// Client SDK generation for TypeScript, Python, Rust, Go
 pub mod sdk_generator;
+/// Application state management with database pool, Redis, Bitcoin client
 pub mod state;

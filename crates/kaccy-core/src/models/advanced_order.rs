@@ -13,8 +13,11 @@ use super::user::ValidationError;
 /// Advanced order with conditional execution
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AdvancedOrder {
+    /// Unique identifier for this order
     pub order_id: Uuid,
+    /// User who placed the order
     pub user_id: Uuid,
+    /// Token being traded
     pub token_id: Uuid,
     /// Amount to trade
     pub amount: Decimal,
@@ -46,10 +49,13 @@ pub struct AdvancedOrder {
     pub filled_amount: Decimal,
     /// Average fill price
     pub average_fill_price: Option<Decimal>,
+    /// Timestamp when this order was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp of the most recent change to this order
     pub updated_at: DateTime<Utc>,
 }
 
+/// Type of advanced conditional order
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "snake_case")]
 #[derive(Default)]
@@ -79,6 +85,7 @@ impl fmt::Display for AdvancedOrderType {
     }
 }
 
+/// Status of an advanced conditional order
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "lowercase")]
 #[derive(Default)]
@@ -325,15 +332,21 @@ impl fmt::Display for AdvancedOrder {
     }
 }
 
+/// Request to create a stop-loss order
 #[derive(Debug, Deserialize)]
 pub struct CreateStopLossRequest {
+    /// Token to trade
     pub token_id: Uuid,
+    /// Quantity to sell when triggered
     pub amount: Decimal,
+    /// Price below which the order triggers
     pub trigger_price: Decimal,
+    /// Optional limit price for the resulting sell order
     pub limit_price: Option<Decimal>,
 }
 
 impl CreateStopLossRequest {
+    /// Validate the stop-loss request
     pub fn validate(&self) -> Result<(), ValidationError> {
         if self.amount <= dec!(0) {
             return Err(ValidationError("Amount must be positive".to_string()));
@@ -357,15 +370,21 @@ impl CreateStopLossRequest {
     }
 }
 
+/// Request to create a take-profit order
 #[derive(Debug, Deserialize)]
 pub struct CreateTakeProfitRequest {
+    /// Token to trade
     pub token_id: Uuid,
+    /// Quantity to sell when triggered
     pub amount: Decimal,
+    /// Price above which the order triggers
     pub trigger_price: Decimal,
+    /// Optional limit price for the resulting sell order
     pub limit_price: Option<Decimal>,
 }
 
 impl CreateTakeProfitRequest {
+    /// Validate the take-profit request
     pub fn validate(&self) -> Result<(), ValidationError> {
         if self.amount <= dec!(0) {
             return Err(ValidationError("Amount must be positive".to_string()));
@@ -389,15 +408,21 @@ impl CreateTakeProfitRequest {
     }
 }
 
+/// Request to create a trailing stop order
 #[derive(Debug, Deserialize)]
 pub struct CreateTrailingStopRequest {
+    /// Token to trade
     pub token_id: Uuid,
+    /// Quantity to sell when triggered
     pub amount: Decimal,
+    /// Distance (in price units) that the stop trails below the high-water mark
     pub trailing_distance: Decimal,
+    /// Current market price used to set the initial stop level
     pub initial_price: Decimal,
 }
 
 impl CreateTrailingStopRequest {
+    /// Validate the trailing stop request
     pub fn validate(&self) -> Result<(), ValidationError> {
         if self.amount <= dec!(0) {
             return Err(ValidationError("Amount must be positive".to_string()));
@@ -421,16 +446,23 @@ impl CreateTrailingStopRequest {
     }
 }
 
+/// Request to create a TWAP (Time-Weighted Average Price) order
 #[derive(Debug, Deserialize)]
 pub struct CreateTwapOrderRequest {
+    /// Token to trade
     pub token_id: Uuid,
+    /// Total quantity to execute over the TWAP window
     pub total_amount: Decimal,
+    /// When to begin executing the TWAP order
     pub start_time: DateTime<Utc>,
+    /// When to stop executing the TWAP order
     pub end_time: DateTime<Utc>,
+    /// Time between individual sub-order executions (seconds)
     pub interval_seconds: i64,
 }
 
 impl CreateTwapOrderRequest {
+    /// Validate the TWAP order request
     pub fn validate(&self) -> Result<(), ValidationError> {
         if self.total_amount <= dec!(0) {
             return Err(ValidationError("Total amount must be positive".to_string()));

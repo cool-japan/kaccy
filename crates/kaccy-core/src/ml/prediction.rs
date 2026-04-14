@@ -11,14 +11,20 @@ use serde::{Deserialize, Serialize};
 /// Prediction result with confidence interval
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PricePrediction {
+    /// Timestamp for which this prediction applies
     pub timestamp: DateTime<Utc>,
+    /// Predicted price at the given timestamp
     pub predicted_price: Decimal,
+    /// Lower bound of the prediction confidence interval
     pub lower_bound: Decimal,
+    /// Upper bound of the prediction confidence interval
     pub upper_bound: Decimal,
+    /// Confidence level (e.g. 0.95 for 95%)
     pub confidence_level: f64,
 }
 
 impl PricePrediction {
+    /// Create a new price prediction with confidence interval
     pub fn new(
         timestamp: DateTime<Utc>,
         predicted_price: Decimal,
@@ -49,14 +55,20 @@ impl PricePrediction {
 /// Model performance metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelPerformance {
-    pub mae: f64,           // Mean Absolute Error
-    pub rmse: f64,          // Root Mean Square Error
-    pub mape: f64,          // Mean Absolute Percentage Error
-    pub r_squared: f64,     // R-squared
-    pub predictions: usize, // Number of predictions made
+    /// Mean Absolute Error
+    pub mae: f64,
+    /// Root Mean Square Error
+    pub rmse: f64,
+    /// Mean Absolute Percentage Error
+    pub mape: f64,
+    /// R-squared coefficient of determination
+    pub r_squared: f64,
+    /// Number of predictions evaluated
+    pub predictions: usize,
 }
 
 impl ModelPerformance {
+    /// Calculate performance metrics from predicted and actual values
     pub fn calculate(predictions: &[f64], actuals: &[f64]) -> anyhow::Result<Self> {
         if predictions.len() != actuals.len() || predictions.is_empty() {
             anyhow::bail!("Predictions and actuals must have the same non-zero length");
@@ -132,12 +144,16 @@ pub trait PredictionModel: Send + Sync {
 /// Simple moving average prediction model
 #[derive(Debug, Clone)]
 pub struct MovingAveragePredictionModel {
+    /// Number of periods in the moving average window
     period: usize,
+    /// Historical price data used for training and prediction
     historical_prices: Vec<PricePoint>,
+    /// Cached performance metrics from training
     performance: Option<ModelPerformance>,
 }
 
 impl MovingAveragePredictionModel {
+    /// Create a new moving average prediction model with the given window period
     pub fn new(period: usize) -> Self {
         Self {
             period,
@@ -249,13 +265,18 @@ impl PredictionModel for MovingAveragePredictionModel {
 /// Linear regression prediction model
 #[derive(Debug, Clone)]
 pub struct LinearRegressionModel {
+    /// Fitted slope of the regression line
     slope: f64,
+    /// Fitted intercept of the regression line
     intercept: f64,
+    /// Historical price data used for training and prediction
     historical_prices: Vec<PricePoint>,
+    /// Cached performance metrics from training
     performance: Option<ModelPerformance>,
 }
 
 impl LinearRegressionModel {
+    /// Create a new linear regression prediction model
     pub fn new() -> Self {
         Self {
             slope: 0.0,
@@ -394,11 +415,14 @@ impl PredictionModel for LinearRegressionModel {
 
 /// Ensemble model that combines multiple prediction models
 pub struct EnsembleModel {
+    /// Component prediction models
     models: Vec<Box<dyn PredictionModel>>,
+    /// Per-model blending weights (parallel to `models`)
     weights: Vec<f64>,
 }
 
 impl EnsembleModel {
+    /// Create a new empty ensemble model
     pub fn new() -> Self {
         Self {
             models: Vec::new(),
@@ -406,12 +430,14 @@ impl EnsembleModel {
         }
     }
 
+    /// Add a model to the ensemble with a given weight
     pub fn add_model(mut self, model: Box<dyn PredictionModel>, weight: f64) -> Self {
         self.models.push(model);
         self.weights.push(weight);
         self
     }
 
+    /// Assign equal weights to all models currently in the ensemble
     pub fn with_equal_weights(mut self) -> Self {
         let n = self.models.len();
         if n > 0 {

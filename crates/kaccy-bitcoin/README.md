@@ -1,10 +1,95 @@
 # kaccy-bitcoin
 
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/cool-japan/kaccy)
+
 Comprehensive Bitcoin integration for Kaccy Protocol.
 
 ## Overview
 
 This crate provides a complete Bitcoin integration solution including Bitcoin Core RPC client, HD wallet management, transaction monitoring, Lightning Network support, Layer 2 integrations, privacy features, and advanced Bitcoin functionalities.
+
+## New in v0.2.0
+
+### `rpc_advanced`
+
+Advanced Bitcoin Core RPC operations:
+
+- **`importdescriptors`** — Bulk descriptor import with range derivation
+- **`getblocktemplate`** — Block template retrieval for mining integrations
+- **`prioritisetransaction`** — Fee-delta adjustment for mempool priority
+- Peer management: `addnode`, `disconnectnode`, `getpeerinfo`, `setban`
+
+### `bech32m_utils`
+
+BIP 350 bech32m encoding/decoding for Taproot:
+
+- **`Bech32mEncoder`** / **`Bech32mDecoder`** — Full bech32m codec
+- Taproot address validation (P2TR, `bc1p` / `tb1p` prefixes)
+- Human-readable part (HRP) detection and network matching
+
+### `schnorr`
+
+BIP 340 Schnorr signature wrapper:
+
+- **`SchnorrSigner`** — Sign messages with a secp256k1 keypair
+- **`SchnorrVerifier`** — Single and batch verification
+- `batch_verify` — Validates a slice of (message, signature, pubkey) tuples in one pass
+
+### `mock_explorer`
+
+Pluggable blockchain explorer backends for testing and privacy:
+
+- **`MockBlockchainExplorer`** — In-memory explorer for hermetic unit tests
+- **`RotatingExplorerClient`** — Round-robin across multiple explorer URLs to reduce fingerprinting
+- **`TorExplorerClient`** — SOCKS5 proxy client for Tor-routed explorer queries
+
+### `psbt_v2`
+
+BIP 370 PSBT version 2 builder:
+
+- **`PsbtV2Builder`** — Construct PSBT v2 inputs/outputs with modifiable transaction fields
+- Role separation: Creator, Updater, Signer, Combiner, Finalizer, Extractor
+- Backwards-compatible serialization alongside PSBT v0
+
+### `taproot_psbt`
+
+BIP 371 Taproot-specific PSBT fields:
+
+- Taproot key-path and script-path signing fields
+- `tap_key_sig`, `tap_script_sig`, `tap_leaf_script`, `tap_bip32_derivation`
+- Integration with `psbt_v2` for unified signing workflows
+
+### `fuzz_testing`
+
+Adversarial transaction testing harness:
+
+- **`TransactionFuzzer`** — Generate malformed/boundary-case transactions
+- Panic-catching batch runs via `std::panic::catch_unwind`
+- Corpus management and reproducible seed support
+
+### `output_descriptor`
+
+BIP 380 descriptor parser with integrity checking:
+
+- **`DescriptorParser`** — Parse `pk()`, `pkh()`, `wpkh()`, `wsh()`, `tr()`, multi, sortedmulti
+- GF(32)-based checksum verification and generation (as specified in BIP 380)
+- Key expression normalization and fingerprint extraction
+
+### `electrum_compat`
+
+Electrum wallet compatibility layer:
+
+- Extended public key format detection: `xpub` / `ypub` / `zpub` (mainnet) and their testnet counterparts
+- BIP 39 mnemonic phrase validation (checksum and wordlist)
+- Conversion utilities between Electrum and BIP 84 descriptor formats
+
+### `mobile_wallet`
+
+Mobile wallet standards and portability:
+
+- **`MobileWalletStandard`** — Common interface for mobile-first wallet operations
+- **`export`** — Serialize wallet state (descriptors, labels, UTXO metadata) to portable format
+- **`import`** — Restore wallet from exported bundle with integrity validation
 
 ## Core Modules
 
@@ -580,6 +665,18 @@ kaccy-bitcoin/
 │   │
 │   ├── Testing
 │   ├── testing.rs                # Test helpers & utilities
+│   ├── fuzz_testing.rs           # TransactionFuzzer, panic-catching batch runs  [v0.2.0]
+│   │
+│   ├── v0.2.0 Additions
+│   ├── rpc_advanced.rs           # importdescriptors, getblocktemplate, peer mgmt [v0.2.0]
+│   ├── bech32m_utils.rs          # BIP 350 bech32m encode/decode, Taproot addr    [v0.2.0]
+│   ├── schnorr.rs                # BIP 340 sign/verify/batch_verify               [v0.2.0]
+│   ├── mock_explorer.rs          # Mock, Rotating, and Tor explorer backends       [v0.2.0]
+│   ├── psbt_v2.rs                # BIP 370 PSBT v2 builder                        [v0.2.0]
+│   ├── taproot_psbt.rs           # BIP 371 Taproot PSBT fields                    [v0.2.0]
+│   ├── output_descriptor.rs      # BIP 380 descriptor parser + GF(32) checksum    [v0.2.0]
+│   ├── electrum_compat.rs        # xpub/ypub/zpub detection, BIP 39 validation    [v0.2.0]
+│   ├── mobile_wallet.rs          # MobileWalletStandard, export/import            [v0.2.0]
 │   │
 │   └── error.rs                  # Error types
 │
@@ -754,7 +851,7 @@ cargo test -p kaccy-bitcoin
 
 ### Coverage
 
-Current test coverage: **254 tests** across all modules
+Current test coverage: **725 passing** (2 skipped — require live mempool.space) across all modules.
 
 - Core modules: Client, HD Wallet, Monitor, Connection Pool, Cache
 - Transaction management: PSBT, Multisig, Taproot, Descriptors, Fee Bumping, Advanced RBF
@@ -767,6 +864,9 @@ Current test coverage: **254 tests** across all modules
 - Optimization: UTXO, Batch optimizer, Transaction Manager
 - Observability: Metrics, Structured Logging
 - Testing utilities: Fuzz helpers, Property tests, Integration helpers, Load tests
+- v0.2.0 additions: RPC Advanced, Bech32m, Schnorr, Mock Explorer, PSBT v2, Taproot PSBT, Output Descriptor, Electrum Compat, Mobile Wallet
+- Integration tests: `e2e_payment_flow`, `multi_party_coordination`, `failure_scenarios`
+- Property tests: `tx_parsing`, `address`, `bech32m`
 
 ## Performance Considerations
 
@@ -775,6 +875,13 @@ Current test coverage: **254 tests** across all modules
 - **Batch withdrawals** - Reduce transaction count and fees
 - **Connection pooling** - Reuse RPC connections
 - **Efficient polling** - Configurable poll intervals (default 30s)
+
+## Known Limitations / Roadmap
+
+The following items are intentionally deferred because they require Bitcoin consensus-level changes that have not yet been deployed to mainnet:
+
+- `[ ]` Cross-input signature aggregation
+- `[ ]` Half-aggregation schemes
 
 ## License
 

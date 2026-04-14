@@ -180,6 +180,7 @@ pub mod order_splitting;
 pub mod price_circuit_breaker;
 pub mod price_discovery;
 pub mod private_pool;
+/// Reinforcement learning market maker.
 pub mod rl_market_maker;
 pub mod routing;
 pub mod security;

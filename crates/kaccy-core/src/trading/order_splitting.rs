@@ -12,9 +12,13 @@ use serde::{Deserialize, Serialize};
 /// Split order configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SplitOrder {
+    /// Quantity to execute in this split.
     pub amount: Decimal,
+    /// Scheduled execution time for this split.
     pub execution_time: DateTime<Utc>,
+    /// Maximum acceptable slippage (optional).
     pub max_slippage: Option<Decimal>,
+    /// Human-readable description of this split.
     pub description: String,
 }
 
@@ -38,6 +42,7 @@ pub struct VolumeWeightedSplitter {
 }
 
 impl VolumeWeightedSplitter {
+    /// Create a new volume-weighted splitter from a historical volume profile.
     pub fn new(volume_profile: Vec<(DateTime<Utc>, Decimal)>) -> Self {
         Self { volume_profile }
     }
@@ -147,6 +152,7 @@ pub struct TimeWeightedSplitter {
 }
 
 impl TimeWeightedSplitter {
+    /// Create a new time-weighted splitter with the given participation rate.
     pub fn new(participation_rate: Decimal) -> Self {
         Self { participation_rate }
     }
@@ -197,6 +203,7 @@ pub struct AdaptiveSplitter {
 }
 
 impl AdaptiveSplitter {
+    /// Create a new adaptive splitter using current volatility and liquidity score.
     pub fn new(volatility: Decimal, liquidity_score: Decimal) -> Self {
         Self {
             volatility,
@@ -293,6 +300,7 @@ pub struct OrderSplitScheduler {
 }
 
 impl OrderSplitScheduler {
+    /// Create a new scheduler from a list of pre-computed split orders.
     pub fn new(splits: Vec<SplitOrder>) -> Self {
         Self {
             splits,

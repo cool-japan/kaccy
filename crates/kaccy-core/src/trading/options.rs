@@ -13,7 +13,9 @@ use uuid::Uuid;
 /// Type of option contract
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OptionType {
+    /// Grants the holder the right to buy the underlying asset
     Call,
+    /// Grants the holder the right to sell the underlying asset
     Put,
 }
 
@@ -35,16 +37,27 @@ pub enum OptionStatus {
 /// Cannot be exercised before expiration date
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptionContract {
+    /// Unique identifier for this contract
     pub contract_id: Uuid,
+    /// Token that is the underlying asset
     pub token_id: Uuid,
+    /// Whether this is a call or put option
     pub option_type: OptionType,
+    /// Strike price at which the option may be exercised
     pub strike_price: Decimal,
+    /// Date and time when this option expires
     pub expiration_date: DateTime<Utc>,
+    /// Premium paid by the buyer to the writer
     pub premium: Decimal,
+    /// User who wrote (issued) this contract
     pub writer_id: Uuid,
+    /// User who currently holds (owns) this contract, if sold
     pub holder_id: Option<Uuid>,
+    /// Current lifecycle status of the contract
     pub status: OptionStatus,
+    /// Timestamp when this contract was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp when this contract was exercised, if applicable
     pub exercised_at: Option<DateTime<Utc>>,
     /// Amount of underlying tokens per contract
     pub contract_size: Decimal,
@@ -162,6 +175,7 @@ pub struct BlackScholesModel {
 }
 
 impl BlackScholesModel {
+    /// Create a new Black-Scholes model with the given annualized risk-free rate
     pub fn new(risk_free_rate: f64) -> Result<Self> {
         if risk_free_rate < 0.0 {
             return Err(CoreError::Validation(
@@ -398,6 +412,7 @@ pub struct OptionsManager {
 }
 
 impl OptionsManager {
+    /// Create a new options manager with the given annualized risk-free rate
     pub fn new(risk_free_rate: f64) -> Result<Self> {
         Ok(Self {
             contracts: HashMap::new(),

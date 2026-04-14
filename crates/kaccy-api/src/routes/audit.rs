@@ -15,13 +15,20 @@ use crate::{error::ApiError, middleware::Claims, state::AppState};
 /// Audit event from database
 #[derive(Debug, Clone, Serialize, FromRow)]
 pub struct AuditEvent {
+    /// Unique event identifier
     pub id: Uuid,
+    /// Timestamp when the event occurred
     #[sqlx(try_from = "chrono::DateTime<chrono::Utc>")]
     pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Type of the audit event
     pub event_type: String,
+    /// Event-specific data payload
     pub event_data: serde_json::Value,
+    /// Source system that generated the event
     pub source: String,
+    /// Optional correlation ID for tracing related events
     pub correlation_id: Option<String>,
+    /// Optional user ID associated with the event
     pub user_id: Option<Uuid>,
 }
 
@@ -58,27 +65,39 @@ fn default_per_page() -> i64 {
 /// Response for audit events list
 #[derive(Debug, Serialize)]
 pub struct AuditEventsResponse {
+    /// List of audit events for this page
     pub events: Vec<AuditEvent>,
+    /// Total number of matching audit events
     pub total: i64,
+    /// Current page number (1-indexed)
     pub page: i64,
+    /// Number of items per page
     pub per_page: i64,
+    /// Total number of pages
     pub total_pages: i64,
 }
 
 /// Audit statistics response
 #[derive(Debug, Serialize)]
 pub struct AuditStatsResponse {
+    /// Total number of audit events in the system
     pub total_events: i64,
+    /// Breakdown of event counts by type
     pub event_types: Vec<EventTypeCount>,
+    /// Number of events in the last 24 hours
     pub events_last_24h: i64,
+    /// Number of events in the last 7 days
     pub events_last_7d: i64,
+    /// Number of events in the last 30 days
     pub events_last_30d: i64,
 }
 
 /// Event type count
 #[derive(Debug, Serialize, FromRow)]
 pub struct EventTypeCount {
+    /// The event type name
     pub event_type: String,
+    /// Number of occurrences of this event type
     pub count: i64,
 }
 

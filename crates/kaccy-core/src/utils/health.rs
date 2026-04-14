@@ -13,21 +13,29 @@ use std::time::{Duration, Instant};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum HealthStatus {
+    /// Component is fully operational
     Healthy,
+    /// Component is operational but experiencing issues
     Degraded,
+    /// Component is not operational
     Unhealthy,
 }
 
 /// Health check result for a single component
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthCheckResult {
+    /// Overall health status
     pub status: HealthStatus,
+    /// Optional human-readable status message
     pub message: Option<String>,
-    pub checked_at: i64, // Unix timestamp
+    /// Unix timestamp when this check was performed
+    pub checked_at: i64,
+    /// How long the check took in milliseconds
     pub response_time_ms: u64,
 }
 
 impl HealthCheckResult {
+    /// Create a healthy result with the given message
     pub fn healthy(message: impl Into<String>, response_time_ms: u64) -> Self {
         Self {
             status: HealthStatus::Healthy,
@@ -37,6 +45,7 @@ impl HealthCheckResult {
         }
     }
 
+    /// Create a degraded result with the given message
     pub fn degraded(message: impl Into<String>, response_time_ms: u64) -> Self {
         Self {
             status: HealthStatus::Degraded,
@@ -46,6 +55,7 @@ impl HealthCheckResult {
         }
     }
 
+    /// Create an unhealthy result with the given message
     pub fn unhealthy(message: impl Into<String>, response_time_ms: u64) -> Self {
         Self {
             status: HealthStatus::Unhealthy,
@@ -58,7 +68,9 @@ impl HealthCheckResult {
 
 /// Health checker trait
 pub trait HealthChecker: Send + Sync {
+    /// Run the health check and return the result.
     fn check(&self) -> HealthCheckResult;
+    /// Return the name identifying this health checker.
     fn name(&self) -> &str;
 }
 
@@ -69,6 +81,7 @@ pub struct DatabaseHealthChecker {
 }
 
 impl DatabaseHealthChecker {
+    /// Create a new database health checker
     pub fn new(name: impl Into<String>, timeout: Duration) -> Self {
         Self {
             name: name.into(),
@@ -107,6 +120,7 @@ pub struct CacheHealthChecker {
 }
 
 impl CacheHealthChecker {
+    /// Create a new cache health checker
     pub fn new(name: impl Into<String>, timeout: Duration) -> Self {
         Self {
             name: name.into(),
@@ -140,6 +154,7 @@ pub struct ResourceHealthChecker {
 }
 
 impl ResourceHealthChecker {
+    /// Create a new resource health checker with the given thresholds
     pub fn new(name: impl Into<String>, cpu_threshold: f64, memory_threshold: f64) -> Self {
         Self {
             name: name.into(),
@@ -185,6 +200,7 @@ pub struct CircuitBreakerHealthChecker {
 }
 
 impl CircuitBreakerHealthChecker {
+    /// Create a new circuit breaker health checker
     pub fn new(name: impl Into<String>, is_open: Arc<AtomicBool>) -> Self {
         Self {
             name: name.into(),
@@ -212,12 +228,16 @@ impl HealthChecker for CircuitBreakerHealthChecker {
 
 /// Health check manager
 pub struct HealthCheckManager {
+    /// Registered health checkers
     checkers: Arc<RwLock<Vec<Arc<dyn HealthChecker>>>>,
+    /// Cache of recent check results
     cache: Arc<RwLock<HashMap<String, (HealthCheckResult, Instant)>>>,
+    /// How long to cache health check results
     cache_ttl: Duration,
 }
 
 impl HealthCheckManager {
+    /// Create a new health check manager with default 5-second cache TTL
     pub fn new() -> Self {
         Self {
             checkers: Arc::new(RwLock::new(Vec::new())),
@@ -226,6 +246,7 @@ impl HealthCheckManager {
         }
     }
 
+    /// Override the cache TTL for health check results
     pub fn with_cache_ttl(mut self, ttl: Duration) -> Self {
         self.cache_ttl = ttl;
         self
@@ -317,8 +338,11 @@ impl Default for HealthCheckManager {
 /// Health report for all components
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthReport {
+    /// Aggregated overall health status
     pub status: HealthStatus,
+    /// Individual component health check results by name
     pub components: HashMap<String, HealthCheckResult>,
+    /// Unix timestamp when this report was generated
     pub timestamp: i64,
 }
 

@@ -1,0 +1,7 @@
+target/
+.git/
+*.md
+.env*
+node_modules/
+.claude/
+knowledge/

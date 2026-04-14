@@ -11,50 +11,75 @@ use uuid::Uuid;
 /// API key usage record
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct ApiKeyUsage {
+    /// Unique identifier for this usage record.
     pub id: Uuid,
+    /// API key that was used.
     pub api_key_id: Uuid,
+    /// Endpoint path that was accessed.
     pub endpoint: String,
+    /// HTTP method used (e.g., "GET", "POST").
     pub method: String,
+    /// HTTP response status code returned.
     pub status_code: i32,
+    /// Time taken to respond in milliseconds.
     pub response_time_ms: i32,
+    /// Timestamp when the request was made.
     pub created_at: DateTime<Utc>,
 }
 
 /// Parameters for recording API usage
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecordUsage {
+    /// API key used in the request.
     pub api_key_id: Uuid,
+    /// Endpoint path accessed.
     pub endpoint: String,
+    /// HTTP method used.
     pub method: String,
+    /// HTTP response status code.
     pub status_code: i32,
+    /// Response time in milliseconds.
     pub response_time_ms: i32,
 }
 
 /// Usage statistics summary
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct UsageStats {
+    /// Total number of requests.
     pub total_requests: i64,
+    /// Number of requests with 2xx status codes.
     pub successful_requests: i64,
+    /// Number of requests with non-2xx status codes.
     pub failed_requests: i64,
+    /// Mean response time in milliseconds.
     pub avg_response_time_ms: Option<f64>,
+    /// Minimum recorded response time in milliseconds.
     pub min_response_time_ms: Option<i32>,
+    /// Maximum recorded response time in milliseconds.
     pub max_response_time_ms: Option<i32>,
 }
 
 /// Per-endpoint usage statistics
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct EndpointStats {
+    /// Endpoint path.
     pub endpoint: String,
+    /// HTTP method.
     pub method: String,
+    /// Number of requests to this endpoint.
     pub request_count: i64,
+    /// Mean response time in milliseconds.
     pub avg_response_time_ms: Option<f64>,
+    /// Fraction of successful requests (0.0–1.0).
     pub success_rate: Option<f64>,
 }
 
 /// Hourly usage count for rate limiting
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct HourlyUsage {
+    /// Start of the one-hour window.
     pub hour: DateTime<Utc>,
+    /// Number of requests in this hour.
     pub request_count: i64,
 }
 

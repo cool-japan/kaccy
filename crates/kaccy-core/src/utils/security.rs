@@ -1,4 +1,4 @@
-// Advanced security features: behavioral biometrics, fraud detection, and privacy
+//! Advanced security features: behavioral biometrics, fraud detection, and privacy
 use crate::error::CoreError;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -8,23 +8,35 @@ use uuid::Uuid;
 /// Behavioral biometrics data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BehavioralBiometrics {
+    /// User this biometric sample belongs to
     pub user_id: Uuid,
+    /// Session during which the sample was captured
     pub session_id: Uuid,
+    /// Keyboard dynamics captured during the session
     pub typing_pattern: TypingPattern,
+    /// Mouse movement dynamics captured during the session
     pub mouse_dynamics: MouseDynamics,
+    /// Device fingerprint at the time of capture
     pub device_fingerprint: DeviceFingerprint,
+    /// Computed risk score for this sample
     pub risk_score: Decimal,
+    /// When the sample was captured
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 /// Typing pattern analysis
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TypingPattern {
-    pub avg_keypress_duration: u64,     // milliseconds
-    pub avg_interval_between_keys: u64, // milliseconds
-    pub typing_speed_wpm: u16,          // words per minute
-    pub error_rate: Decimal,            // 0.0 to 1.0
-    pub pattern_signature: Vec<u64>,    // Timing intervals
+    /// Average time a key is held down, in milliseconds
+    pub avg_keypress_duration: u64,
+    /// Average time between consecutive keystrokes, in milliseconds
+    pub avg_interval_between_keys: u64,
+    /// Typing speed in words per minute
+    pub typing_speed_wpm: u16,
+    /// Proportion of erroneous keystrokes (0.0 to 1.0)
+    pub error_rate: Decimal,
+    /// Raw inter-keystroke timing intervals used as a signature
+    pub pattern_signature: Vec<u64>,
 }
 
 impl TypingPattern {
@@ -107,10 +119,15 @@ impl TypingPattern {
 /// Mouse movement dynamics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MouseDynamics {
-    pub avg_velocity: Decimal,        // pixels per second
-    pub avg_acceleration: Decimal,    // pixels per second squared
-    pub movement_smoothness: Decimal, // 0.0 to 1.0
-    pub click_precision: Decimal,     // 0.0 to 1.0
+    /// Average cursor velocity in pixels per second
+    pub avg_velocity: Decimal,
+    /// Average cursor acceleration in pixels per second squared
+    pub avg_acceleration: Decimal,
+    /// Smoothness of cursor movement (0.0 = erratic, 1.0 = perfectly smooth)
+    pub movement_smoothness: Decimal,
+    /// Accuracy of clicking on targets (0.0 to 1.0)
+    pub click_precision: Decimal,
+    /// Recorded cursor trajectory as (x, y) pixel coordinates
     pub trajectory_points: Vec<(i32, i32)>,
 }
 
@@ -173,13 +190,21 @@ impl MouseDynamics {
 /// Device fingerprint for identification
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceFingerprint {
+    /// MD5 hash of the fingerprint attributes
     pub fingerprint_hash: String,
+    /// Browser user-agent string
     pub user_agent: String,
+    /// Screen resolution as (width, height) in pixels
     pub screen_resolution: (u32, u32),
+    /// IANA timezone identifier
     pub timezone: String,
+    /// Browser locale/language
     pub language: String,
+    /// Operating system or platform string
     pub platform: String,
+    /// When this device was first seen
     pub first_seen: chrono::DateTime<chrono::Utc>,
+    /// Most recent time this device was seen
     pub last_seen: chrono::DateTime<chrono::Utc>,
 }
 
@@ -221,7 +246,9 @@ impl DeviceFingerprint {
 /// Behavioral biometrics analyzer
 #[derive(Debug, Clone)]
 pub struct BiometricsAnalyzer {
+    /// Historical biometric samples per user
     user_profiles: HashMap<Uuid, Vec<BehavioralBiometrics>>,
+    /// Minimum similarity score [0.0, 1.0] required to accept a verification attempt
     threshold_similarity: Decimal,
 }
 
@@ -278,35 +305,56 @@ impl BiometricsAnalyzer {
 /// Fraud detection system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FraudDetector {
+    /// Unique identifier of this detector instance
     pub id: Uuid,
+    /// Users that are explicitly banned
     pub user_blacklist: Vec<Uuid>,
+    /// IP addresses that are explicitly banned
     pub ip_blacklist: Vec<String>,
+    /// Known fraud patterns recorded by this detector
     pub suspicious_patterns: Vec<FraudPattern>,
 }
 
+/// A detected fraud pattern with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FraudPattern {
+    /// Classification of the fraud pattern
     pub pattern_type: FraudPatternType,
+    /// Human-readable description
     pub description: String,
+    /// Severity of this pattern
     pub severity: FraudSeverity,
 }
 
+/// Classification of fraud pattern type
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FraudPatternType {
+    /// Unusually high rate of transactions
     RapidTransactions,
+    /// Login or transaction from an unusual location
     UnusualLocation,
+    /// New or unknown device detected
     DeviceChange,
+    /// Single transaction exceeds normal thresholds
     LargeTransaction,
+    /// General suspicious behaviour pattern
     SuspiciousPattern,
+    /// Same user controlling multiple accounts
     MultipleAccounts,
+    /// Transaction velocity exceeds historical norms
     VelocityAnomaly,
 }
 
+/// Severity level for a detected fraud pattern
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FraudSeverity {
+    /// Low-severity indicator
     Low,
+    /// Medium-severity indicator
     Medium,
+    /// High-severity indicator requiring review
     High,
+    /// Critical indicator requiring immediate action
     Critical,
 }
 
@@ -453,31 +501,47 @@ impl Default for FraudDetector {
 /// Fraud analysis result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FraudAnalysis {
+    /// Aggregate risk score (0 = clean, 100+ = fraudulent)
     pub risk_score: Decimal,
+    /// Individual fraud patterns that contributed to the score
     pub detected_patterns: Vec<FraudPattern>,
+    /// Overall severity based on the risk score
     pub severity: FraudSeverity,
+    /// Whether a human reviewer should inspect this transaction
     pub requires_review: bool,
+    /// When this analysis was performed
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 /// Transaction record for analysis
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionRecord {
+    /// Monetary value of the transaction
     pub amount: Decimal,
+    /// When the transaction was made
     pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// IP address from which the transaction was submitted
     pub ip_address: String,
 }
 
 /// IP reputation scoring
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IpReputation {
+    /// The IP address being scored
     pub ip_address: String,
-    pub reputation_score: Decimal, // 0-100, higher is better
+    /// Reputation score (0 = worst, 100 = best)
+    pub reputation_score: Decimal,
+    /// Country of origin for the IP
     pub country: String,
+    /// Whether the IP is a known VPN exit node
     pub is_vpn: bool,
+    /// Whether the IP is a known proxy
     pub is_proxy: bool,
+    /// Whether the IP is a Tor exit node
     pub is_tor: bool,
+    /// Number of abuse reports received for this IP
     pub abuse_reports: u32,
+    /// When this reputation data was last refreshed
     pub last_updated: chrono::DateTime<chrono::Utc>,
 }
 
@@ -512,10 +576,15 @@ impl IpReputation {
 /// Account takeover prevention
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountTakeoverDetector {
+    /// User whose account is being monitored
     pub user_id: Uuid,
+    /// Known good login locations for this user
     pub normal_login_locations: Vec<String>,
+    /// Known good device fingerprints for this user
     pub normal_devices: Vec<String>,
+    /// When the user last changed their password
     pub last_password_change: chrono::DateTime<chrono::Utc>,
+    /// Number of consecutive failed login attempts
     pub failed_login_attempts: u32,
 }
 
@@ -591,19 +660,28 @@ impl AccountTakeoverDetector {
 /// Takeover risk assessment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TakeoverRisk {
+    /// Computed risk score indicating likelihood of account takeover
     pub risk_score: Decimal,
+    /// Human-readable list of factors that raised the risk score
     pub risk_factors: Vec<String>,
+    /// Whether the login attempt should be challenged with 2FA
     pub requires_2fa: bool,
+    /// Whether additional identity verification is needed
     pub requires_verification: bool,
 }
 
 /// Privacy-preserving transaction proof (simplified zero-knowledge concept)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrivacyProof {
+    /// Unique identifier of this proof
     pub proof_id: Uuid,
-    pub statement: String,  // What we're proving (e.g., "balance > 1000")
-    pub commitment: String, // Cryptographic commitment
+    /// The statement being proven (e.g. "balance > 1000")
+    pub statement: String,
+    /// Cryptographic commitment to the secret value
+    pub commitment: String,
+    /// Whether the proof has been successfully verified
     pub verified: bool,
+    /// When this proof was created
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 

@@ -8,31 +8,51 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum UserAction {
+    /// User viewed a page
     PageView {
+        /// Page path viewed
         page: String,
+        /// Referrer URL
         referrer: Option<String>,
     },
+    /// User clicked a button
     ButtonClick {
+        /// Button element ID
         button_id: String,
+        /// Button label text
         label: String,
     },
+    /// User submitted a form
     FormSubmit {
+        /// Form element ID
         form_id: String,
+        /// Whether the form submission was successful
         success: bool,
     },
+    /// User purchased tokens
     TokenPurchase {
+        /// Token that was purchased
         token_id: Uuid,
+        /// Amount purchased as string
         amount: String,
     },
+    /// User sold tokens
     TokenSale {
+        /// Token that was sold
         token_id: Uuid,
+        /// Amount sold as string
         amount: String,
     },
+    /// User performed a search
     Search {
+        /// Search query
         query: String,
+        /// Number of results returned
         results_count: usize,
     },
+    /// User updated their profile
     ProfileUpdate {
+        /// List of fields that were updated
         fields: Vec<String>,
     },
 }
@@ -198,8 +218,11 @@ impl Default for BehaviorTracker {
 /// User statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserStats {
+    /// Total number of sessions
     pub total_sessions: usize,
+    /// Total number of actions across all sessions
     pub total_actions: usize,
+    /// Average session duration
     pub avg_session_duration: Duration,
 }
 

@@ -36,10 +36,15 @@ impl fmt::Display for GpuBackend {
 /// GPU device information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GpuDeviceInfo {
+    /// Human-readable device name.
     pub name: String,
+    /// GPU compute backend in use.
     pub backend: GpuBackend,
+    /// Available GPU memory in megabytes.
     pub memory_mb: usize,
+    /// Number of compute units (shader processors / CUs).
     pub compute_units: usize,
+    /// Maximum work-group size supported by the device.
     pub max_work_group_size: usize,
 }
 
@@ -150,17 +155,34 @@ impl GpuMatrix {
         Ok(result)
     }
 
-    /// CUDA-accelerated matrix multiplication (requires CUDA)
+    /// CUDA-accelerated matrix multiplication (requires CUDA feature flag).
+    ///
+    /// This build does not include CUDA support (`cuda` feature not enabled).
+    /// Falls back to the CPU implementation, which is functionally identical
+    /// but runs on the host CPU rather than a GPU device.
     fn matmul_cuda(&self, other: &GpuMatrix) -> Result<GpuMatrix> {
-        // TODO: Implement actual CUDA kernel
-        // For now, fall back to CPU (CUDA not available in this build)
+        tracing::debug!(
+            "CUDA not available in this build; using CPU fallback for matmul ({}x{} * {}x{})",
+            self.rows,
+            self.cols,
+            other.rows,
+            other.cols
+        );
         self.matmul_cpu(other)
     }
 
-    /// OpenCL-accelerated matrix multiplication
+    /// OpenCL-accelerated matrix multiplication (requires OpenCL feature flag).
+    ///
+    /// This build does not include OpenCL support (`opencl` feature not enabled).
+    /// Falls back to the CPU implementation.
     fn matmul_opencl(&self, other: &GpuMatrix) -> Result<GpuMatrix> {
-        // TODO: Implement OpenCL kernel
-        // For now, fall back to CPU (OpenCL not available in this build)
+        tracing::debug!(
+            "OpenCL not available in this build; using CPU fallback for matmul ({}x{} * {}x{})",
+            self.rows,
+            self.cols,
+            other.rows,
+            other.cols
+        );
         self.matmul_cpu(other)
     }
 
@@ -249,15 +271,29 @@ impl GpuFeatureExtractor {
         Ok(features)
     }
 
+    /// CUDA-accelerated parallel feature extraction (requires CUDA feature flag).
+    ///
+    /// `cuda` feature is not enabled in this build; computation runs on the CPU.
     fn extract_cuda(&self, prices: &[Decimal], window_size: usize) -> Result<Vec<Vec<f64>>> {
-        // TODO: Implement CUDA kernel for parallel feature extraction
-        // For now, fall back to CPU (CUDA not available in this build)
+        tracing::debug!(
+            "CUDA not available in this build; using CPU fallback for feature extraction \
+             (prices={}, window={})",
+            prices.len(),
+            window_size
+        );
         self.extract_cpu(prices, window_size)
     }
 
+    /// OpenCL-accelerated parallel feature extraction (requires OpenCL feature flag).
+    ///
+    /// `opencl` feature is not enabled in this build; computation runs on the CPU.
     fn extract_opencl(&self, prices: &[Decimal], window_size: usize) -> Result<Vec<Vec<f64>>> {
-        // TODO: Implement OpenCL kernel
-        // For now, fall back to CPU (OpenCL not available in this build)
+        tracing::debug!(
+            "OpenCL not available in this build; using CPU fallback for feature extraction \
+             (prices={}, window={})",
+            prices.len(),
+            window_size
+        );
         self.extract_cpu(prices, window_size)
     }
 }
@@ -340,23 +376,38 @@ impl GpuBacktester {
         Ok(results)
     }
 
+    /// CUDA-accelerated parallel backtesting (requires CUDA feature flag).
+    ///
+    /// `cuda` feature is not enabled in this build; backtesting runs on the CPU
+    /// sequentially across the provided parameter sets.
     fn backtest_cuda(
         &self,
         data: &[Decimal],
         parameter_sets: &[Vec<f64>],
     ) -> Result<Vec<BacktestResult>> {
-        // TODO: Implement CUDA kernel for parallel backtesting
-        // For now, fall back to CPU (CUDA not available in this build)
+        tracing::debug!(
+            "CUDA not available in this build; using CPU fallback for backtesting \
+             ({} parameter sets, {} data points)",
+            parameter_sets.len(),
+            data.len()
+        );
         self.backtest_cpu(data, parameter_sets)
     }
 
+    /// OpenCL-accelerated parallel backtesting (requires OpenCL feature flag).
+    ///
+    /// `opencl` feature is not enabled in this build; backtesting runs on the CPU.
     fn backtest_opencl(
         &self,
         data: &[Decimal],
         parameter_sets: &[Vec<f64>],
     ) -> Result<Vec<BacktestResult>> {
-        // TODO: Implement OpenCL kernel
-        // For now, fall back to CPU (OpenCL not available in this build)
+        tracing::debug!(
+            "OpenCL not available in this build; using CPU fallback for backtesting \
+             ({} parameter sets, {} data points)",
+            parameter_sets.len(),
+            data.len()
+        );
         self.backtest_cpu(data, parameter_sets)
     }
 }
@@ -364,9 +415,13 @@ impl GpuBacktester {
 /// Backtest result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BacktestResult {
+    /// Strategy parameter values that produced this result.
     pub parameters: Vec<f64>,
+    /// Total profit and loss over the backtest period.
     pub total_pnl: f64,
+    /// Number of trades executed during the backtest.
     pub num_trades: usize,
+    /// Annualized Sharpe ratio.
     pub sharpe_ratio: f64,
 }
 
@@ -374,9 +429,15 @@ pub struct BacktestResult {
 pub struct GpuDeviceManager;
 
 impl GpuDeviceManager {
-    /// List available GPU devices
+    /// List available compute devices.
+    ///
+    /// In this pure-Rust build only the CPU device is reported.  CUDA and
+    /// OpenCL device enumeration requires the respective feature flags
+    /// (`cuda`, `opencl`) which are not enabled by default to satisfy the
+    /// COOLJAPAN Pure Rust Policy.  When those features are enabled, this
+    /// function would query the installed runtime and append real GPU entries.
     pub fn list_devices() -> Vec<GpuDeviceInfo> {
-        // Always have CPU fallback
+        // CPU fallback device is always present.
         let devices = vec![GpuDeviceInfo {
             name: "CPU".to_string(),
             backend: GpuBackend::Cpu,
@@ -387,8 +448,15 @@ impl GpuDeviceManager {
             max_work_group_size: 1,
         }];
 
-        // TODO: Detect CUDA devices
-        // TODO: Detect OpenCL devices
+        // CUDA device detection: not available in this build.
+        // Enable the `cuda` feature to activate real CUDA device enumeration.
+        tracing::trace!("CUDA device detection skipped: `cuda` feature not enabled in this build");
+
+        // OpenCL device detection: not available in this build.
+        // Enable the `opencl` feature to activate real OpenCL device enumeration.
+        tracing::trace!(
+            "OpenCL device detection skipped: `opencl` feature not enabled in this build"
+        );
 
         devices
     }

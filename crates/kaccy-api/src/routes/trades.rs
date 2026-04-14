@@ -11,9 +11,12 @@ use uuid::Uuid;
 use crate::error::{ApiError, Result};
 use crate::state::AppState;
 
+/// Query parameters for trade listings
 #[derive(Debug, Deserialize)]
 pub struct TradesQuery {
+    /// Maximum number of results to return
     pub limit: Option<i64>,
+    /// Number of records to skip for pagination
     pub offset: Option<i64>,
 }
 
@@ -101,32 +104,52 @@ pub async fn get_token_trades(
     }))
 }
 
+/// A single trade record for a token
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct TokenTrade {
+    /// Unique trade ID
     pub trade_id: Uuid,
+    /// User ID of the buyer
     pub buyer_user_id: Uuid,
+    /// Username of the buyer
     pub buyer_username: String,
+    /// User ID of the seller (None for bonding curve)
     pub seller_user_id: Option<Uuid>,
+    /// Username of the seller
     pub seller_username: Option<String>,
+    /// Amount of tokens traded
     pub amount: Decimal,
+    /// Price per token in BTC
     pub price_btc: Decimal,
+    /// Total trade value in BTC
     pub total_btc: Decimal,
+    /// Trade execution timestamp
     pub executed_at: chrono::DateTime<chrono::Utc>,
 }
 
+/// Aggregated trade statistics for a token
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct TradeSummary {
+    /// Total number of trades
     pub total_trades: i64,
+    /// Total trading volume in BTC
     pub total_volume_btc: Decimal,
+    /// Average trade price in BTC
     pub avg_price_btc: Decimal,
+    /// Highest trade price in BTC
     pub high_price_btc: Decimal,
+    /// Lowest trade price in BTC
     pub low_price_btc: Decimal,
 }
 
+/// Response containing token trades with summary statistics
 #[derive(Debug, Serialize)]
 pub struct TokenTradesResponse {
+    /// List of trades
     pub trades: Vec<TokenTrade>,
+    /// Aggregated trade statistics
     pub summary: TradeSummary,
+    /// Trading volume in the past 24 hours (BTC)
     pub volume_24h_btc: Decimal,
 }
 
@@ -192,18 +215,28 @@ struct TokenInfo {
     circulating_supply: Decimal,
 }
 
+/// A token holder with balance information
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct TokenHolder {
+    /// Holder's user ID
     pub user_id: Uuid,
+    /// Holder's username
     pub username: String,
+    /// Holder's display name
     pub display_name: Option<String>,
+    /// Amount of tokens held
     pub amount: Decimal,
+    /// Percentage of total circulating supply held
     pub percentage: Option<Decimal>,
 }
 
+/// Response containing token holder list and supply info
 #[derive(Debug, Serialize)]
 pub struct TokenHoldersResponse {
+    /// List of token holders
     pub holders: Vec<TokenHolder>,
+    /// Total number of unique holders
     pub total_holders: i64,
+    /// Current circulating supply
     pub circulating_supply: Decimal,
 }

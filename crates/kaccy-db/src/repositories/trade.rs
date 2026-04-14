@@ -9,33 +9,56 @@ use crate::error::Result;
 /// Trade data from database
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct TradeRow {
+    /// Unique identifier for the trade.
     pub trade_id: Uuid,
+    /// User who bought the tokens.
     pub buyer_user_id: Uuid,
+    /// User who sold the tokens, if a seller exists.
     pub seller_user_id: Option<Uuid>,
+    /// Token that was traded.
     pub token_id: Uuid,
+    /// Amount of tokens traded.
     pub amount: Decimal,
+    /// Price per token in BTC.
     pub price_btc: Decimal,
+    /// Total BTC value of the trade.
     pub total_btc: Decimal,
+    /// Platform fee collected in BTC.
     pub platform_fee_btc: Decimal,
+    /// Issuer royalty collected in BTC.
     pub issuer_royalty_btc: Decimal,
+    /// Timestamp when the trade was executed.
     pub executed_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Trade with additional context
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct TradeWithContextRow {
+    /// Unique identifier for the trade.
     pub trade_id: Uuid,
+    /// User who bought the tokens.
     pub buyer_user_id: Uuid,
+    /// User who sold the tokens, if applicable.
     pub seller_user_id: Option<Uuid>,
+    /// Token that was traded.
     pub token_id: Uuid,
+    /// Amount of tokens traded.
     pub amount: Decimal,
+    /// Price per token in BTC.
     pub price_btc: Decimal,
+    /// Total BTC value of the trade.
     pub total_btc: Decimal,
+    /// Platform fee in BTC.
     pub platform_fee_btc: Decimal,
+    /// Issuer royalty in BTC.
     pub issuer_royalty_btc: Decimal,
+    /// Execution timestamp.
     pub executed_at: chrono::DateTime<chrono::Utc>,
+    /// Username of the buyer.
     pub buyer_username: String,
+    /// Username of the seller, if applicable.
     pub seller_username: Option<String>,
+    /// Symbol of the traded token.
     pub token_symbol: String,
 }
 
@@ -45,6 +68,7 @@ pub struct TradeRepository {
 }
 
 impl TradeRepository {
+    /// Create a new trade repository.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -565,70 +589,105 @@ impl TimeRange {
 /// Trade summary statistics
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct TradeSummary {
+    /// Total number of trades.
     pub total_trades: i64,
+    /// Cumulative BTC volume traded.
     pub total_volume_btc: Decimal,
+    /// Average trade price in BTC.
     pub avg_price_btc: Decimal,
+    /// Highest trade price in BTC.
     pub high_price_btc: Decimal,
+    /// Lowest trade price in BTC.
     pub low_price_btc: Decimal,
 }
 
 /// Parameters for creating a trade (used in batch operations)
 #[derive(Debug, Clone)]
 pub struct CreateTradeParams {
+    /// User who is buying.
     pub buyer_user_id: Uuid,
+    /// User who is selling, if applicable.
     pub seller_user_id: Option<Uuid>,
+    /// Token being traded.
     pub token_id: Uuid,
+    /// Amount of tokens.
     pub amount: Decimal,
+    /// Price per token in BTC.
     pub price_btc: Decimal,
+    /// Total BTC value.
     pub total_btc: Decimal,
+    /// Platform fee in BTC.
     pub platform_fee_btc: Decimal,
+    /// Issuer royalty in BTC.
     pub issuer_royalty_btc: Decimal,
 }
 
 /// User trading statistics
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct UserTradeStats {
+    /// Number of buy-side trades.
     pub buy_count: Option<i64>,
+    /// Number of sell-side trades.
     pub sell_count: Option<i64>,
+    /// Total BTC spent as buyer.
     pub total_bought_btc: Decimal,
+    /// Total BTC received as seller.
     pub total_sold_btc: Decimal,
+    /// Total fees paid in BTC.
     pub fees_paid_btc: Decimal,
 }
 
 /// Trader activity statistics
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct TraderActivity {
+    /// User identifier.
     pub user_id: Uuid,
+    /// Total number of trades.
     pub trade_count: Option<i64>,
+    /// Total BTC volume traded.
     pub total_volume_btc: Option<Decimal>,
 }
 
 /// Token trading volume statistics
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct TokenTradingVolume {
+    /// Token identifier.
     pub token_id: Uuid,
+    /// Number of trades involving this token.
     pub trade_count: i64,
+    /// Total BTC volume traded.
     pub total_volume_btc: Decimal,
+    /// Total token amount traded.
     pub total_amount: Decimal,
 }
 
 /// Daily trade statistics
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct DailyTradeStats {
+    /// Date of the aggregation bucket.
     pub date: chrono::NaiveDate,
+    /// Number of trades on this date.
     pub trade_count: i64,
+    /// Number of distinct buyers on this date.
     pub unique_buyers: i64,
+    /// Number of distinct tokens traded on this date.
     pub unique_tokens: i64,
+    /// Total BTC volume on this date.
     pub total_volume_btc: Decimal,
+    /// Total fees collected on this date.
     pub total_fees_btc: Decimal,
 }
 
 /// Price point for charting
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct PricePoint {
+    /// Timestamp of the trade.
     pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Trade price in BTC.
     pub price_btc: Decimal,
+    /// Token amount traded.
     pub amount: Decimal,
+    /// Total BTC value.
     pub total_btc: Decimal,
 }
 

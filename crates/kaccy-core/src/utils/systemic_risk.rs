@@ -87,6 +87,7 @@ pub struct Interconnection {
     pub exposure_type: ExposureType,
 }
 
+/// Category of financial exposure between counterparties
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ExposureType {
     /// Direct lending

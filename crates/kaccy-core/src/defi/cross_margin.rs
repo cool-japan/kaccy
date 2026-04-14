@@ -401,15 +401,25 @@ impl CrossMarginAccount {
 /// Portfolio summary
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PortfolioSummary {
+    /// Unique identifier of the margin account.
     pub account_id: String,
+    /// Total collateral deposited in the account.
     pub collateral: Decimal,
+    /// Net equity (collateral + unrealized PnL).
     pub equity: Decimal,
+    /// Total unrealized profit and loss across all positions.
     pub unrealized_pnl: Decimal,
+    /// Total initial margin required for open positions.
     pub initial_margin: Decimal,
+    /// Total maintenance margin required to avoid liquidation.
     pub maintenance_margin: Decimal,
+    /// Balance available for new positions.
     pub available_balance: Decimal,
+    /// Ratio of used margin to total equity.
     pub margin_utilization: Decimal,
+    /// Number of open positions in the account.
     pub position_count: usize,
+    /// Whether the account is eligible for liquidation.
     pub is_liquidatable: bool,
 }
 

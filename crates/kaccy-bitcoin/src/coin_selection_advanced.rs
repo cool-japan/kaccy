@@ -34,7 +34,7 @@
 
 use crate::error::BitcoinError;
 use crate::utxo::Utxo;
-use rand::Rng;
+use rand::RngExt;
 use serde::{Deserialize, Serialize};
 
 /// Configuration for advanced coin selection

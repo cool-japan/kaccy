@@ -7,16 +7,23 @@ use crate::error::Result;
 use crate::evidence::EvidenceParser;
 use crate::github::{GitHubClient, GitHubConfig, GitHubVerifier};
 
+/// Result of a single output verification check.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationResult {
+    /// Whether the evidence was considered verified.
     pub verified: bool,
-    pub confidence: f64, // 0-1
+    /// Confidence level in the result (0.0–1.0).
+    pub confidence: f64,
+    /// Whether the supplied evidence URL/hash was reachable and valid.
     pub evidence_valid: bool,
+    /// Human-readable explanation of the verification outcome.
     pub details: String,
 }
 
+/// Trait for verifying outputs such as commits and content URLs.
 #[async_trait]
 pub trait OutputVerifier: Send + Sync {
+    /// Verify that a GitHub commit exists and was authored by `expected_author`.
     async fn verify_github_commit(
         &self,
         repo_url: &str,
@@ -24,6 +31,7 @@ pub trait OutputVerifier: Send + Sync {
         expected_author: &str,
     ) -> Result<VerificationResult>;
 
+    /// Verify that a content URL is accessible and optionally matches a hash.
     async fn verify_content_url(
         &self,
         url: &str,

@@ -14,15 +14,24 @@ pub enum MiniscriptPolicy {
     /// Public key policy: pk(KEY)
     PublicKey(String),
     /// Hash preimage: hash256(H), sha256(H), ripemd160(H), hash160(H)
-    Hash { hash_type: HashType, hash: String },
+    Hash {
+        /// Hash function type
+        hash_type: HashType,
+        /// Hex-encoded hash value
+        hash: String,
+    },
     /// Timelock: after(n), older(n)
     Timelock {
+        /// Whether timelock is absolute or relative
         timelock_type: TimelockType,
+        /// Timelock value (block height or seconds)
         value: u32,
     },
     /// Threshold: thresh(k, X1, ..., Xn)
     Threshold {
+        /// Minimum number of sub-policies that must be satisfied
         k: usize,
+        /// Sub-policies to combine
         policies: Vec<MiniscriptPolicy>,
     },
     /// Logical AND: and(X, Y)
@@ -30,7 +39,12 @@ pub enum MiniscriptPolicy {
     /// Logical OR: or(X, Y)
     Or(Box<MiniscriptPolicy>, Box<MiniscriptPolicy>),
     /// Multi-signature: multi(k, KEY1, ..., KEYn)
-    Multi { k: usize, keys: Vec<String> },
+    Multi {
+        /// Required number of signatures
+        k: usize,
+        /// List of public keys
+        keys: Vec<String>,
+    },
 }
 
 /// Hash types for miniscript

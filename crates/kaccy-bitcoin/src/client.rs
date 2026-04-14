@@ -14,11 +14,15 @@ use crate::error::{BitcoinError, Result};
 /// Bitcoin network configuration
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BitcoinNetwork {
+    /// Bitcoin mainnet
     Mainnet,
+    /// Bitcoin testnet (testnet3)
     Testnet,
     /// Testnet4 (when available, currently maps to Testnet)
     Testnet4,
+    /// Regression test network
     Regtest,
+    /// Bitcoin signet
     Signet,
 }
 
@@ -320,19 +324,28 @@ impl BitcoinClient {
 /// Address validation result
 #[derive(Debug, Clone, Serialize)]
 pub struct AddressValidation {
+    /// Whether the address is valid
     pub is_valid: bool,
+    /// Whether the address belongs to the node's wallet
     pub is_mine: bool,
+    /// Whether the address is a script address (P2SH)
     pub is_script: bool,
 }
 
 /// Summary of node status
 #[derive(Debug, Clone, Serialize)]
 pub struct NodeStatus {
+    /// Whether the node is connected
     pub connected: bool,
+    /// Current best block height
     pub block_height: u64,
+    /// Network name (e.g. "main", "test", "regtest")
     pub network: String,
+    /// Node software version number
     pub version: u64,
+    /// Number of active peer connections
     pub connections: usize,
+    /// Number of transactions in the mempool
     pub mempool_size: u64,
 }
 
@@ -457,29 +470,44 @@ impl BitcoinClient {
 /// Result from list_since_block
 #[derive(Debug, Clone, Serialize)]
 pub struct ListSinceBlockResult {
+    /// List of transactions since the requested block
     pub transactions: Vec<TransactionInfo>,
+    /// Hash of the last block included in the result
     pub last_block: bitcoin::BlockHash,
 }
 
 /// Transaction info from list_since_block
 #[derive(Debug, Clone, Serialize)]
 pub struct TransactionInfo {
+    /// Transaction ID
     pub txid: Txid,
+    /// Address involved in the transaction
     pub address: Option<String>,
+    /// Transaction category (send, receive, etc.)
     pub category: String,
+    /// Amount in satoshis (negative for sends)
     pub amount: i64,
+    /// Number of confirmations
     pub confirmations: i32,
+    /// Block hash where the transaction was included
     pub block_hash: Option<bitcoin::BlockHash>,
+    /// Block timestamp
     pub block_time: Option<u64>,
+    /// Transaction timestamp
     pub time: u64,
 }
 
 /// Detailed address information
 #[derive(Debug, Clone, Serialize)]
 pub struct AddressInfo {
+    /// The Bitcoin address
     pub address: String,
+    /// Whether the address is valid
     pub is_valid: bool,
+    /// Total received satoshis (including unconfirmed)
     pub total_received_sats: u64,
+    /// Confirmed received satoshis
     pub confirmed_received_sats: u64,
+    /// Unconfirmed received satoshis
     pub unconfirmed_sats: u64,
 }

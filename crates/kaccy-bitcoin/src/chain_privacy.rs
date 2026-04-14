@@ -40,9 +40,15 @@ pub enum AmountObfuscation {
     /// Round to nearest power of 10
     RoundPowerOfTen,
     /// Round to specific denomination
-    RoundDenomination { sats: u64 },
+    RoundDenomination {
+        /// Denomination in satoshis to round to
+        sats: u64,
+    },
     /// Add random dust to amounts
-    AddRandomDust { max_dust: u64 },
+    AddRandomDust {
+        /// Maximum dust to add in satoshis
+        max_dust: u64,
+    },
 }
 
 /// Timing analysis resistance configuration
@@ -101,7 +107,7 @@ impl TransactionPrivacyEnhancer {
                 }
             }
             AmountObfuscation::AddRandomDust { max_dust } => {
-                use rand::Rng;
+                use rand::RngExt;
                 let mut rng = rand::rng();
                 let dust = rng.random_range(0..*max_dust);
                 amount + dust
@@ -111,7 +117,7 @@ impl TransactionPrivacyEnhancer {
 
     /// Generate decoy output amount
     pub fn generate_decoy_amount(&self, total_amount: u64) -> u64 {
-        use rand::Rng;
+        use rand::RngExt;
         let mut rng = rand::rng();
         // Decoy should be between 1% and 20% of total
         let min = total_amount / 100;
@@ -124,7 +130,7 @@ impl TransactionPrivacyEnhancer {
 
     /// Check if decoy output should be added
     pub fn should_add_decoy(&self) -> bool {
-        use rand::Rng;
+        use rand::RngExt;
         self.structure_randomization.add_decoy_outputs && {
             let mut rng = rand::rng();
             rng.random_bool(0.3) // 30% chance
@@ -133,7 +139,7 @@ impl TransactionPrivacyEnhancer {
 
     /// Calculate broadcast delay in seconds
     pub fn calculate_broadcast_delay(&self) -> u64 {
-        use rand::Rng;
+        use rand::RngExt;
         if let Some((min, max)) = self.timing_obfuscation.random_delay_secs {
             let mut rng = rand::rng();
             rng.random_range(min..=max)
@@ -164,7 +170,10 @@ pub enum ChangeStrategy {
     /// Standard change output
     Standard,
     /// Multiple change outputs to obfuscate
-    Multiple { count: usize },
+    Multiple {
+        /// Number of change outputs to create
+        count: usize,
+    },
     /// Match payment output amount
     MatchPayment,
     /// Random amount split
@@ -233,7 +242,7 @@ impl ChangeOutputGenerator {
             return Ok(vec![total]);
         }
 
-        use rand::Rng;
+        use rand::RngExt;
         let mut outputs = Vec::new();
         let mut remaining = total;
         let mut rng = rand::rng();
@@ -255,7 +264,7 @@ impl ChangeOutputGenerator {
 
     /// Split change randomly
     fn split_change_random(&self, total: u64) -> Result<Vec<u64>, BitcoinError> {
-        use rand::Rng;
+        use rand::RngExt;
         let mut rng = rand::rng();
         let count = rng.random_range(1..=3);
         self.split_change_multiple(total, count)
@@ -419,11 +428,19 @@ impl FingerprintingAnalyzer {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FingerprintingIssue {
     /// Amount is a round number
-    RoundNumber { amount: u64 },
+    RoundNumber {
+        /// The round amount in satoshis
+        amount: u64,
+    },
     /// Simple 1-input, 2-output pattern
     SimplePayment,
     /// Duplicate output amounts
-    DuplicateAmount { amount: u64, count: usize },
+    DuplicateAmount {
+        /// The duplicated amount in satoshis
+        amount: u64,
+        /// Number of outputs with this amount
+        count: usize,
+    },
 }
 
 #[cfg(test)]

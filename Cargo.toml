@@ -11,7 +11,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.85"
 license = "Apache-2.0"
@@ -23,7 +23,7 @@ documentation = "https://docs.rs/kaccy"
 
 [workspace.dependencies]
 # Async runtime
-tokio = { version = "1.49", features = ["full"] }
+tokio = { version = "1.51", features = ["full"] }
 
 # Web framework
 axum = { version = "0.8", features = ["ws"] }
@@ -42,7 +42,7 @@ http-body-util = "0.1"
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate", "rust_decimal"] }
 
 # Redis cache
-redis = { version = "1.0", features = ["aio", "tokio-comp", "connection-manager"] }
+redis = { version = "1.2", features = ["aio", "tokio-comp", "connection-manager"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -53,14 +53,14 @@ jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 argon2 = "0.5"
 
 # Random number generation
-rand = "0.9"
-rand_distr = "0.5"
+rand = "0.10"
+rand_distr = "0.6"
 statrs = "0.18"
 
 # Utilities
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-rust_decimal = { version = "1.40", features = ["serde"] }
+rust_decimal = { version = "1.41", features = ["serde"] }
 rust_decimal_macros = "1.40"
 thiserror = "2"
 anyhow = "1"
@@ -84,7 +84,7 @@ reqwest = { version = "0.13", features = ["json", "stream"] }
 urlencoding = "2"
 
 # PDF parsing
-lopdf = "0.39"
+lopdf = "0.40"
 
 # Image handling
 image = "0.25"
@@ -108,7 +108,7 @@ totp-rs = { version = "5", features = ["qr", "otpauth"] }
 qrcode = "0.14"
 
 # Hashing and crypto
-sha2 = "0.10"
+sha2 = "0.11"
 md5 = "0.8"
 aes-gcm = "0.10"
 chacha20poly1305 = "0.10"
@@ -127,17 +127,17 @@ tracing-opentelemetry = "0.32"
 # Testing
 tokio-test = "0.4"
 mockall = "0.14"
-proptest = "1.9"
-criterion = { version = "0.7", features = ["async_tokio"] }
+proptest = "1.11"
+criterion = { version = "0.8", features = ["async_tokio"] }
 
 # Internal crates
-kaccy-core = { version = "0.1.0", path = "crates/kaccy-core" }
-kaccy-api = { version = "0.1.0", path = "crates/kaccy-api" }
-kaccy-bitcoin = { version = "0.1.0", path = "crates/kaccy-bitcoin" }
-kaccy-reputation = { version = "0.1.0", path = "crates/kaccy-reputation" }
-kaccy-ai = { version = "0.1.0", path = "crates/kaccy-ai" }
-kaccy-db = { version = "0.1.0", path = "crates/kaccy-db" }
-kaccy = { version = "0.1.0", path = "crates/kaccy" }
+kaccy-core = { version = "0.2.0", path = "crates/kaccy-core" }
+kaccy-api = { version = "0.2.0", path = "crates/kaccy-api" }
+kaccy-bitcoin = { version = "0.2.0", path = "crates/kaccy-bitcoin" }
+kaccy-reputation = { version = "0.2.0", path = "crates/kaccy-reputation" }
+kaccy-ai = { version = "0.2.0", path = "crates/kaccy-ai" }
+kaccy-db = { version = "0.2.0", path = "crates/kaccy-db" }
+kaccy = { version = "0.2.0", path = "crates/kaccy" }
 
 [profile.release]
 opt-level = 3

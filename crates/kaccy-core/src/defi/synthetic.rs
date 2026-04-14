@@ -34,9 +34,13 @@ pub enum SyntheticAssetType {
 /// Synthetic asset definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyntheticAsset {
+    /// Unique identifier for this synthetic asset
     pub asset_id: Uuid,
+    /// Short ticker symbol (e.g. `sUSD`)
     pub symbol: String,
+    /// Human-readable name
     pub name: String,
+    /// Category of the underlying asset
     pub asset_type: SyntheticAssetType,
     /// Collateral ratio required (e.g., 1.5 = 150% collateralization)
     pub collateral_ratio: Decimal,
@@ -48,10 +52,12 @@ pub struct SyntheticAsset {
     pub burn_fee: Decimal,
     /// Total supply of synthetic asset
     pub total_supply: Decimal,
+    /// UNIX timestamp when this asset was created
     pub created_at: i64,
 }
 
 impl SyntheticAsset {
+    /// Create and validate a new synthetic asset definition
     pub fn new(
         symbol: String,
         name: String,
@@ -108,29 +114,41 @@ impl SyntheticAsset {
 /// Collateral deposit record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollateralDeposit {
+    /// Unique identifier for this deposit
     pub deposit_id: Uuid,
+    /// User who made the deposit
     pub user_id: Uuid,
+    /// Asset used as collateral
     pub collateral_asset_id: Uuid,
+    /// Amount of collateral deposited
     pub amount: Decimal,
+    /// UNIX timestamp of the deposit
     pub timestamp: i64,
 }
 
 /// Synthetic position (CDP - Collateralized Debt Position)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyntheticPosition {
+    /// Unique identifier for this position
     pub position_id: Uuid,
+    /// Owner of this position
     pub user_id: Uuid,
+    /// Synthetic asset that was minted
     pub synthetic_asset_id: Uuid,
     /// Collateral deposited
     pub collateral_amount: Decimal,
+    /// Asset used as collateral for this position.
     pub collateral_asset_id: Uuid,
     /// Synthetic asset minted (debt)
     pub minted_amount: Decimal,
+    /// UNIX timestamp when this position was opened
     pub created_at: i64,
+    /// UNIX timestamp of the most recent position update
     pub last_update: i64,
 }
 
 impl SyntheticPosition {
+    /// Create a new empty synthetic position
     pub fn new(user_id: Uuid, synthetic_asset_id: Uuid, collateral_asset_id: Uuid) -> Self {
         let now = chrono::Utc::now().timestamp();
         Self {
@@ -171,34 +189,49 @@ impl SyntheticPosition {
 /// Liquidation event for synthetic position
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyntheticLiquidation {
+    /// Unique identifier for this liquidation
     pub liquidation_id: Uuid,
+    /// Position that was liquidated
     pub position_id: Uuid,
+    /// User who triggered the liquidation
     pub liquidator_id: Uuid,
+    /// Amount of synthetic debt that was covered
     pub debt_covered: Decimal,
+    /// Amount of collateral seized by the liquidator
     pub collateral_seized: Decimal,
+    /// Penalty amount charged on the liquidated collateral
     pub liquidation_penalty: Decimal,
+    /// UNIX timestamp of the liquidation
     pub timestamp: i64,
 }
 
 /// Oracle price feed
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriceFeed {
+    /// Asset whose price is reported
     pub asset_id: Uuid,
+    /// Current price of the asset
     pub price: Decimal,
+    /// UNIX timestamp of this price observation
     pub timestamp: i64,
-    pub confidence: Decimal, // 0.0 to 1.0
+    /// Oracle confidence score (0.0 to 1.0)
+    pub confidence: Decimal,
 }
 
 /// Synthetic asset manager
 pub struct SyntheticAssetManager {
+    /// Registered synthetic assets indexed by asset ID
     assets: Arc<RwLock<HashMap<Uuid, SyntheticAsset>>>,
+    /// Open CDP positions indexed by position ID
     positions: Arc<RwLock<HashMap<Uuid, SyntheticPosition>>>,
+    /// Latest oracle price feeds indexed by asset ID
     price_feeds: Arc<RwLock<HashMap<Uuid, PriceFeed>>>,
-    /// Track user positions by user_id
+    /// Position IDs grouped by user ID
     user_positions: Arc<RwLock<HashMap<Uuid, Vec<Uuid>>>>,
 }
 
 impl SyntheticAssetManager {
+    /// Create a new synthetic asset manager
     pub fn new() -> Self {
         Self {
             assets: Arc::new(RwLock::new(HashMap::new())),

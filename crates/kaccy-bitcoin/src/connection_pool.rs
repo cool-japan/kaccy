@@ -326,9 +326,13 @@ impl Drop for PooledConnectionGuard {
 /// Connection pool statistics
 #[derive(Debug, Clone)]
 pub struct PoolStats {
+    /// Total number of connections in the pool
     pub total_connections: usize,
+    /// Number of connections passing health checks
     pub healthy_connections: usize,
+    /// Maximum allowed connections
     pub max_connections: usize,
+    /// Number of connections available to acquire
     pub available_permits: usize,
 }
 

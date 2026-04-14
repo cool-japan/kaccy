@@ -13,44 +13,71 @@ use super::request_id::RequestId;
 #[serde(rename_all = "snake_case")]
 pub enum AuditEventType {
     // Authentication events
+    /// A new user registered
     UserRegistered,
+    /// A user logged in
     UserLogin,
+    /// A user logged out
     UserLogout,
+    /// A login attempt failed
     LoginFailed,
+    /// A user changed their password
     PasswordChanged,
+    /// Two-factor authentication was enabled
     TwoFactorEnabled,
+    /// Two-factor authentication was disabled
     TwoFactorDisabled,
 
     // Authorization events
+    /// A user's role was changed
     RoleChanged,
+    /// A permission was granted to a user
     PermissionGranted,
+    /// A permission was revoked from a user
     PermissionRevoked,
+    /// Access to a resource was denied
     AccessDenied,
 
     // KYC events
+    /// A KYC application was submitted
     KycSubmitted,
+    /// A KYC application was approved
     KycApproved,
+    /// A KYC application was rejected
     KycRejected,
 
     // Token events
+    /// A new token was created
     TokenCreated,
+    /// A token was updated
     TokenUpdated,
+    /// A token was deleted
     TokenDeleted,
 
     // Order events
+    /// A new order was placed
     OrderCreated,
+    /// An order was cancelled
     OrderCancelled,
+    /// An order was completed
     OrderCompleted,
 
     // Admin events
+    /// An admin performed an action
     AdminAction,
+    /// A system configuration was changed
     ConfigChanged,
+    /// Data was exported from the system
     DataExported,
 
     // Security events
+    /// An API key was created
     ApiKeyCreated,
+    /// An API key was revoked
     ApiKeyRevoked,
+    /// Suspicious activity was detected
     SuspiciousActivity,
+    /// Rate limit was exceeded
     RateLimitExceeded,
 }
 
@@ -101,8 +128,11 @@ pub struct AuditEvent {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum AuditResult {
+    /// Action completed successfully
     Success,
+    /// Action attempted but failed
     Failure,
+    /// Action was denied due to insufficient permissions
     Denied,
 }
 

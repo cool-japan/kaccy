@@ -11,11 +11,14 @@ use std::collections::HashMap;
 /// Feature vector containing extracted features
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeatureVector {
+    /// Timestamp of the data point these features were extracted from
     pub timestamp: DateTime<Utc>,
+    /// Named feature values
     pub features: HashMap<String, f64>,
 }
 
 impl FeatureVector {
+    /// Create a new empty feature vector for the given timestamp
     pub fn new(timestamp: DateTime<Utc>) -> Self {
         Self {
             timestamp,
@@ -23,14 +26,17 @@ impl FeatureVector {
         }
     }
 
+    /// Insert or update a named feature value
     pub fn add_feature(&mut self, name: String, value: f64) {
         self.features.insert(name, value);
     }
 
+    /// Retrieve a feature value by name
     pub fn get_feature(&self, name: &str) -> Option<f64> {
         self.features.get(name).copied()
     }
 
+    /// Return the number of features in this vector
     pub fn feature_count(&self) -> usize {
         self.features.len()
     }
@@ -39,27 +45,40 @@ impl FeatureVector {
 /// Price data point for feature extraction
 #[derive(Debug, Clone, Copy)]
 pub struct PricePoint {
+    /// Timestamp for this OHLCV bar
     pub timestamp: DateTime<Utc>,
+    /// Opening price
     pub open: Decimal,
+    /// Highest price during the period
     pub high: Decimal,
+    /// Lowest price during the period
     pub low: Decimal,
+    /// Closing price
     pub close: Decimal,
+    /// Trading volume during the period
     pub volume: Decimal,
 }
 
 /// Feature extractor trait for implementing custom feature extraction logic
 pub trait FeatureExtractor: Send + Sync {
+    /// Extracts feature vectors from a slice of price points.
     fn extract(&self, data: &[PricePoint]) -> anyhow::Result<Vec<FeatureVector>>;
+    /// Returns the ordered list of feature names produced by this extractor.
     fn feature_names(&self) -> Vec<String>;
 }
 
 /// Technical indicator-based feature extractor
 #[derive(Debug, Clone)]
 pub struct TechnicalFeatureExtractor {
+    /// Periods to compute simple moving averages for
     sma_periods: Vec<usize>,
+    /// Periods to compute exponential moving averages for
     ema_periods: Vec<usize>,
+    /// Period for RSI calculation
     rsi_period: usize,
+    /// Period for Bollinger Band calculation
     bollinger_period: usize,
+    /// Number of standard deviations for Bollinger Bands
     bollinger_std: f64,
 }
 
@@ -76,15 +95,18 @@ impl Default for TechnicalFeatureExtractor {
 }
 
 impl TechnicalFeatureExtractor {
+    /// Create a new technical feature extractor with default settings
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Override the SMA periods to compute
     pub fn with_sma_periods(mut self, periods: Vec<usize>) -> Self {
         self.sma_periods = periods;
         self
     }
 
+    /// Override the EMA periods to compute
     pub fn with_ema_periods(mut self, periods: Vec<usize>) -> Self {
         self.ema_periods = periods;
         self
@@ -332,10 +354,12 @@ impl Default for VolumeFeatureExtractor {
 }
 
 impl VolumeFeatureExtractor {
+    /// Create a new volume feature extractor with default lookback periods
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Override the lookback periods for volume ratio calculations
     pub fn with_periods(mut self, periods: Vec<usize>) -> Self {
         self.lookback_periods = periods;
         self
@@ -406,25 +430,30 @@ impl FeatureExtractor for VolumeFeatureExtractor {
 
 /// Composite feature extractor that combines multiple extractors
 pub struct CompositeFeatureExtractor {
+    /// Individual feature extractors to run in sequence
     extractors: Vec<Box<dyn FeatureExtractor>>,
 }
 
 impl CompositeFeatureExtractor {
+    /// Create a new empty composite feature extractor
     pub fn new() -> Self {
         Self {
             extractors: Vec::new(),
         }
     }
 
+    /// Add a feature extractor to this composite
     pub fn add_extractor(mut self, extractor: Box<dyn FeatureExtractor>) -> Self {
         self.extractors.push(extractor);
         self
     }
 
+    /// Add a default technical indicator extractor
     pub fn with_technical(self) -> Self {
         self.add_extractor(Box::new(TechnicalFeatureExtractor::new()))
     }
 
+    /// Add a default volume feature extractor
     pub fn with_volume(self) -> Self {
         self.add_extractor(Box::new(VolumeFeatureExtractor::new()))
     }

@@ -93,7 +93,9 @@ pub struct ASQuote {
 
 /// Avellaneda-Stoikov market maker
 pub struct AvellanedaStoikovMarketMaker {
+    /// Model configuration parameters.
     pub config: AvellanedaStoikovConfig,
+    /// Token this market maker is operating on.
     pub token_id: Uuid,
 }
 

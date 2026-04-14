@@ -102,8 +102,11 @@ const DEFAULT_TTL_SECONDS: i64 = 300; // 5 minutes
 /// Cached reputation score entry
 #[derive(Debug, Clone)]
 pub struct CachedScore {
+    /// The cached reputation score.
     pub score: ReputationScore,
+    /// Timestamp at which this entry was placed in the cache.
     pub cached_at: DateTime<Utc>,
+    /// Cache time-to-live in seconds.
     pub ttl_seconds: i64,
 }
 
@@ -126,8 +129,11 @@ impl CachedScore {
 /// Cached tier information
 #[derive(Debug, Clone)]
 pub struct CachedTier {
+    /// The cached reputation tier.
     pub tier: ReputationTier,
+    /// Reputation score at the time of caching.
     pub score: Decimal,
+    /// Timestamp at which this entry was placed in the cache.
     pub cached_at: DateTime<Utc>,
 }
 
@@ -380,15 +386,25 @@ impl ReputationCache {
 /// Cache statistics with hit rate tracking
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CacheStats {
+    /// Number of score entries currently in the cache.
     pub cached_scores: usize,
+    /// Number of tier entries currently in the cache.
     pub cached_tiers: usize,
+    /// Configured TTL in seconds for cache entries.
     pub ttl_seconds: i64,
+    /// Number of score cache hits since last reset.
     pub score_hits: usize,
+    /// Number of score cache misses since last reset.
     pub score_misses: usize,
+    /// Number of tier cache hits since last reset.
     pub tier_hits: usize,
+    /// Number of tier cache misses since last reset.
     pub tier_misses: usize,
+    /// Fraction of score lookups that were cache hits (0.0–1.0).
     pub score_hit_rate: f64,
+    /// Fraction of tier lookups that were cache hits (0.0–1.0).
     pub tier_hit_rate: f64,
+    /// Overall fraction of all lookups that were cache hits (0.0–1.0).
     pub overall_hit_rate: f64,
 }
 
@@ -412,7 +428,9 @@ impl CacheStats {
 /// Cache cleanup statistics
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CacheCleanupStats {
+    /// Number of expired score entries removed during cleanup.
     pub expired_scores: usize,
+    /// Timestamp at which the cleanup was performed.
     pub cleaned_at: DateTime<Utc>,
 }
 

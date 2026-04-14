@@ -12,82 +12,124 @@ use std::time::{Duration, SystemTime};
 /// Webhook configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Webhook {
+    /// Unique identifier of this webhook
     pub webhook_id: String,
+    /// User who owns this webhook
     pub user_id: String,
+    /// Endpoint URL to deliver events to
     pub url: String,
+    /// HMAC signing secret for payload verification
     pub secret: String,
+    /// Event types this webhook subscribes to
     pub events: Vec<WebhookEventType>,
+    /// Whether this webhook is currently active
     pub enabled: bool,
+    /// When the webhook was created
     pub created_at: SystemTime,
+    /// When the webhook configuration was last modified
     pub updated_at: SystemTime,
+    /// Arbitrary key-value metadata
     pub metadata: HashMap<String, String>,
 }
 
 /// Types of events that can trigger webhooks
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum WebhookEventType {
-    // Trading events
+    /// An order was placed
     OrderCreated,
+    /// An order was fully filled
     OrderFilled,
+    /// An order was cancelled
     OrderCancelled,
+    /// A trade was executed
     TradeExecuted,
 
-    // Balance events
+    /// A balance changed
     BalanceUpdated,
+    /// A deposit was received
     Deposit,
+    /// A withdrawal was processed
     Withdrawal,
 
-    // Price events
+    /// A price alert was triggered
     PriceAlert,
+    /// A significant price movement occurred
     PriceChange,
 
-    // Risk events
+    /// A margin call was issued
     MarginCall,
+    /// A position is approaching liquidation
     LiquidationWarning,
+    /// A position was closed
     PositionClosed,
 
-    // System events
+    /// Scheduled maintenance announcement
     MaintenanceScheduled,
+    /// A system-level alert
     SystemAlert,
 
-    // All events
+    /// Subscribe to all event types
     All,
 }
 
 /// Webhook delivery attempt
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebhookDelivery {
+    /// Unique identifier of this delivery attempt
     pub delivery_id: String,
+    /// Webhook this delivery belongs to
     pub webhook_id: String,
+    /// Event type that triggered the delivery
     pub event_type: WebhookEventType,
+    /// JSON-encoded event payload
     pub payload: String,
+    /// Number of delivery attempts so far
     pub attempt_count: u32,
+    /// Maximum allowed delivery attempts before giving up
     pub max_attempts: u32,
+    /// Current delivery status
     pub status: DeliveryStatus,
+    /// When the delivery was first created
     pub created_at: SystemTime,
+    /// When the next retry is scheduled
     pub next_retry_at: Option<SystemTime>,
+    /// When the delivery reached a terminal state
     pub completed_at: Option<SystemTime>,
+    /// HTTP response code from the last attempt
     pub response_code: Option<u16>,
+    /// Error message from the last failed attempt
     pub error_message: Option<String>,
 }
 
+/// Status of a webhook delivery
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DeliveryStatus {
+    /// Queued but not yet dispatched
     Pending,
+    /// Currently being delivered
     InProgress,
+    /// Delivered successfully
     Success,
+    /// All attempts exhausted without success
     Failed,
+    /// Failed and scheduled for a retry
     Retrying,
 }
 
 /// Webhook rate limiting configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebhookRateLimit {
+    /// Maximum number of deliveries allowed per minute
     pub max_deliveries_per_minute: usize,
+    /// Maximum number of deliveries allowed per hour
     pub max_deliveries_per_hour: usize,
+    /// Number of deliveries made in the current minute window
     pub current_minute_count: usize,
+    /// Number of deliveries made in the current hour window
     pub current_hour_count: usize,
+    /// When the per-minute counter resets
     pub minute_reset_at: SystemTime,
+    /// When the per-hour counter resets
     pub hour_reset_at: SystemTime,
 }
 
@@ -135,14 +177,20 @@ impl WebhookRateLimit {
 
 /// Webhook manager
 pub struct WebhookManager {
+    /// Registered webhooks indexed by webhook ID
     webhooks: HashMap<String, Webhook>,
+    /// Delivery records indexed by delivery ID
     deliveries: HashMap<String, WebhookDelivery>,
-    retry_queue: VecDeque<String>, // delivery_ids to retry
-    rate_limits: HashMap<String, WebhookRateLimit>, // webhook_id -> rate limit
+    /// Delivery IDs waiting for retry
+    retry_queue: VecDeque<String>,
+    /// Per-webhook rate limit state
+    rate_limits: HashMap<String, WebhookRateLimit>,
+    /// Monotonic counter for generating unique delivery IDs
     delivery_counter: u64,
 }
 
 impl WebhookManager {
+    /// Create a new webhook manager
     pub fn new() -> Self {
         Self {
             webhooks: HashMap::new(),
@@ -432,11 +480,17 @@ impl Default for WebhookManager {
 /// Webhook statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebhookStats {
+    /// Webhook these statistics relate to
     pub webhook_id: String,
+    /// Total number of delivery attempts
     pub total_deliveries: usize,
+    /// Number of successful deliveries
     pub successful_deliveries: usize,
+    /// Number of permanently failed deliveries
     pub failed_deliveries: usize,
+    /// Number of deliveries still pending or retrying
     pub pending_deliveries: usize,
+    /// Success rate as a percentage (0–100)
     pub success_rate: Decimal,
 }
 

@@ -103,11 +103,16 @@ pub struct LoggingEventHandler {
     pub log_levels: HashMap<PoolEventType, LogLevel>,
 }
 
+/// Log severity level for pool event messages.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LogLevel {
+    /// Verbose debug-level message.
     Debug,
+    /// Informational message.
     Info,
+    /// Warning for potentially problematic events.
     Warn,
+    /// Error for critical or failing events.
     Error,
 }
 

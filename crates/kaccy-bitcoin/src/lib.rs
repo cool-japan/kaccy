@@ -11,6 +11,7 @@ pub mod advanced_rbf;
 pub mod atomic_swap;
 pub mod audit;
 pub mod batch_optimizer;
+pub mod bech32m_utils;
 pub mod bip21;
 pub mod bip324;
 pub mod bip329;
@@ -27,10 +28,13 @@ pub mod compact_filters;
 pub mod confirmation;
 pub mod connection_pool;
 pub mod descriptor;
+/// Discreet Log Contract (DLC) support for Bitcoin.
 pub mod dlc;
+pub mod electrum_compat;
 pub mod error;
 pub mod fee_bumping;
 pub mod frost;
+pub mod fuzz_testing;
 pub mod gap_limit;
 pub mod hd_wallet;
 pub mod health;
@@ -44,21 +48,28 @@ pub mod mempool_analytics;
 pub mod mempool_space;
 pub mod metrics;
 pub mod miniscript_support;
+pub mod mobile_wallet;
+pub mod mock_explorer;
 pub mod monitor;
 pub mod multisig;
 pub mod musig2;
 pub mod network_privacy;
 pub mod notifications;
+pub mod output_descriptor;
+/// Bitcoin P2P network protocol utilities.
 pub mod p2p;
 pub mod package_relay;
 pub mod payjoin;
 pub mod privacy_metrics;
 pub mod psbt;
 pub mod psbt_analysis;
+pub mod psbt_v2;
 pub mod psbt_workflows;
 pub mod rbf;
 pub mod regtest_utils;
+pub mod rpc_advanced;
 pub mod rsk;
+pub mod schnorr;
 pub mod script_analyzer;
 pub mod script_optimizer;
 pub mod seed_recovery;
@@ -69,9 +80,11 @@ pub mod stacks;
 pub mod structured_logging;
 pub mod submarine_swaps;
 pub mod taproot;
+pub mod taproot_psbt;
 pub mod tapscript_utils;
 #[cfg(test)]
 pub mod testing;
+/// Bitcoin testnet4 network support and utilities.
 pub mod testnet4;
 pub mod timelock;
 pub mod transaction_history;
@@ -109,6 +122,7 @@ pub use audit::{
 pub use batch_optimizer::{
     BatchEfficiency, BatchOptimizer, BatchStrategy, BatchWithdrawal, OptimizedBatch,
 };
+pub use bech32m_utils::{AddressConverter, Bech32mCodec, Bech32mError, TaprootAddressInfo};
 pub use bip21::{BitcoinUri, BitcoinUriBuilder, QrCodeHelper};
 pub use bip47::{
     NotificationTransaction, PaymentChannel, PaymentCode, PaymentCodeManager, PaymentCodeVersion,
@@ -165,6 +179,10 @@ pub use dlc::{
     CetBuilder, ContractOutcome, DlcContract, DlcManager, DlcStatus, Oracle, OracleAnnouncement,
     OracleAttestation,
 };
+pub use electrum_compat::{
+    ElectrumAddressDeriver, ElectrumCompatibility, ElectrumError, ElectrumMasterKey,
+    ElectrumWalletInfo, ElectrumWalletType,
+};
 pub use error::BitcoinError;
 pub use fee_bumping::{
     AutoFeeBumper, BumpPriority, BumpStrategy, CpfpBuilder, FeeBudgetManager, FeeBumpResult,
@@ -174,6 +192,7 @@ pub use frost::{
     FrostConfig, FrostCoordinator, FrostSigner, KeyGenOutput, NonceCommitment, SecretShare,
     SignatureShare, lagrange_coefficient,
 };
+pub use fuzz_testing::{FuzzConfig, FuzzResult, MalformedTxCategory, TransactionFuzzer};
 pub use gap_limit::{
     AddressDiscovery, AddressUsage, DiscoveryResult, GapLimitConfig, GapLimitStats, GapLimitTracker,
 };
@@ -215,6 +234,15 @@ pub use miniscript_support::{
     HashType, MiniscriptCompiler, MiniscriptDescriptor, MiniscriptPolicy, MiniscriptScriptType,
     PolicyAnalysis, PolicyTemplateBuilder, TimelockType,
 };
+pub use mobile_wallet::{
+    MobileWalletDetector, MobileWalletExport, MobileWalletScanner, MobileWalletStandard,
+    WalletRestoreInfo,
+};
+pub use mock_explorer::{
+    BlockchainExplorer, CachedExplorerEntry, ExplorerAddress, ExplorerTransaction, ExplorerUtxo,
+    MockBlockchainExplorer, QueryMinimizationConfig, QueryMinimizingExplorer,
+    RotatingExplorerClient, RotatingExplorerConfig, TorExplorerClient, TorExplorerConfig,
+};
 pub use monitor::{
     MonitorConfig, PaymentDetails, PaymentEvent, PaymentMonitor, PaymentMonitorTask, PaymentStatus,
     PendingOrder, create_shutdown_signal,
@@ -235,6 +263,10 @@ pub use network_privacy::{
 pub use notifications::{
     AdminNotification, AdminNotificationService, NotificationCategory, NotificationMetadata,
     NotificationPriority, NotificationStats,
+};
+pub use output_descriptor::{
+    DescriptorError, DescriptorKey, DescriptorKeyType, DescriptorParser, DescriptorScript,
+    DescriptorTree, ParsedDescriptor,
 };
 pub use p2p::{P2pClient, P2pConfig, P2pEvent, P2pStats, PeerInfo, PeerManager};
 pub use package_relay::{CpfpHelper, PackageRelayManager, PackageStats, TransactionPackage};
@@ -258,6 +290,9 @@ pub use psbt_analysis::{
     FeeVerification, InputAnalysis, OutputAnalysis, PsbtAnalysis, PsbtAnalyzer, SecurityIssue,
     ValidationWarning, verify_psbt_fees,
 };
+pub use psbt_v2::{
+    PsbtV2, PsbtV2Builder, PsbtV2Error, PsbtV2Input, PsbtV2Output, PsbtV2Summary, TxModifiable,
+};
 pub use psbt_workflows::{
     PsbtTemplate, PsbtVersion, PsbtWorkflow, PsbtWorkflowManager, SignatureRecord, SignerRole,
     SigningStatus, WorkflowState,
@@ -267,11 +302,16 @@ pub use rbf::{
     TrackedRbfTransaction,
 };
 pub use regtest_utils::{RegtestConfig, RegtestHelper, ReorgInfo as RegtestReorgInfo};
+pub use rpc_advanced::{
+    AddNodeResult, AdvancedRpcClient, AdvancedRpcConfig, BlockTemplate, DescriptorImportRequest,
+    DescriptorInfo, NetworkPeerInfo, PrioritisedTransaction, SendMessageResult,
+};
 pub use rsk::{
     DeploymentStatus as RskDeploymentStatus, PegConfig, PegInTransaction, PegManager, PegOperation,
     PegOutTransaction, PegStatus, RskAddress, RskClient, RskContractDeployment,
     RskDeploymentResult, RskNetwork, RskTransactionReceipt,
 };
+pub use schnorr::{SchnorrError, SchnorrKeyPair, SchnorrSigner, SchnorrUtils};
 pub use script_analyzer::{
     ScriptAnalysis, ScriptAnalyzer, ScriptDisassembler, ScriptTemplateBuilder,
     ScriptType as AnalyzerScriptType,
@@ -305,6 +345,10 @@ pub use submarine_swaps::{
 pub use taproot::{
     TaprootAddress, TaprootConfig, TaprootKeyPair, TaprootManager, TaprootScriptLeaf,
     TaprootScriptTree, TaprootSpendPath, TaprootTxBuilder,
+};
+pub use taproot_psbt::{
+    LeafVersion, TapBip32Derivation, TapLeafScript, TaprootInputFields, TaprootOutputFields,
+    TaprootPsbt, TaprootPsbtBuilder, TaprootPsbtError,
 };
 pub use tapscript_utils::{
     MerkleProof, ScriptPathOptimizer, TapscriptLeaf, TapscriptNode, TapscriptTreeBuilder,

@@ -35,12 +35,19 @@ pub enum FlowDirection {
 /// Represents a trade for flow analysis
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FlowTrade {
+    /// Unique identifier for this trade.
     pub trade_id: Uuid,
+    /// Token involved in the trade.
     pub token_id: Uuid,
+    /// Direction of the trade (buy or sell).
     pub side: OrderSide,
+    /// Execution price.
     pub price: Decimal,
+    /// Trade amount.
     pub amount: Decimal,
+    /// When the trade occurred.
     pub timestamp: DateTime<Utc>,
+    /// How aggressively the order was executed.
     pub aggressiveness: OrderAggressiveness,
 }
 

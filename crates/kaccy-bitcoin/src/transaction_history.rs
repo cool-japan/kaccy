@@ -11,25 +11,40 @@ use crate::error::Result;
 /// Transaction type for categorization
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TransactionType {
+    /// Bitcoin received from an external address.
     Received,
+    /// Bitcoin sent to an external address.
     Sent,
+    /// Transfer between addresses owned by the same wallet.
     SelfTransfer,
+    /// Transaction type could not be determined.
     Unknown,
 }
 
 /// Transaction record for history
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoricalTransaction {
+    /// Transaction identifier on the Bitcoin network.
     pub txid: Txid,
+    /// Categorization of the transaction direction.
     pub tx_type: TransactionType,
+    /// Net amount in satoshis (positive = received, negative = sent).
     pub amount_sats: i64,
+    /// Miner fee paid in satoshis, if known.
     pub fee_sats: Option<u64>,
+    /// Number of block confirmations; `0` means still in mempool.
     pub confirmations: u32,
+    /// Block height at which the transaction was confirmed.
     pub block_height: Option<u64>,
+    /// Timestamp from the block header when confirmed.
     pub block_time: Option<DateTime<Utc>>,
+    /// Local timestamp when the transaction was first seen.
     pub timestamp: DateTime<Utc>,
+    /// Bitcoin addresses involved in this transaction.
     pub addresses: Vec<String>,
+    /// User-assigned label for this transaction.
     pub label: Option<String>,
+    /// User-written notes attached to this transaction.
     pub notes: Option<String>,
 }
 
@@ -213,26 +228,37 @@ impl Default for PaginationOptions {
 /// Fields to sort by
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortField {
+    /// Sort by the time the transaction was first seen.
     Timestamp,
+    /// Sort by net amount (satoshis).
     Amount,
+    /// Sort by number of block confirmations.
     Confirmations,
+    /// Sort by the block height at which the transaction was confirmed.
     BlockHeight,
 }
 
 /// Sort order
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortOrder {
+    /// Smallest / oldest value first.
     Ascending,
+    /// Largest / newest value first.
     Descending,
 }
 
 /// Paginated result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaginatedResult {
+    /// The transactions on the current page.
     pub transactions: Vec<HistoricalTransaction>,
+    /// Total number of transactions matching the filter (across all pages).
     pub total_count: usize,
+    /// Current page index (0-based).
     pub page: usize,
+    /// Maximum number of transactions per page.
     pub page_size: usize,
+    /// Total number of pages given `total_count` and `page_size`.
     pub total_pages: usize,
 }
 
@@ -482,11 +508,17 @@ impl Default for TransactionHistory {
 /// Transaction summary statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionSummary {
+    /// Total number of transactions in the history.
     pub total_transactions: usize,
+    /// Total amount received across all `Received` transactions (satoshis).
     pub total_received_sats: u64,
+    /// Total amount sent across all `Sent` transactions (satoshis).
     pub total_sent_sats: u64,
+    /// Total miner fees paid across all transactions (satoshis).
     pub total_fees_sats: u64,
+    /// Number of transactions with at least one confirmation.
     pub confirmed_transactions: usize,
+    /// Number of transactions still waiting for confirmations.
     pub pending_transactions: usize,
 }
 
@@ -505,8 +537,11 @@ impl TransactionSummary {
 /// Address reuse detection report
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddressReuseReport {
+    /// The Bitcoin address that was reused.
     pub address: String,
+    /// Number of transactions that involved this address.
     pub usage_count: usize,
+    /// Transaction IDs of all transactions that used this address.
     pub transactions: Vec<Txid>,
 }
 

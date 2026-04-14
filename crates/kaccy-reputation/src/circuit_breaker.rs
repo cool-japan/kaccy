@@ -10,16 +10,25 @@ use crate::error::{ReputationError, Result};
 use crate::tier::ReputationTier;
 
 /// Reputation thresholds for circuit breaker actions
+/// Score threshold below which token issuance is disabled.
 pub const CIRCUIT_BREAKER_THRESHOLD: Decimal = dec!(200);
+/// Score threshold below which active tokens are paused.
 pub const PAUSE_TOKENS_THRESHOLD: Decimal = dec!(100);
 
+/// Current circuit-breaker state for a user.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CircuitBreakerStatus {
+    /// User whose status is reported.
     pub user_id: Uuid,
+    /// Current reputation score.
     pub reputation_score: Decimal,
+    /// Derived reputation tier.
     pub tier: ReputationTier,
+    /// Whether the user may issue new tokens.
     pub can_issue_tokens: bool,
+    /// Whether the user may participate in trades.
     pub can_trade: bool,
+    /// Whether existing tokens are paused due to low score.
     pub tokens_paused: bool,
 }
 
@@ -29,6 +38,7 @@ pub struct CircuitBreaker {
 }
 
 impl CircuitBreaker {
+    /// Create a new [`CircuitBreaker`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -235,11 +245,18 @@ impl CircuitBreaker {
     }
 }
 
+/// Action taken by the circuit breaker for a user.
 #[derive(Debug, Clone, Serialize)]
 pub enum CircuitBreakerAction {
+    /// No circuit-breaker action required.
     NoAction,
+    /// Token issuance has been disabled for this user.
     IssuanceDisabled,
-    TokensPaused { count: u64 },
+    /// Active tokens have been paused; `count` is the number of tokens affected.
+    TokensPaused {
+        /// Number of tokens that were paused.
+        count: u64,
+    },
 }
 
 impl std::fmt::Display for CircuitBreakerAction {

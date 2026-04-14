@@ -3,7 +3,7 @@
 //! Implements mean-variance optimization, efficient frontier calculation,
 //! and risk-return optimization strategies.
 
-use rand::Rng;
+use rand::RngExt;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -535,9 +535,9 @@ impl BlackLittermanModel {
         Ok(equilibrium_returns)
     }
 
-    /// Calculate posterior returns combining equilibrium and views
-    /// Formula: E[R] = [(tau*Sigma)^-1 + P'*Omega^-1*P]^-1 * [(tau*Sigma)^-1*Pi + P'*Omega^-1*Q]
-    /// Simplified version for practical use
+    /// Calculate posterior returns combining equilibrium and views.
+    /// Formula: `E[R] = [(tau*Sigma)^-1 + P'*Omega^-1*P]^-1 * [(tau*Sigma)^-1*Pi + P'*Omega^-1*Q]`
+    /// Simplified version for practical use.
     pub fn calculate_posterior_returns(
         &self,
         equilibrium_returns: &HashMap<Uuid, Decimal>,

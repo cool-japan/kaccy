@@ -414,7 +414,9 @@ impl DatabaseSizeMonitor {
             }
 
             let first = &history[0];
-            let last = history.back().unwrap();
+            let Some(last) = history.back() else {
+                continue;
+            };
 
             let growth_bytes = last.total_bytes - first.total_bytes;
             let growth_rate = if first.total_bytes > 0 {
@@ -443,7 +445,11 @@ impl DatabaseSizeMonitor {
             });
         }
 
-        stats.sort_by(|a, b| b.growth_rate.partial_cmp(&a.growth_rate).unwrap());
+        stats.sort_by(|a, b| {
+            b.growth_rate
+                .partial_cmp(&a.growth_rate)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         stats
     }
@@ -510,17 +516,18 @@ impl DatabaseSizeMonitor {
 
         let avg_growth_gb_per_day = if history.len() >= 2 {
             let first = &history[0];
-            let last = history.last().unwrap();
+            // history.last() is Some here (guarded by len() >= 2); map_or avoids unwrap
+            history.last().map_or(0.0, |last| {
+                let growth_bytes = last.total_size_bytes - first.total_size_bytes;
+                let time_diff = last.timestamp.signed_duration_since(first.timestamp);
+                let days = time_diff.num_seconds() as f64 / 86400.0;
 
-            let growth_bytes = last.total_size_bytes - first.total_size_bytes;
-            let time_diff = last.timestamp.signed_duration_since(first.timestamp);
-            let days = time_diff.num_seconds() as f64 / 86400.0;
-
-            if days > 0.0 {
-                (growth_bytes as f64 / days) / 1_073_741_824.0
-            } else {
-                0.0
-            }
+                if days > 0.0 {
+                    (growth_bytes as f64 / days) / 1_073_741_824.0
+                } else {
+                    0.0
+                }
+            })
         } else {
             0.0
         };

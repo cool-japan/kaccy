@@ -125,6 +125,7 @@ impl Profiler {
 /// Helper trait for profiling async operations
 #[allow(async_fn_in_trait)]
 pub trait ProfiledOperation<T> {
+    /// Execute the operation and record profiling metrics under the given name
     async fn profile(self, operation_name: &str) -> T;
 }
 

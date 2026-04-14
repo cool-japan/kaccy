@@ -47,13 +47,21 @@ pub struct MevDetection {
 /// Transaction pattern for MEV detection
 #[derive(Debug, Clone)]
 pub struct TransactionPattern {
+    /// Unique identifier of the transaction.
     pub tx_id: String,
+    /// User who submitted the transaction.
     pub user_id: String,
+    /// Token being traded in this transaction.
     pub token_id: String,
+    /// Whether the transaction is a buy (`true`) or sell (`false`).
     pub is_buy: bool,
+    /// Trade amount.
     pub amount: Decimal,
+    /// Execution price.
     pub price: Decimal,
+    /// Timestamp of the transaction.
     pub timestamp: SystemTime,
+    /// Gas price used (relevant on EVM chains).
     pub gas_price: Option<Decimal>,
 }
 
@@ -367,8 +375,11 @@ impl SandwichDetector {
 /// Statistics about the MEV detector
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DetectorStats {
+    /// Total number of transactions analysed.
     pub transaction_count: usize,
+    /// Number of distinct users seen.
     pub unique_users: usize,
+    /// Number of distinct tokens seen.
     pub unique_tokens: usize,
 }
 
@@ -381,6 +392,7 @@ pub struct VictimTracker {
 }
 
 impl VictimTracker {
+    /// Creates a new empty `VictimTracker`.
     pub fn new() -> Self {
         Self {
             victims: HashMap::new(),

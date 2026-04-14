@@ -88,45 +88,58 @@ impl EventPayload {
 /// Event filter for querying events
 #[derive(Debug, Clone, Default)]
 pub struct EventFilter {
+    /// Optional list of event types to include; `None` means all types.
     pub event_types: Option<Vec<String>>,
+    /// Optional list of aggregate IDs to filter by.
     pub aggregate_ids: Option<Vec<Uuid>>,
+    /// Optional list of user IDs to filter by.
     pub user_ids: Option<Vec<Uuid>>,
+    /// Optional inclusive lower bound for event timestamps.
     pub from_time: Option<DateTime<Utc>>,
+    /// Optional inclusive upper bound for event timestamps.
     pub to_time: Option<DateTime<Utc>>,
+    /// Optional maximum number of events to return.
     pub limit: Option<usize>,
 }
 
 impl EventFilter {
+    /// Creates a new `EventFilter` with no criteria set (matches all events).
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Restricts the filter to a single event type.
     pub fn with_event_type(mut self, event_type: String) -> Self {
         self.event_types = Some(vec![event_type]);
         self
     }
 
+    /// Restricts the filter to a set of event types.
     pub fn with_event_types(mut self, event_types: Vec<String>) -> Self {
         self.event_types = Some(event_types);
         self
     }
 
+    /// Restricts the filter to a single aggregate ID.
     pub fn with_aggregate_id(mut self, aggregate_id: Uuid) -> Self {
         self.aggregate_ids = Some(vec![aggregate_id]);
         self
     }
 
+    /// Restricts the filter to a single user ID.
     pub fn with_user_id(mut self, user_id: Uuid) -> Self {
         self.user_ids = Some(vec![user_id]);
         self
     }
 
+    /// Restricts the filter to events within a time range.
     pub fn with_time_range(mut self, from: DateTime<Utc>, to: DateTime<Utc>) -> Self {
         self.from_time = Some(from);
         self.to_time = Some(to);
         self
     }
 
+    /// Sets the maximum number of events returned by this filter.
     pub fn with_limit(mut self, limit: usize) -> Self {
         self.limit = Some(limit);
         self

@@ -13,15 +13,25 @@ use crate::error::ReputationError;
 /// External reputation source
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct ExternalReputation {
+    /// Unique identifier for this record.
     pub id: Uuid,
+    /// Local user this external reputation is linked to.
     pub user_id: Uuid,
+    /// String identifier for the source platform.
     pub platform: String,
+    /// User's ID on the source platform.
     pub platform_user_id: String,
+    /// Raw reputation data from the platform.
     pub reputation_data: serde_json::Value,
+    /// Score imported from the platform (mapped to 0–1000).
     pub imported_score: i32,
+    /// Whether this record has been independently verified.
     pub verified: bool,
+    /// Timestamp when verification was completed.
     pub verified_at: Option<DateTime<Utc>>,
+    /// Timestamp when this record was created.
     pub created_at: DateTime<Utc>,
+    /// Timestamp when this record was last updated.
     pub updated_at: DateTime<Utc>,
 }
 
@@ -29,110 +39,167 @@ pub struct ExternalReputation {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Platform {
+    /// GitHub developer platform.
     GitHub,
+    /// LinkedIn professional network.
     LinkedIn,
+    /// Stack Overflow Q&A community.
     StackOverflow,
+    /// Twitter/X social platform.
     Twitter,
+    /// Discord chat and community platform.
     Discord,
+    /// Any other platform identified by name.
     Custom(String),
 }
 
 /// GitHub reputation data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GitHubReputation {
+    /// GitHub username.
     pub username: String,
+    /// Number of followers on GitHub.
     pub followers: i32,
+    /// Number of public repositories.
     pub public_repos: i32,
+    /// Total stars received across all repositories.
     pub total_stars: i32,
+    /// Total forks of the user's repositories.
     pub total_forks: i32,
+    /// Number of contributions made in the last calendar year.
     pub contributions_last_year: i32,
+    /// Age of the account in days.
     pub account_age_days: i32,
+    /// Most-used programming languages.
     pub top_languages: Vec<String>,
 }
 
 /// LinkedIn reputation data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LinkedInReputation {
+    /// LinkedIn profile identifier.
     pub profile_id: String,
+    /// Number of LinkedIn connections.
     pub connections: i32,
+    /// Total skill endorsements received.
     pub endorsements: i32,
+    /// Number of written recommendations received.
     pub recommendations: i32,
+    /// Years of professional experience listed.
     pub years_experience: i32,
+    /// Skills listed on the profile.
     pub skills: Vec<String>,
 }
 
 /// Stack Overflow reputation data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StackOverflowReputation {
+    /// Stack Overflow numeric user ID.
     pub user_id: i32,
+    /// Stack Overflow reputation score.
     pub reputation: i32,
+    /// Number of gold badges earned.
     pub gold_badges: i32,
+    /// Number of silver badges earned.
     pub silver_badges: i32,
+    /// Number of bronze badges earned.
     pub bronze_badges: i32,
+    /// Total number of answers posted.
     pub answers: i32,
+    /// Total number of questions posted.
     pub questions: i32,
+    /// Tags the user has the most activity in.
     pub top_tags: Vec<String>,
 }
 
 /// Verifiable credential for exporting reputation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerifiableCredential {
+    /// JSON-LD context URIs.
     #[serde(rename = "@context")]
     pub context: Vec<String>,
+    /// Credential type array (e.g. `["VerifiableCredential", "ReputationCredential"]`).
     #[serde(rename = "type")]
     pub credential_type: Vec<String>,
+    /// Unique URI identifying this credential.
     pub id: String,
+    /// DID or URI of the issuing authority.
     pub issuer: String,
+    /// Timestamp when the credential was issued.
     pub issuance_date: DateTime<Utc>,
+    /// Optional timestamp after which the credential is no longer valid.
     pub expiration_date: Option<DateTime<Utc>>,
+    /// Claims about the credential subject.
     pub credential_subject: CredentialSubject,
+    /// Cryptographic proof of authenticity.
     pub proof: CredentialProof,
 }
 
 /// Subject of the credential
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CredentialSubject {
+    /// DID or identifier of the subject.
     pub id: String,
+    /// Reputation score at time of credential issuance.
     pub reputation_score: i32,
+    /// Reputation tier string at time of credential issuance.
     pub reputation_tier: String,
+    /// Platform identifier where the score originated.
     pub platform: String,
+    /// Whether the score has been independently verified.
     pub verified: bool,
+    /// Date the credential reflects the state of.
     pub as_of_date: DateTime<Utc>,
 }
 
 /// Cryptographic proof for the credential
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CredentialProof {
+    /// Proof type (e.g. `"Ed25519Signature2020"`).
     #[serde(rename = "type")]
     pub proof_type: String,
+    /// Timestamp when the proof was created.
     pub created: DateTime<Utc>,
+    /// Identifier of the key used to create the proof.
     pub verification_method: String,
+    /// Base64-encoded proof value.
     pub proof_value: String,
 }
 
 /// Request to import reputation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImportReputationRequest {
+    /// Local user ID to associate with the imported reputation.
     pub user_id: Uuid,
+    /// Source platform to import from.
     pub platform: Platform,
+    /// User identifier on the source platform.
     pub platform_user_id: String,
+    /// OAuth access token for accessing the platform's API, if required.
     pub access_token: Option<String>,
 }
 
 /// Request to export reputation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExportReputationRequest {
+    /// User whose reputation should be exported.
     pub user_id: Uuid,
+    /// Whether to include a cryptographic proof in the export.
     pub include_proof: bool,
+    /// Optional credential expiration in days from now.
     pub expiration_days: Option<i32>,
 }
 
 /// Import result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImportResult {
+    /// ID assigned to the newly created external reputation record.
     pub external_reputation_id: Uuid,
+    /// Score value imported from the external platform.
     pub imported_score: i32,
+    /// Whether manual verification is required before the score is applied.
     pub verification_required: bool,
+    /// URL to visit for manual verification, if required.
     pub verification_url: Option<String>,
 }
 
@@ -142,6 +209,7 @@ pub struct PortabilityService {
 }
 
 impl PortabilityService {
+    /// Create a new [`PortabilityService`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }

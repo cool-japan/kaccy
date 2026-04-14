@@ -39,9 +39,13 @@ fn default_chunk_size() -> usize {
 /// Each line is a separate JSON object
 #[derive(Debug, Serialize)]
 pub struct TokenData {
+    /// Token unique identifier
     pub id: Uuid,
+    /// Token ticker symbol (e.g. "BTC")
     pub symbol: String,
+    /// Token display name
     pub name: String,
+    /// Current token price denominated in BTC
     pub price_btc: f64,
 }
 

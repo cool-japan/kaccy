@@ -9,15 +9,25 @@ use thiserror::Error;
 /// Configuration errors
 #[derive(Debug, Error)]
 pub enum ConfigError {
+    /// A required configuration key is missing
     #[error("Missing required configuration: {0}")]
     MissingRequired(String),
 
+    /// A configuration value is invalid
     #[error("Invalid configuration value for {key}: {message}")]
-    InvalidValue { key: String, message: String },
+    InvalidValue {
+        /// The configuration key that has an invalid value
+        key: String,
+        /// Description of why the value is invalid
+        message: String,
+    },
 
+    /// Failed to parse a configuration value
     #[error("Failed to parse {key}: {source}")]
     ParseError {
+        /// The configuration key that failed to parse
         key: String,
+        /// The underlying parse error
         #[source]
         source: Box<dyn std::error::Error + Send + Sync>,
     },
@@ -157,8 +167,11 @@ pub struct SmtpConfig {
 /// Application environment
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Environment {
+    /// Local development environment
     Development,
+    /// Pre-production staging environment
     Staging,
+    /// Live production environment
     Production,
 }
 

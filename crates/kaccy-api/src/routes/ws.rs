@@ -35,52 +35,81 @@ pub enum WsMessage {
     ChatMessage(ChatMessage),
     /// Subscription confirmation
     Subscribed {
+        /// Name of the channel that was successfully subscribed
         channel: String,
     },
     /// Error message
     Error {
+        /// Human-readable error description
         message: String,
     },
     /// Ping/pong for keepalive
     Ping,
+    /// Pong response to a Ping message
     Pong,
 }
 
+/// Real-time price update for a token
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriceUpdate {
+    /// Token ID
     pub token_id: String,
+    /// Token symbol
     pub symbol: String,
+    /// Current price in BTC
     pub price_btc: f64,
+    /// 24-hour price change percentage
     pub change_24h: f64,
+    /// 24-hour trading volume in BTC
     pub volume_24h: f64,
+    /// Unix timestamp in milliseconds
     pub timestamp: i64,
 }
 
+/// Order status change notification
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrderUpdate {
+    /// Order ID
     pub order_id: String,
+    /// New order status
     pub status: String,
+    /// Optional human-readable message
     pub message: Option<String>,
+    /// Unix timestamp in milliseconds
     pub timestamp: i64,
 }
 
+/// Trade execution notification
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeNotification {
+    /// Trade ID
     pub trade_id: String,
+    /// Token ID that was traded
     pub token_id: String,
+    /// Token symbol
     pub symbol: String,
+    /// Amount of tokens traded
     pub amount: f64,
+    /// Price per token in BTC
     pub price_btc: f64,
+    /// Trade direction (buy or sell)
     pub trade_type: String,
+    /// Unix timestamp in milliseconds
     pub timestamp: i64,
 }
 
+/// Chat message in a token community
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatMessage {
+    /// Token ID for the chat room
     pub token_id: String,
+    /// User ID of the sender
     pub sender_id: String,
+    /// Display name of the sender
     pub sender_name: String,
+    /// Message content
     pub content: String,
+    /// Unix timestamp in milliseconds
     pub timestamp: i64,
 }
 
@@ -89,15 +118,29 @@ pub struct ChatMessage {
 #[serde(tag = "action")]
 #[serde(rename_all = "snake_case")]
 pub enum ClientMessage {
-    Subscribe { channel: String },
-    Unsubscribe { channel: String },
-    Chat { content: String },
+    /// Subscribe to a channel
+    Subscribe {
+        /// Channel name to subscribe to
+        channel: String,
+    },
+    /// Unsubscribe from a channel
+    Unsubscribe {
+        /// Channel name to unsubscribe from
+        channel: String,
+    },
+    /// Send a chat message
+    Chat {
+        /// Message content (max 1000 chars)
+        content: String,
+    },
+    /// Keepalive ping
     Ping,
 }
 
 /// Incoming chat message from client
 #[derive(Debug, Deserialize)]
 pub struct IncomingChatMessage {
+    /// Message content
     pub content: String,
 }
 
@@ -493,9 +536,13 @@ async fn get_user_display_name(pool: &sqlx::PgPool, user_id: Uuid) -> Result<Str
 /// Broadcast channels for WebSocket updates
 #[derive(Clone)]
 pub struct WsBroadcaster {
+    /// Global broadcast channel for price updates
     price_tx: Arc<broadcast::Sender<PriceUpdate>>,
+    /// Per-token broadcast channels for trade notifications
     trade_channels: Arc<dashmap::DashMap<Uuid, broadcast::Sender<TradeNotification>>>,
+    /// Per-user broadcast channels for order updates
     order_channels: Arc<dashmap::DashMap<Uuid, broadcast::Sender<OrderUpdate>>>,
+    /// Per-token broadcast channels for chat messages
     chat_channels: Arc<dashmap::DashMap<Uuid, broadcast::Sender<ChatMessage>>>,
 }
 
@@ -506,6 +553,7 @@ impl Default for WsBroadcaster {
 }
 
 impl WsBroadcaster {
+    /// Create a new WebSocket broadcaster with default channel capacities
     pub fn new() -> Self {
         let (price_tx, _) = broadcast::channel(1000);
         Self {

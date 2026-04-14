@@ -7,6 +7,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+readme = "README.md"
 description = "Reputation and scoring system for Kaccy Protocol - trust, fraud detection, and tier management"
 categories = ["algorithms", "authentication"]
 keywords = ["reputation", "trust", "soulbound", "scoring", "tier"]

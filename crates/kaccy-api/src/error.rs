@@ -194,35 +194,46 @@ impl Default for ValidationBuilder {
     }
 }
 
+/// API error types returned by route handlers
 #[derive(Error, Debug)]
 pub enum ApiError {
+    /// Database query error
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
 
+    /// Database layer error
     #[error("Database error: {0}")]
     DbError(#[from] kaccy_db::error::DbError),
 
+    /// Core business logic error
     #[error("Core error: {0}")]
     Core(#[from] kaccy_core::CoreError),
 
+    /// Authentication or authorization failure
     #[error("Authentication error: {0}")]
     Auth(String),
 
+    /// Request validation failure with simple message
     #[error("Validation error: {0}")]
     Validation(String),
 
+    /// Request validation failure with per-field details
     #[error("Validation errors")]
     ValidationDetails(ValidationErrors),
 
+    /// Requested resource was not found
     #[error("Not found: {0}")]
     NotFound(String),
 
+    /// Operation is not permitted for the current user
     #[error("Forbidden: {0}")]
     Forbidden(String),
 
+    /// Unexpected internal server error
     #[error("Internal server error")]
     Internal,
 
+    /// Internal server error with a message (not exposed to clients)
     #[error("Internal server error: {0}")]
     InternalWithMessage(String),
 }
@@ -330,4 +341,5 @@ impl IntoResponse for ApiError {
     }
 }
 
+/// Convenience type alias for API handler results
 pub type Result<T> = std::result::Result<T, ApiError>;

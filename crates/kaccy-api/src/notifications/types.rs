@@ -25,25 +25,42 @@ pub enum NotificationStatus {
 pub enum NotificationType {
     /// Email notification
     Email {
+        /// Recipient email address
         to: String,
+        /// Email subject line
         subject: String,
+        /// Plain text email body
         body: String,
+        /// Optional HTML email body
         html: Option<String>,
     },
     /// SMS notification
-    Sms { to: String, message: String },
+    Sms {
+        /// Recipient phone number
+        to: String,
+        /// SMS message text
+        message: String,
+    },
     /// Push notification
     Push {
+        /// Target user ID
         user_id: Uuid,
+        /// Notification title
         title: String,
+        /// Notification body text
         body: String,
+        /// Optional JSON payload data
         data: Option<String>,
     },
     /// In-app notification
     InApp {
+        /// Target user ID
         user_id: Uuid,
+        /// Notification title
         title: String,
+        /// Notification message body
         message: String,
+        /// Optional URL to navigate to when the notification is clicked
         action_url: Option<String>,
     },
 }

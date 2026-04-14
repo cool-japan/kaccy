@@ -431,6 +431,18 @@ impl TierConfig {
     }
 }
 
+/// Lightweight reference to personalisation settings for a custom agent.
+///
+/// The full `IssuerPersonalization` struct lives in `custom_endpoint.rs`;
+/// this struct is the cheap, serialisable handle stored alongside agent config.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IssuerPersonalizationRef {
+    /// Optional system-prompt override; when set it replaces the agent's default prompt
+    pub system_prompt_override: Option<String>,
+    /// Optional short hint about the issuer's domain / context
+    pub context_hint: Option<String>,
+}
+
 /// Custom AI agent configuration for an issuer
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CustomAgentConfig {
@@ -452,6 +464,10 @@ pub struct CustomAgentConfig {
     pub is_active: bool,
     /// Access tier required to use this agent
     pub min_tier: AccessTier,
+    /// Optional URL of a custom LLM endpoint to use instead of the built-in providers
+    pub custom_endpoint: Option<String>,
+    /// Optional personalisation settings for this agent
+    pub personalization: Option<IssuerPersonalizationRef>,
 }
 
 impl CustomAgentConfig {
@@ -468,6 +484,8 @@ impl CustomAgentConfig {
             temperature: 0.7,
             is_active: true,
             min_tier: AccessTier::Gold,
+            custom_endpoint: None,
+            personalization: None,
         }
     }
 }

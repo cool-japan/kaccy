@@ -301,9 +301,13 @@ impl InfluencerMetrics {
 /// Influencer tier
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum InfluencerTier {
+    /// Standard user with no influence amplification.
     Regular,
+    /// User with a small but measurable referral network.
     MinorInfluencer,
+    /// User with a significant following and referral impact.
     MajorInfluencer,
+    /// User with the highest tier of network influence.
     TopInfluencer,
 }
 

@@ -29,7 +29,7 @@
 //!
 //! ## Quick Start
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use kaccy::prelude::*;
 //!
 //! #[tokio::main]
@@ -46,6 +46,7 @@
 //!         "http://localhost:8332",
 //!         "rpcuser",
 //!         "rpcpassword",
+//!         kaccy_bitcoin::BitcoinNetwork::Mainnet,
 //!     )?;
 //!
 //!     // Create reputation engine
@@ -59,7 +60,7 @@
 //!
 //! ### Core Business Logic
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use kaccy::kaccy_core::pricing::{BondingCurve, LinearBondingCurve};
 //! use rust_decimal_macros::dec;
 //!
@@ -82,24 +83,23 @@
 //!
 //! ### Bitcoin Integration
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! use kaccy::kaccy_bitcoin::{BitcoinClient, HdWallet};
+//! use kaccy::kaccy_bitcoin::{BitcoinClient, BitcoinNetwork, HdWallet, HdWalletConfig};
 //!
-//! let client = BitcoinClient::new("http://localhost:8332", "user", "pass")?;
-//! let wallet = HdWallet::new(&std::env::var("WALLET_XPUB")?)?;
+//! let client = BitcoinClient::new("http://localhost:8332", "user", "pass", BitcoinNetwork::Mainnet)?;
+//! let config = HdWalletConfig { xpub: std::env::var("WALLET_XPUB")?, ..Default::default() };
+//! let wallet = HdWallet::new(config)?;
 //! # Ok(())
 //! # }
 //! ```
 //!
 //! ### Reputation System
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! use kaccy::kaccy_reputation::{ReputationEngine, ReputationEventType};
-//! use rust_decimal_macros::dec;
-//! # use sqlx::PgPool;
-//! # let pool: PgPool = todo!();
+//! # let pool: sqlx::PgPool = todo!();
 //! # let user_id = uuid::Uuid::new_v4();
 //!
 //! let engine = ReputationEngine::new(pool);

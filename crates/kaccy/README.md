@@ -12,7 +12,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-kaccy = "0.1.0"
+kaccy = "0.2.0"
 ```
 
 ## Usage
@@ -62,12 +62,12 @@ If you only need specific components, you can install them individually:
 
 ```toml
 [dependencies]
-kaccy-core = "0.1.0"
-kaccy-db = "0.1.0"
-kaccy-bitcoin = "0.1.0"
-kaccy-reputation = "0.1.0"
-kaccy-ai = "0.1.0"
-kaccy-api = "0.1.0"
+kaccy-core = "0.2.0"
+kaccy-db = "0.2.0"
+kaccy-bitcoin = "0.2.0"
+kaccy-reputation = "0.2.0"
+kaccy-ai = "0.2.0"
+kaccy-api = "0.2.0"
 ```
 
 ## Documentation

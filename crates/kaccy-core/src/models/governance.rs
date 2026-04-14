@@ -13,7 +13,9 @@ use super::user::ValidationError;
 /// Governance proposal
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Proposal {
+    /// Unique identifier for this proposal
     pub proposal_id: Uuid,
+    /// User who created the proposal
     pub proposer_user_id: Uuid,
     /// Proposal title
     pub title: String,
@@ -41,10 +43,13 @@ pub struct Proposal {
     pub execution_time: Option<DateTime<Utc>>,
     /// Time lock duration in seconds
     pub time_lock_seconds: i64,
+    /// Timestamp when this proposal was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp when this proposal was last updated
     pub updated_at: DateTime<Utc>,
 }
 
+/// Category of governance proposal
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "snake_case")]
 #[derive(Default)]
@@ -80,6 +85,7 @@ impl fmt::Display for ProposalType {
     }
 }
 
+/// Status of a governance proposal.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "lowercase")]
 #[derive(Default)]
@@ -216,8 +222,11 @@ impl fmt::Display for Proposal {
 /// Individual vote on a proposal
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Vote {
+    /// Unique identifier for this vote
     pub vote_id: Uuid,
+    /// Proposal being voted on
     pub proposal_id: Uuid,
+    /// User who cast the vote
     pub voter_user_id: Uuid,
     /// Voting power (based on token holdings)
     pub voting_power: Decimal,
@@ -225,15 +234,20 @@ pub struct Vote {
     pub choice: VoteChoice,
     /// Optional reasoning
     pub reason: Option<String>,
+    /// Timestamp when the vote was cast
     pub voted_at: DateTime<Utc>,
 }
 
+/// Voter's choice on a proposal
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "lowercase")]
 #[derive(Default)]
 pub enum VoteChoice {
+    /// Vote in favour of the proposal
     For,
+    /// Vote against the proposal
     Against,
+    /// Abstain from the vote
     #[default]
     Abstain,
 }
@@ -248,16 +262,23 @@ impl fmt::Display for VoteChoice {
     }
 }
 
+/// Request to create a new governance proposal
 #[derive(Debug, Deserialize)]
 pub struct CreateProposalRequest {
+    /// Short title for the proposal
     pub title: String,
+    /// Detailed description of the proposal
     pub description: String,
+    /// Category this proposal falls under
     pub proposal_type: ProposalType,
+    /// How long voting will be open (hours)
     pub voting_duration_hours: i64,
+    /// Optional time-lock delay before execution (hours)
     pub time_lock_hours: Option<i64>,
 }
 
 impl CreateProposalRequest {
+    /// Validate that the request has sensible values
     pub fn validate(&self) -> Result<(), ValidationError> {
         if self.title.is_empty() {
             return Err(ValidationError("Title is required".to_string()));
@@ -285,14 +306,19 @@ impl CreateProposalRequest {
     }
 }
 
+/// Request to cast a vote on a proposal
 #[derive(Debug, Deserialize)]
 pub struct CastVoteRequest {
+    /// Proposal to vote on
     pub proposal_id: Uuid,
+    /// Vote choice (for, against, or abstain)
     pub choice: VoteChoice,
+    /// Optional reasoning for the vote
     pub reason: Option<String>,
 }
 
 impl CastVoteRequest {
+    /// Validate that the request is well-formed
     pub fn validate(&self) -> Result<(), ValidationError> {
         if let Some(ref reason) = self.reason {
             if reason.len() > 1000 {

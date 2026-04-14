@@ -8,62 +8,104 @@ use uuid::Uuid;
 /// User session model
 #[derive(Debug, Clone, sqlx::FromRow, Serialize, Deserialize)]
 pub struct UserSession {
+    /// Unique session identifier.
     pub id: Uuid,
+    /// User who owns this session.
     pub user_id: Uuid,
+    /// Opaque session token used for authentication.
     pub session_token: String,
+    /// Type of device (e.g., "mobile", "desktop").
     pub device_type: Option<String>,
+    /// Human-readable device name.
     pub device_name: Option<String>,
+    /// Operating system of the client device.
     pub os: Option<String>,
+    /// Browser used to create the session.
     pub browser: Option<String>,
+    /// IP address from which the session was created.
     pub ip_address: String,
+    /// Country of the client IP address.
     pub country: Option<String>,
+    /// City of the client IP address.
     pub city: Option<String>,
+    /// Timestamp when the session was established.
     pub logged_in_at: DateTime<Utc>,
+    /// Timestamp of the most recent activity in this session.
     pub last_activity_at: DateTime<Utc>,
+    /// Timestamp when the session will expire.
     pub expires_at: DateTime<Utc>,
+    /// Timestamp when the user explicitly logged out.
     pub logged_out_at: Option<DateTime<Utc>>,
+    /// Whether the session is currently active.
     pub is_active: bool,
+    /// Reason the session was terminated, if applicable.
     pub logout_reason: Option<String>,
+    /// JSON flags for additional security context.
     pub security_flags: Option<JsonValue>,
+    /// Record creation timestamp.
     pub created_at: DateTime<Utc>,
+    /// Record last-updated timestamp.
     pub updated_at: DateTime<Utc>,
 }
 
 /// Parameters for creating a new session
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateSession {
+    /// User to create the session for.
     pub user_id: Uuid,
+    /// Unique session token.
     pub session_token: String,
+    /// Device type (e.g., "mobile").
     pub device_type: Option<String>,
+    /// Device name.
     pub device_name: Option<String>,
+    /// Operating system.
     pub os: Option<String>,
+    /// Browser name.
     pub browser: Option<String>,
+    /// Client IP address.
     pub ip_address: String,
+    /// Country derived from IP.
     pub country: Option<String>,
+    /// City derived from IP.
     pub city: Option<String>,
+    /// Session expiry timestamp.
     pub expires_at: DateTime<Utc>,
+    /// Optional security metadata.
     pub security_flags: Option<JsonValue>,
 }
 
 /// Session statistics for a user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionStats {
+    /// Total number of sessions (all time).
     pub total_sessions: i64,
+    /// Number of currently active sessions.
     pub active_sessions: i64,
+    /// Number of distinct device types seen.
     pub unique_devices: i64,
+    /// Number of distinct IP addresses seen.
     pub unique_ips: i64,
+    /// Timestamp of the most recent login.
     pub last_login: Option<DateTime<Utc>>,
 }
 
 /// Active session summary
 #[derive(Debug, Clone, sqlx::FromRow, Serialize, Deserialize)]
 pub struct ActiveSessionSummary {
+    /// Session identifier.
     pub id: Uuid,
+    /// Device type.
     pub device_type: Option<String>,
+    /// Device name.
     pub device_name: Option<String>,
+    /// Client IP address.
     pub ip_address: String,
+    /// Login timestamp.
     pub logged_in_at: DateTime<Utc>,
+    /// Most recent activity timestamp.
     pub last_activity_at: DateTime<Utc>,
+    /// Expiry timestamp.
     pub expires_at: DateTime<Utc>,
 }
 

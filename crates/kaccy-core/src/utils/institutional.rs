@@ -14,41 +14,65 @@ use std::time::SystemTime;
 /// Manages multiple sub-accounts under a single institutional account
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrimeBrokerageAccount {
+    /// Unique identifier for this prime brokerage account
     pub account_id: String,
+    /// Legal name of the institution
     pub institution_name: String,
+    /// Sub-accounts indexed by sub-account ID
     pub sub_accounts: HashMap<String, SubAccount>,
+    /// Credit facility attached to this account
     pub credit_line: CreditLine,
+    /// Timestamp when the account was created
     pub created_at: SystemTime,
 }
 
+/// A sub-account under a prime brokerage account
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubAccount {
+    /// Unique identifier for this sub-account
     pub sub_account_id: String,
+    /// Human-readable name for this sub-account
     pub account_name: String,
+    /// Asset balances keyed by asset symbol
     pub balances: HashMap<String, Decimal>,
+    /// Whether trading is permitted from this sub-account
     pub trading_enabled: bool,
+    /// Whether withdrawals are permitted from this sub-account
     pub withdrawal_enabled: bool,
+    /// Trading volume and size limits for this sub-account
     pub daily_limits: TradingLimits,
 }
 
+/// Credit line extended to an institutional client
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreditLine {
+    /// Maximum credit available
     pub total_limit: Decimal,
+    /// Amount of credit currently drawn
     pub used_amount: Decimal,
+    /// Annual interest rate on drawn credit
     pub interest_rate: Decimal,
+    /// Required collateral as a percentage of drawn credit
     pub collateral_required: Decimal,
+    /// Collateral ratio below which a margin call is triggered
     pub margin_call_threshold: Decimal,
 }
 
+/// Trading limits for a sub-account
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradingLimits {
+    /// Maximum size of a single order
     pub max_order_size: Decimal,
+    /// Maximum cumulative trading volume per day
     pub daily_volume_limit: Decimal,
+    /// Cumulative volume traded today
     pub daily_volume_used: Decimal,
+    /// Maximum number of simultaneously open positions
     pub max_open_positions: usize,
 }
 
 impl PrimeBrokerageAccount {
+    /// Create a new prime brokerage account with the given credit limit
     pub fn new(account_id: String, institution_name: String, credit_limit: Decimal) -> Self {
         Self {
             account_id,
@@ -122,21 +146,34 @@ impl PrimeBrokerageAccount {
 /// Consolidated reporting for institutional accounts
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConsolidatedReport {
+    /// Identifier of the prime brokerage account being reported on
     pub account_id: String,
+    /// Timestamp when the report was generated
     pub report_date: SystemTime,
+    /// Total asset balances aggregated across all sub-accounts
     pub total_assets: HashMap<String, Decimal>,
+    /// Total outstanding liabilities (drawn credit)
     pub total_liabilities: Decimal,
+    /// Net asset value (total assets minus liabilities)
     pub net_asset_value: Decimal,
+    /// Profit and loss for the reporting period
     pub period_pnl: Decimal,
+    /// Per-sub-account summaries
     pub sub_account_summaries: Vec<SubAccountSummary>,
 }
 
+/// Summary of a single sub-account for consolidated reporting
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubAccountSummary {
+    /// Unique identifier of the sub-account
     pub sub_account_id: String,
+    /// Human-readable name
     pub account_name: String,
+    /// Total market value of assets in this sub-account
     pub total_value: Decimal,
+    /// Profit and loss for the reporting period
     pub period_pnl: Decimal,
+    /// Number of open positions
     pub position_count: usize,
 }
 
@@ -146,6 +183,7 @@ pub struct PrimeBrokerageManager {
 }
 
 impl PrimeBrokerageManager {
+    /// Create a new prime brokerage manager
     pub fn new() -> Self {
         Self {
             accounts: HashMap::new(),
@@ -233,73 +271,122 @@ impl Default for PrimeBrokerageManager {
 /// Algorithmic trading strategy
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AlgoStrategy {
+    /// Unique identifier for this strategy
     pub strategy_id: String,
+    /// Human-readable name for this strategy
     pub strategy_name: String,
+    /// Classification of the strategy type
     pub strategy_type: StrategyType,
+    /// Strategy-specific configuration parameters
     pub parameters: HashMap<String, String>,
+    /// Risk limits applied to this strategy
     pub risk_limits: RiskLimits,
+    /// Current lifecycle state of the strategy
     pub status: StrategyStatus,
+    /// Cumulative performance metrics
     pub performance: StrategyPerformance,
 }
 
+/// Classification of algorithmic trading strategy type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StrategyType {
+    /// Provides bid and ask quotes to earn the spread
     MarketMaking,
+    /// Exploits price differences across venues
     Arbitrage,
+    /// Follows market momentum and trends
     TrendFollowing,
+    /// Trades on price reversion to a historical mean
     MeanReversion,
+    /// Uses statistical models for signal generation
     Statistical,
+    /// Custom strategy type
     Custom,
 }
 
+/// Lifecycle status of an algorithmic strategy
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StrategyStatus {
+    /// Strategy is running and generating orders
     Active,
+    /// Strategy is temporarily suspended
     Paused,
+    /// Strategy has been stopped
     Stopped,
+    /// Strategy encountered an error
     Error,
 }
 
+/// Risk limits applied to an algorithmic strategy
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskLimits {
+    /// Maximum allowed position size
     pub max_position_size: Decimal,
+    /// Maximum loss allowed per day before the strategy is halted
     pub max_daily_loss: Decimal,
+    /// Maximum peak-to-trough drawdown before the strategy is halted
     pub max_drawdown: Decimal,
+    /// Stop-loss threshold for individual positions
     pub stop_loss_threshold: Decimal,
 }
 
+/// Cumulative performance metrics for an algorithmic strategy
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StrategyPerformance {
+    /// Total profit and loss since inception
     pub total_pnl: Decimal,
+    /// Profit and loss for today
     pub daily_pnl: Decimal,
+    /// Fraction of trades that were profitable
     pub win_rate: Decimal,
+    /// Risk-adjusted return metric
     pub sharpe_ratio: Decimal,
+    /// Maximum peak-to-trough drawdown observed
     pub max_drawdown: Decimal,
+    /// Total number of trades executed
     pub trade_count: usize,
 }
 
 /// Algorithmic trading framework
 pub struct AlgoTradingFramework {
+    /// Registered strategies indexed by strategy ID
     strategies: HashMap<String, AlgoStrategy>,
+    /// Chronological log of strategy execution events
     execution_log: Vec<StrategyExecution>,
 }
 
+/// Record of a single strategy execution event
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StrategyExecution {
+    /// Unique identifier for this execution record
     pub execution_id: String,
+    /// Strategy that was executed
     pub strategy_id: String,
+    /// When the execution occurred
     pub timestamp: SystemTime,
+    /// Description of the action taken
     pub action: String,
+    /// Outcome of the execution
     pub result: ExecutionResult,
 }
 
+/// Outcome of a strategy execution attempt
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ExecutionResult {
-    Success { pnl: Decimal },
-    Failure { reason: String },
+    /// Execution succeeded with a recorded profit/loss
+    Success {
+        /// Profit or loss from this execution
+        pnl: Decimal,
+    },
+    /// Execution failed
+    Failure {
+        /// Human-readable reason for failure
+        reason: String,
+    },
 }
 
 impl AlgoTradingFramework {
+    /// Create a new algorithmic trading framework
     pub fn new() -> Self {
         Self {
             strategies: HashMap::new(),
@@ -368,13 +455,19 @@ impl Default for AlgoTradingFramework {
 /// Custodial wallet system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CustodialWallet {
+    /// Unique identifier for this wallet
     pub wallet_id: String,
+    /// Storage tier of this wallet
     pub wallet_type: WalletType,
+    /// Multi-signature configuration, if enabled
     pub multi_sig_config: Option<MultiSigConfig>,
+    /// Asset balances held in this wallet indexed by asset symbol
     pub balances: HashMap<String, Decimal>,
+    /// Operational status of this wallet
     pub status: WalletStatus,
 }
 
+/// Storage tier of a custodial wallet
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WalletType {
     /// Hot wallet for immediate access
@@ -385,68 +478,105 @@ pub enum WalletType {
     Warm,
 }
 
+/// Operational status of a custodial wallet
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WalletStatus {
+    /// Wallet is operational
     Active,
+    /// Wallet is locked and cannot be used
     Locked,
+    /// Wallet is undergoing maintenance
     Maintenance,
 }
 
+/// Multi-signature configuration for a custodial wallet
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultiSigConfig {
+    /// Number of signatures required to authorise a transaction
     pub required_signatures: usize,
+    /// Total number of signers in the group
     pub total_signers: usize,
+    /// Identifiers of all authorised signers
     pub signer_ids: Vec<String>,
 }
 
 /// Withdrawal request for custodial services
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WithdrawalRequest {
+    /// Unique identifier for this withdrawal request
     pub request_id: String,
+    /// Wallet from which funds are to be withdrawn
     pub wallet_id: String,
+    /// Asset symbol being withdrawn
     pub asset: String,
+    /// Amount to withdraw
     pub amount: Decimal,
+    /// Destination address or account for the withdrawal
     pub destination: String,
+    /// User or system that initiated the request
     pub requester_id: String,
+    /// Timestamp when the request was created
     pub created_at: SystemTime,
+    /// Current status of the withdrawal request
     pub status: WithdrawalStatus,
+    /// Approvals collected so far
     pub approvals: Vec<Approval>,
 }
 
+/// Status of a custodial withdrawal request
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WithdrawalStatus {
+    /// Request submitted and awaiting initial processing
     Pending,
+    /// Request requires additional approvals
     AwaitingApproval,
+    /// Request has received sufficient approvals
     Approved,
+    /// Request was denied
     Rejected,
+    /// Funds have been transferred
     Completed,
+    /// Transfer attempt failed
     Failed,
 }
 
+/// An individual approval on a withdrawal request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Approval {
+    /// Identifier of the approving signer
     pub approver_id: String,
+    /// Timestamp when the approval was granted
     pub approved_at: SystemTime,
+    /// Cryptographic signature from the approver
     pub signature: String,
 }
 
 /// Custodial services manager
 pub struct CustodialManager {
+    /// Custodial wallets indexed by wallet ID
     wallets: HashMap<String, CustodialWallet>,
+    /// Withdrawal requests indexed by request ID
     withdrawal_requests: HashMap<String, WithdrawalRequest>,
+    /// Approval workflow configurations indexed by workflow ID
     #[allow(dead_code)]
     approval_workflows: HashMap<String, ApprovalWorkflow>,
 }
 
+/// Workflow configuration for multi-party withdrawal approvals
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApprovalWorkflow {
+    /// Unique identifier for this workflow
     pub workflow_id: String,
+    /// Number of approvals required to proceed
     pub required_approvals: usize,
+    /// List of approver identifiers
     pub approvers: Vec<String>,
+    /// Amount below which the withdrawal is auto-approved
     pub auto_approve_threshold: Option<Decimal>,
 }
 
 impl CustodialManager {
+    /// Create a new custodial manager
     pub fn new() -> Self {
         Self {
             wallets: HashMap::new(),

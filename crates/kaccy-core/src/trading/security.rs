@@ -88,6 +88,7 @@ impl EmergencyPause {
 /// Multi-signature operation
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct MultiSigOperation {
+    /// Unique identifier for this multi-sig operation
     pub operation_id: Uuid,
     /// Operation type (withdraw, transfer, pause, etc.)
     pub operation_type: OperationType,
@@ -107,18 +108,25 @@ pub struct MultiSigOperation {
     pub expires_at: DateTime<Utc>,
     /// Initiated by
     pub initiated_by: Uuid,
+    /// Timestamp when this operation was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp when this operation was last updated
     pub updated_at: DateTime<Utc>,
 }
 
+/// Type of multi-sig guarded operation
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "lowercase")]
 #[derive(Default)]
 pub enum OperationType {
+    /// Withdraw funds from the platform
     Withdraw,
+    /// Transfer assets between accounts
     #[default]
     Transfer,
+    /// Pause or resume system operations
     Pause,
+    /// Change system configuration
     ConfigChange,
 }
 
@@ -133,15 +141,21 @@ impl fmt::Display for OperationType {
     }
 }
 
+/// Status of a multi-sig operation
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "lowercase")]
 #[derive(Default)]
 pub enum MultiSigStatus {
+    /// Awaiting required signatures
     #[default]
     Pending,
+    /// Required signatures collected and operation is approved
     Approved,
+    /// Operation was rejected
     Rejected,
+    /// Operation expired before collecting enough signatures
     Expired,
+    /// Operation has been executed
     Executed,
 }
 
@@ -333,7 +347,7 @@ pub struct AnomalyDetector {
     pub large_trade_threshold: Decimal,
     /// Threshold for rapid trading (trades per minute)
     pub rapid_trade_threshold: i32,
-    /// Recent trades per user
+    /// Recent trade timestamps per user for rapid-trading detection
     recent_trades: HashMap<Uuid, VecDeque<DateTime<Utc>>>,
 }
 
@@ -432,25 +446,39 @@ impl AnomalyDetector {
 /// Anomaly alert
 #[derive(Debug, Clone, Serialize)]
 pub struct AnomalyAlert {
+    /// Classification of the detected anomaly
     pub alert_type: AnomalyType,
+    /// Severity level of the alert
     pub severity: AlertSeverity,
+    /// Human-readable description of the alert
     pub description: String,
+    /// Timestamp when the anomaly was detected
     pub timestamp: DateTime<Utc>,
 }
 
+/// Classification of a detected trading anomaly
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 pub enum AnomalyType {
+    /// An unusually large trade relative to pool liquidity
     LargeTrade,
+    /// A user trading at an abnormally high frequency
     RapidTrading,
+    /// Suspected price manipulation activity
     PriceManipulation,
+    /// Other suspicious trading pattern
     SuspiciousPattern,
 }
 
+/// Severity of a security or anomaly alert
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 pub enum AlertSeverity {
+    /// Informational, no immediate action required
     Low,
+    /// Warrants attention but not critical
     Medium,
+    /// Significant issue requiring prompt action
     High,
+    /// Immediate action required
     Critical,
 }
 

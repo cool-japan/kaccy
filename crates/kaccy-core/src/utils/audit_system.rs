@@ -56,18 +56,31 @@ pub struct AuditLogEntry {
 /// Audit action types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AuditAction {
+    /// A new resource was created
     Create,
+    /// A resource was read or queried
     Read,
+    /// An existing resource was modified
     Update,
+    /// A resource was deleted
     Delete,
+    /// A user authenticated successfully
     Login,
+    /// A user ended their session
     Logout,
+    /// A user changed their password
     PasswordChange,
+    /// A user's permissions were changed
     PermissionChange,
+    /// System or platform configuration was changed
     ConfigChange,
+    /// A trade was executed
     Trade,
+    /// Funds were withdrawn from the platform
     Withdrawal,
+    /// Funds were deposited into the platform
     Deposit,
+    /// A custom action not covered by other variants
     Custom(String),
 }
 
@@ -166,7 +179,7 @@ impl AuditLogManager {
         }
         hasher.update(entry.previous_hash.as_bytes());
 
-        format!("{:x}", hasher.finalize())
+        hex::encode(hasher.finalize().as_slice())
     }
 
     /// Verify integrity of audit log
@@ -418,11 +431,17 @@ impl Default for AuditLogManager {
 /// Filter for querying audit logs
 #[derive(Debug, Clone, Default)]
 pub struct AuditLogFilter {
+    /// Return only entries where the actor matches this value
     pub actor: Option<String>,
+    /// Return only entries belonging to this tenant
     pub tenant_id: Option<Uuid>,
+    /// Return only entries for this action type
     pub action: Option<AuditAction>,
+    /// Return only entries affecting this resource type
     pub resource_type: Option<String>,
+    /// Return only entries at or after this timestamp
     pub start_time: Option<DateTime<Utc>>,
+    /// Return only entries at or before this timestamp
     pub end_time: Option<DateTime<Utc>>,
 }
 
@@ -472,50 +491,72 @@ impl AuditAnalytics {
     }
 }
 
-/// Detected anomaly
+/// Detected anomaly in the audit log
 #[derive(Debug, Clone)]
 pub struct AuditAnomaly {
+    /// Category of the anomaly
     pub anomaly_type: AnomalyType,
+    /// Actor whose behaviour triggered the anomaly
     pub actor: String,
+    /// Human-readable description of the anomaly
     pub description: String,
+    /// How serious this anomaly is considered
     pub severity: AnomalySeverity,
+    /// When the anomaly was detected
     pub timestamp: DateTime<Utc>,
 }
 
-/// Anomaly type
+/// Category of audit anomaly
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AnomalyType {
+    /// Unusually high action rate from a single actor
     RapidActivity,
+    /// Multiple consecutive failed login attempts
     FailedLogins,
+    /// Action sequence that matches a known suspicious pattern
     SuspiciousPattern,
+    /// Access to resources outside the user's normal scope
     UnusualAccess,
 }
 
-/// Anomaly severity
+/// Severity level of an audit anomaly
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum AnomalySeverity {
+    /// Informational; does not require immediate action
     Low,
+    /// Worth investigating but not urgent
     Medium,
+    /// Likely malicious; requires prompt response
     High,
+    /// Active attack or data breach; requires immediate response
     Critical,
 }
 
-/// Compliance report
+/// Summary compliance report for a time period
 #[derive(Debug, Clone)]
 pub struct ComplianceReport {
+    /// Start of the reporting period
     pub period_start: DateTime<Utc>,
+    /// End of the reporting period
     pub period_end: DateTime<Utc>,
+    /// Total number of audit events in the period
     pub total_events: usize,
+    /// Number of distinct actors that generated events
     pub unique_actors: usize,
+    /// Count of events broken down by action type
     pub action_breakdown: HashMap<String, usize>,
+    /// Count of events broken down by resource type
     pub resource_breakdown: HashMap<String, usize>,
+    /// Whether the log integrity was verified successfully
     pub integrity_verified: bool,
 }
 
 /// Export format for audit logs
 #[derive(Debug, Clone, Copy)]
 pub enum ExportFormat {
+    /// Export as pretty-printed JSON
     Json,
+    /// Export as comma-separated values
     Csv,
 }
 

@@ -488,6 +488,7 @@ pub struct NettingAgreement {
     pub active: bool,
 }
 
+/// Type of netting agreement between counterparties
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NettingType {
     /// Close-out netting (upon default)

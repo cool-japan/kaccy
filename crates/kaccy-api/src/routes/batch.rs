@@ -1,13 +1,10 @@
 //! Request batching endpoint
 
-use axum::{
-    Json,
-    body::Body,
-    extract::State,
-    http::{Method, Request},
-};
+use std::collections::HashMap;
+
+use axum::{Json, extract::State};
+use futures::future::join_all;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::{
     error::{ApiError, Result, ValidationBuilder},
@@ -17,6 +14,12 @@ use crate::{
 
 /// Maximum number of requests in a batch
 const MAX_BATCH_SIZE: usize = 10;
+
+/// Default base URL for sub-requests
+const DEFAULT_BASE_URL: &str = "http://localhost:8080";
+
+/// Timeout in seconds for each sub-request
+const BATCH_REQUEST_TIMEOUT_SECS: u64 = 30;
 
 /// Single request in a batch
 #[derive(Debug, Deserialize)]
@@ -29,7 +32,7 @@ pub struct BatchRequest {
     pub path: String,
     /// Request headers (optional)
     #[serde(default)]
-    pub headers: std::collections::HashMap<String, String>,
+    pub headers: HashMap<String, String>,
     /// Request body (optional, as JSON)
     #[serde(default)]
     pub body: Option<serde_json::Value>,
@@ -50,7 +53,7 @@ pub struct BatchResponse {
     /// HTTP status code
     pub status: u16,
     /// Response headers
-    pub headers: std::collections::HashMap<String, String>,
+    pub headers: HashMap<String, String>,
     /// Response body (as JSON)
     pub body: serde_json::Value,
 }
@@ -66,9 +69,10 @@ pub struct BatchResponsePayload {
 pub async fn execute_batch(
     State(_state): State<AppState>,
     claims: Claims,
+    incoming_headers: axum::http::HeaderMap,
     Json(payload): Json<BatchRequestPayload>,
 ) -> Result<Json<BatchResponsePayload>> {
-    let _user_id = Uuid::parse_str(&claims.sub)
+    let _user_id = uuid::Uuid::parse_str(&claims.sub)
         .map_err(|_| ApiError::Auth("Invalid user ID in token".to_string()))?;
 
     // Validation
@@ -116,116 +120,132 @@ pub async fn execute_batch(
         return errors.into_result();
     }
 
-    // Execute requests
-    // In production, this would:
-    // 1. Parse each request
-    // 2. Execute them (potentially in parallel using tokio::spawn)
-    // 3. Collect responses
-    // 4. Return batch response
-    //
-    // For now, return mock responses
-    let responses: Vec<BatchResponse> = payload
-        .requests
-        .iter()
-        .map(|req| BatchResponse {
-            id: req.id.clone(),
-            status: 200,
-            headers: std::collections::HashMap::new(),
-            body: serde_json::json!({
-                "message": format!("Mock response for {} {}", req.method, req.path)
-            }),
-        })
-        .collect();
+    // Determine base URL from environment
+    let base_url = std::env::var("KACCY_BASE_URL").unwrap_or_else(|_| DEFAULT_BASE_URL.to_string());
+
+    // Extract Authorization header from the incoming request to forward
+    let auth_header = incoming_headers
+        .get("authorization")
+        .and_then(|v| v.to_str().ok())
+        .map(String::from);
+
+    // Build a reqwest client with a per-request timeout
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(BATCH_REQUEST_TIMEOUT_SECS))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+
+    // Execute all sub-requests in parallel
+    let responses =
+        execute_batch_parallel(&client, &base_url, &auth_header, &payload.requests).await;
 
     Ok(Json(BatchResponsePayload { responses }))
 }
 
-/// Execute batch with parallel processing
-#[allow(dead_code)]
+/// Execute all sub-requests concurrently and return results in order
 async fn execute_batch_parallel(
-    requests: Vec<BatchRequest>,
-    _state: AppState,
+    client: &reqwest::Client,
+    base_url: &str,
+    auth_header: &Option<String>,
+    requests: &[BatchRequest],
 ) -> Vec<BatchResponse> {
-    // Spawn tasks for parallel execution
-    let tasks: Vec<_> = requests
-        .into_iter()
-        .map(|req| {
-            tokio::spawn(async move {
-                // In production: execute the actual request
-                BatchResponse {
-                    id: req.id,
-                    status: 200,
-                    headers: std::collections::HashMap::new(),
-                    body: serde_json::json!({"result": "success"}),
-                }
-            })
+    let futures: Vec<_> = requests
+        .iter()
+        .map(|req| execute_single_request(client, base_url, auth_header, req))
+        .collect();
+
+    join_all(futures).await
+}
+
+/// Execute a single sub-request via reqwest and return a `BatchResponse`
+async fn execute_single_request(
+    client: &reqwest::Client,
+    base_url: &str,
+    auth_header: &Option<String>,
+    request: &BatchRequest,
+) -> BatchResponse {
+    let url = format!("{}{}", base_url, request.path);
+
+    // Select the appropriate builder for the given HTTP method
+    let req_builder = match request.method.to_uppercase().as_str() {
+        "GET" => client.get(&url),
+        "POST" => client.post(&url),
+        "PUT" => client.put(&url),
+        "DELETE" => client.delete(&url),
+        "PATCH" => client.patch(&url),
+        _ => {
+            return BatchResponse {
+                id: request.id.clone(),
+                status: 400,
+                headers: HashMap::new(),
+                body: serde_json::json!({"error": "unsupported method"}),
+            };
+        }
+    };
+
+    // Forward the Authorization header from the outer request
+    let req_builder = if let Some(auth) = auth_header {
+        req_builder.header("authorization", auth)
+    } else {
+        req_builder
+    };
+
+    // Forward any extra headers included in the batch request item
+    let req_builder = request
+        .headers
+        .iter()
+        .fold(req_builder, |builder, (key, value)| {
+            builder.header(key.as_str(), value.as_str())
+        });
+
+    // Attach JSON body when provided
+    let req_builder = if let Some(body_json) = &request.body {
+        req_builder
+            .header("content-type", "application/json")
+            .json(body_json)
+    } else {
+        req_builder
+    };
+
+    // Execute and map transport-level errors to 502
+    let response = match req_builder.send().await {
+        Ok(r) => r,
+        Err(e) => {
+            return BatchResponse {
+                id: request.id.clone(),
+                status: 502,
+                headers: HashMap::new(),
+                body: serde_json::json!({"error": format!("Sub-request failed: {}", e)}),
+            };
+        }
+    };
+
+    let status = response.status().as_u16();
+
+    // Collect response headers as a plain map
+    let resp_headers: HashMap<String, String> = response
+        .headers()
+        .iter()
+        .filter_map(|(name, value)| {
+            value
+                .to_str()
+                .ok()
+                .map(|v| (name.to_string(), v.to_string()))
         })
         .collect();
 
-    // Wait for all tasks to complete
-    let mut responses = Vec::new();
-    for task in tasks {
-        if let Ok(response) = task.await {
-            responses.push(response);
-        }
-    }
-
-    responses
-}
-
-/// Execute single request within batch
-#[allow(dead_code)]
-async fn execute_single_request(
-    req: BatchRequest,
-    _state: AppState,
-    _auth_header: Option<String>,
-) -> Result<BatchResponse> {
-    // Parse method
-    let method = match req.method.to_uppercase().as_str() {
-        "GET" => Method::GET,
-        "POST" => Method::POST,
-        "PUT" => Method::PUT,
-        "DELETE" => Method::DELETE,
-        "PATCH" => Method::PATCH,
-        _ => {
-            return Ok(BatchResponse {
-                id: req.id,
-                status: 400,
-                headers: std::collections::HashMap::new(),
-                body: serde_json::json!({
-                    "error": format!("Invalid method: {}", req.method)
-                }),
-            });
-        }
+    // Deserialise the body as JSON; fall back to a string wrapper on failure
+    let body = match response.json::<serde_json::Value>().await {
+        Ok(json) => json,
+        Err(e) => serde_json::json!({"error": format!("Failed to parse response body: {}", e)}),
     };
 
-    // Build request
-    let mut http_req = Request::builder().method(method).uri(&req.path);
-
-    // Add headers
-    for (key, value) in &req.headers {
-        http_req = http_req.header(key, value);
+    BatchResponse {
+        id: request.id.clone(),
+        status,
+        headers: resp_headers,
+        body,
     }
-
-    // Add body if present
-    let body = if let Some(body_json) = &req.body {
-        Body::from(serde_json::to_vec(body_json).unwrap_or_default())
-    } else {
-        Body::empty()
-    };
-
-    let _http_req = http_req
-        .body(body)
-        .map_err(|e| ApiError::InternalWithMessage(format!("Failed to build request: {}", e)))?;
-
-    // In production: execute the request through the router
-    // For now, return a mock response
-    Ok(BatchResponse {
-        id: req.id,
-        status: 200,
-        headers: std::collections::HashMap::new(),
-        body: serde_json::json!({"result": "success"}),
-    })
 }
 
 #[cfg(test)]
@@ -238,7 +258,7 @@ mod tests {
             id: "req-1".to_string(),
             method: "GET".to_string(),
             path: "/api/tokens".to_string(),
-            headers: std::collections::HashMap::new(),
+            headers: HashMap::new(),
             body: None,
         };
 
@@ -257,7 +277,7 @@ mod tests {
         let response = BatchResponse {
             id: "req-1".to_string(),
             status: 200,
-            headers: std::collections::HashMap::new(),
+            headers: HashMap::new(),
             body: serde_json::json!({"data": "test"}),
         };
 

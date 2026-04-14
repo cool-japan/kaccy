@@ -11,21 +11,37 @@ use crate::{error::ApiError, state::AppState};
 /// Notification preferences for a user
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct NotificationPreferences {
+    /// User ID these preferences belong to
     pub user_id: Uuid,
+    /// Whether email notifications are enabled globally
     pub email_enabled: bool,
+    /// Whether to send email for order status updates
     pub email_order_updates: bool,
+    /// Whether to send email for trade executions
     pub email_trade_notifications: bool,
+    /// Whether to send email for commitment updates
     pub email_commitment_updates: bool,
+    /// Whether to send email for KYC status updates
     pub email_kyc_updates: bool,
+    /// Whether to receive marketing emails
     pub email_marketing: bool,
+    /// Whether SMS notifications are enabled globally
     pub sms_enabled: bool,
+    /// Whether to send SMS for order status updates
     pub sms_order_updates: bool,
+    /// Whether to send SMS for trade executions
     pub sms_trade_notifications: bool,
+    /// Whether to send SMS for security alerts
     pub sms_security_alerts: bool,
+    /// Whether push notifications are enabled globally
     pub push_enabled: bool,
+    /// Whether to send push for order status updates
     pub push_order_updates: bool,
+    /// Whether to send push for trade executions
     pub push_trade_notifications: bool,
+    /// Whether to send push for price alerts
     pub push_price_alerts: bool,
+    /// Whether in-app notifications are enabled
     pub inapp_enabled: bool,
 }
 
@@ -55,20 +71,35 @@ impl Default for NotificationPreferences {
 /// Update notification preferences request
 #[derive(Debug, Deserialize)]
 pub struct UpdateNotificationPreferencesRequest {
+    /// Enable or disable all email notifications
     pub email_enabled: Option<bool>,
+    /// Enable or disable order update emails
     pub email_order_updates: Option<bool>,
+    /// Enable or disable trade notification emails
     pub email_trade_notifications: Option<bool>,
+    /// Enable or disable commitment update emails
     pub email_commitment_updates: Option<bool>,
+    /// Enable or disable KYC update emails
     pub email_kyc_updates: Option<bool>,
+    /// Enable or disable marketing emails
     pub email_marketing: Option<bool>,
+    /// Enable or disable all SMS notifications
     pub sms_enabled: Option<bool>,
+    /// Enable or disable order update SMS
     pub sms_order_updates: Option<bool>,
+    /// Enable or disable trade notification SMS
     pub sms_trade_notifications: Option<bool>,
+    /// Enable or disable security alert SMS
     pub sms_security_alerts: Option<bool>,
+    /// Enable or disable all push notifications
     pub push_enabled: Option<bool>,
+    /// Enable or disable order update push notifications
     pub push_order_updates: Option<bool>,
+    /// Enable or disable trade notification push notifications
     pub push_trade_notifications: Option<bool>,
+    /// Enable or disable price alert push notifications
     pub push_price_alerts: Option<bool>,
+    /// Enable or disable in-app notifications
     pub inapp_enabled: Option<bool>,
 }
 

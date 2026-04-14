@@ -9,14 +9,20 @@ use uuid::Uuid;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum JobStatus {
+    /// Job is queued but has not started yet.
     Pending,
+    /// Job is currently executing.
     Running,
+    /// Job finished successfully.
     Completed,
+    /// Job encountered an error and stopped.
     Failed,
+    /// Job was explicitly cancelled before completion.
     Cancelled,
 }
 
 impl JobStatus {
+    /// Return the lowercase string representation of the status.
     pub fn as_str(&self) -> &'static str {
         match self {
             JobStatus::Pending => "pending",
@@ -31,56 +37,92 @@ impl JobStatus {
 /// Background job model
 #[derive(Debug, Clone, sqlx::FromRow, Serialize, Deserialize)]
 pub struct BackgroundJob {
+    /// Unique identifier for the job.
     pub id: Uuid,
+    /// Type name identifying the kind of work to perform.
     pub job_type: String,
+    /// Current status string.
     pub status: String,
+    /// Scheduling priority (higher values run first).
     pub priority: i32,
+    /// Input data for the job.
     pub payload: JsonValue,
+    /// Output or result data after completion.
     pub result: Option<JsonValue>,
+    /// Error message if the job failed.
     pub error_message: Option<String>,
+    /// Maximum number of retry attempts allowed.
     pub max_retries: i32,
+    /// Number of retries attempted so far.
     pub retry_count: i32,
+    /// Backoff delay between retries in milliseconds.
     pub retry_backoff_ms: i32,
+    /// Timestamp when the job is scheduled to run.
     pub scheduled_at: DateTime<Utc>,
+    /// Timestamp when the job started executing.
     pub started_at: Option<DateTime<Utc>>,
+    /// Timestamp when the job finished (success or failure).
     pub completed_at: Option<DateTime<Utc>>,
+    /// Timestamp after which the job result should be discarded.
     pub expires_at: Option<DateTime<Utc>>,
+    /// User or system that created the job.
     pub created_by: Option<Uuid>,
+    /// Distributed tracing correlation ID.
     pub correlation_id: Option<String>,
+    /// Record creation timestamp.
     pub created_at: DateTime<Utc>,
+    /// Record last-updated timestamp.
     pub updated_at: DateTime<Utc>,
 }
 
 /// Parameters for creating a new background job
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateBackgroundJob {
+    /// Type name identifying the job handler.
     pub job_type: String,
+    /// Input payload for the job.
     pub payload: JsonValue,
+    /// Scheduling priority; defaults to 0 if not specified.
     pub priority: Option<i32>,
+    /// Maximum retry attempts; uses system default if not specified.
     pub max_retries: Option<i32>,
+    /// Backoff delay in milliseconds; uses system default if not specified.
     pub retry_backoff_ms: Option<i32>,
+    /// When to run the job; runs immediately if not specified.
     pub scheduled_at: Option<DateTime<Utc>>,
+    /// Expiry timestamp after which the result can be cleaned up.
     pub expires_at: Option<DateTime<Utc>>,
+    /// Creator identity.
     pub created_by: Option<Uuid>,
+    /// Tracing correlation ID.
     pub correlation_id: Option<String>,
 }
 
 /// Job execution result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JobResult {
+    /// Whether the job completed successfully.
     pub success: bool,
+    /// Output data produced by the job.
     pub data: Option<JsonValue>,
+    /// Error message if the job failed.
     pub error: Option<String>,
 }
 
 /// Job statistics by type
 #[derive(Debug, Clone, sqlx::FromRow, Serialize, Deserialize)]
 pub struct JobTypeStats {
+    /// Job type name.
     pub job_type: String,
+    /// Number of jobs currently pending.
     pub pending_count: i64,
+    /// Number of jobs currently running.
     pub running_count: i64,
+    /// Number of successfully completed jobs.
     pub completed_count: i64,
+    /// Number of failed jobs.
     pub failed_count: i64,
+    /// Mean execution duration in seconds.
     pub average_duration_seconds: Option<f64>,
 }
 

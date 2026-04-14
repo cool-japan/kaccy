@@ -359,6 +359,7 @@ pub trait NotificationTriggers {
     fn create_delete_trigger_sql(table: &str, channel: &str) -> String;
 }
 
+/// PostgreSQL implementation of `NotificationTriggers` using `pg_notify`.
 pub struct PostgresNotificationTriggers;
 
 impl NotificationTriggers for PostgresNotificationTriggers {

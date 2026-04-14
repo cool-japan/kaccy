@@ -14,16 +14,30 @@ pub enum PaymentStatus {
     NotReceived,
     /// Payment received but waiting for confirmations
     Pending {
+        /// Amount received so far (may include mempool balance).
         received_amount: Amount,
+        /// Number of confirmations the payment currently has.
         confirmations: u32,
     },
     /// Payment received but amount is incorrect
-    Underpaid { expected: Amount, received: Amount },
+    Underpaid {
+        /// The amount that was expected.
+        expected: Amount,
+        /// The amount that was actually received.
+        received: Amount,
+    },
     /// Payment received but amount is more than expected
-    Overpaid { expected: Amount, received: Amount },
+    Overpaid {
+        /// The amount that was expected.
+        expected: Amount,
+        /// The amount that was actually received.
+        received: Amount,
+    },
     /// Payment confirmed with required confirmations
     Confirmed {
+        /// Total amount received and confirmed.
         received_amount: Amount,
+        /// Number of confirmations at the time of confirmation.
         confirmations: u32,
     },
 }
@@ -45,6 +59,7 @@ pub struct PaymentMonitor {
 }
 
 impl PaymentMonitor {
+    /// Create a new `PaymentMonitor` with the given client and confirmation threshold.
     pub fn new(client: Arc<BitcoinClient>, required_confirmations: u32) -> Self {
         Self {
             client,
@@ -139,18 +154,26 @@ impl PaymentMonitor {
 /// Detailed payment information
 #[derive(Debug, Clone, Serialize)]
 pub struct PaymentDetails {
+    /// Bitcoin address being monitored for the payment.
     pub address: String,
+    /// Amount expected for this payment.
     pub expected_amount: Amount,
+    /// Current status of the payment.
     pub status: PaymentStatus,
+    /// Transaction ID of the payment, if known.
     pub txid: Option<String>,
 }
 
 /// Pending order for monitoring
 #[derive(Debug, Clone)]
 pub struct PendingOrder {
+    /// Unique identifier for this order.
     pub order_id: uuid::Uuid,
+    /// Bitcoin address assigned for this order's payment.
     pub address: String,
+    /// Payment amount expected for this order.
     pub expected_amount: Amount,
+    /// UTC timestamp when this order was created.
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -159,30 +182,45 @@ pub struct PendingOrder {
 pub enum PaymentEvent {
     /// Payment received and confirmed
     Confirmed {
+        /// Unique identifier of the order whose payment was confirmed.
         order_id: uuid::Uuid,
+        /// Confirmed amount received.
         amount: Amount,
+        /// Number of block confirmations at the time of this event.
         confirmations: u32,
     },
     /// Payment pending (in mempool or insufficient confirmations)
     Pending {
+        /// Unique identifier of the order awaiting payment.
         order_id: uuid::Uuid,
+        /// Amount detected so far (may be unconfirmed).
         amount: Amount,
+        /// Current number of confirmations.
         confirmations: u32,
     },
     /// Underpayment detected
     Underpaid {
+        /// Unique identifier of the underpaid order.
         order_id: uuid::Uuid,
+        /// Amount that was expected.
         expected: Amount,
+        /// Amount that was actually received.
         received: Amount,
     },
     /// Overpayment detected
     Overpaid {
+        /// Unique identifier of the overpaid order.
         order_id: uuid::Uuid,
+        /// Amount that was expected.
         expected: Amount,
+        /// Amount that was actually received.
         received: Amount,
     },
     /// Order expired without payment
-    Expired { order_id: uuid::Uuid },
+    Expired {
+        /// Unique identifier of the expired order.
+        order_id: uuid::Uuid,
+    },
 }
 
 /// Configuration for payment monitor background task

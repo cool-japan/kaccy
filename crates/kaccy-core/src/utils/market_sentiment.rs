@@ -104,10 +104,15 @@ impl SocialSentiment {
 /// Sentiment category
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SentimentCategory {
+    /// Strongly bullish sentiment (score > 50)
     ExtremelyBullish,
+    /// Moderately bullish sentiment (score 20–50)
     Bullish,
+    /// Neutral sentiment (score −20 to 20)
     Neutral,
+    /// Moderately bearish sentiment (score −50 to −20)
     Bearish,
+    /// Strongly bearish sentiment (score < −50)
     ExtremelyBearish,
 }
 
@@ -157,10 +162,15 @@ pub struct FearGreedComponents {
 /// Fear and Greed category
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FearGreedCategory {
+    /// Index 0–24: extreme fear in the market
     ExtremeFear,
+    /// Index 25–49: fear in the market
     Fear,
+    /// Index 50: neutral sentiment
     Neutral,
+    /// Index 51–75: greed in the market
     Greed,
+    /// Index 76–100: extreme greed in the market
     ExtremeGreed,
 }
 
@@ -594,9 +604,13 @@ impl Default for MarketSentimentAggregator {
 /// Overall sentiment for a token
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OverallSentiment {
+    /// Token symbol this sentiment belongs to
     pub token: String,
+    /// Number of bullish signals from different indicators
     pub bullish_signals: u32,
+    /// Number of bearish signals from different indicators
     pub bearish_signals: u32,
+    /// Aggregated sentiment category
     pub category: SentimentCategory,
 }
 

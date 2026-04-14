@@ -63,8 +63,11 @@ impl std::fmt::Display for WebhookEventType {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum WebhookStatus {
+    /// Webhook is active and receiving events
     Active,
+    /// Webhook is paused and not receiving events
     Inactive,
+    /// Webhook has failed too many consecutive deliveries
     Failed,
 }
 
@@ -100,35 +103,55 @@ pub struct UpdateWebhookRequest {
 /// Webhook response
 #[derive(Debug, Serialize)]
 pub struct WebhookResponse {
+    /// Unique webhook ID
     pub id: Uuid,
+    /// ID of the user who owns this webhook
     pub user_id: Uuid,
+    /// Webhook URL (must be HTTPS)
     pub url: String,
+    /// Event types this webhook subscribes to
     pub events: Vec<WebhookEventType>,
+    /// Optional description
     pub description: Option<String>,
+    /// Current webhook status
     pub status: WebhookStatus,
+    /// HMAC secret for signature verification
     pub secret: String,
+    /// Webhook creation timestamp
     pub created_at: DateTime<Utc>,
+    /// Last update timestamp
     pub updated_at: DateTime<Utc>,
 }
 
 /// Webhook delivery response
 #[derive(Debug, Serialize)]
 pub struct WebhookDeliveryResponse {
+    /// Unique delivery ID
     pub id: Uuid,
+    /// ID of the webhook that received this delivery
     pub webhook_id: Uuid,
+    /// Type of event delivered
     pub event_type: WebhookEventType,
+    /// Event payload
     pub payload: serde_json::Value,
+    /// Delivery status (pending, delivered, failed)
     pub status: String,
+    /// HTTP response code from the endpoint
     pub response_code: Option<i32>,
+    /// Number of delivery attempts
     pub attempts: i32,
+    /// Delivery creation timestamp
     pub created_at: DateTime<Utc>,
+    /// Timestamp of successful delivery
     pub delivered_at: Option<DateTime<Utc>>,
 }
 
 /// List webhooks response
 #[derive(Debug, Serialize)]
 pub struct ListWebhooksResponse {
+    /// List of webhooks
     pub webhooks: Vec<WebhookResponse>,
+    /// Total number of webhooks
     pub total: i64,
 }
 
@@ -282,18 +305,22 @@ pub async fn list_webhook_deliveries(
 
 /// Generate webhook secret (HMAC key)
 fn generate_webhook_secret() -> String {
-    use rand::Rng;
+    use rand::RngExt;
     let mut rng = rand::rng();
-    let bytes: Vec<u8> = (0..32).map(|_| rng.random_range(0..256) as u8).collect();
+    let bytes: Vec<u8> = (0..32).map(|_| rng.random_range(0u8..=255u8)).collect();
     hex::encode(bytes)
 }
 
 /// Webhook payload structure
 #[derive(Debug, Serialize)]
 pub struct WebhookPayload {
+    /// Unique event ID
     pub id: Uuid,
+    /// Event type string
     pub event: String,
+    /// Event creation timestamp
     pub created_at: DateTime<Utc>,
+    /// Event-specific data
     pub data: serde_json::Value,
 }
 

@@ -1,13 +1,18 @@
-/// Background job processing system for kaccy-api
-///
-/// This module provides a comprehensive job processing infrastructure including:
-/// - Task queue system
-/// - Job scheduling (cron-like)
-/// - Job retry and failure handling
-/// - Job monitoring and statistics
+//! Background job processing system for kaccy-api
+//!
+//! This module provides a comprehensive job processing infrastructure including:
+//! - Task queue system
+//! - Job scheduling (cron-like)
+//! - Job retry and failure handling
+//! - Job monitoring and statistics
+
+/// Job queue for enqueueing and dequeuing jobs
 pub mod queue;
+/// Job scheduler for recurring/cron-based jobs
 pub mod scheduler;
+/// Job and result type definitions
 pub mod types;
+/// Job worker for executing queued jobs
 pub mod worker;
 
 pub use queue::{JobQueue, JobQueueConfig};

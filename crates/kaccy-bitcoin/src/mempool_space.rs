@@ -407,6 +407,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires live mempool.space network access"]
     async fn test_historical_fees() {
         let client = MempoolSpaceClient::default();
         let historical = client.get_historical_fees(24).await.unwrap();
@@ -429,6 +430,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires live mempool.space network access"]
     async fn test_fee_market_analysis() {
         let client = MempoolSpaceClient::default();
         let analysis = client.analyze_fee_market().await.unwrap();

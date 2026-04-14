@@ -17,12 +17,19 @@ use crate::error::{DbError, Result};
 
 /// Cache key prefixes for namespacing
 pub mod keys {
+    /// Key prefix for user session data.
     pub const USER_SESSION: &str = "session:";
+    /// Key prefix for user profile data.
     pub const USER_PROFILE: &str = "user:";
+    /// Key prefix for token price data.
     pub const TOKEN_PRICE: &str = "price:";
+    /// Key prefix for token metadata.
     pub const TOKEN_META: &str = "token:";
+    /// Key prefix for user balance data.
     pub const USER_BALANCE: &str = "balance:";
+    /// Key prefix for rate limiting counters.
     pub const RATE_LIMIT: &str = "ratelimit:";
+    /// Key prefix for distributed locks.
     pub const LOCK: &str = "lock:";
 }
 
@@ -466,6 +473,7 @@ pub struct CachedRepository<R> {
 }
 
 impl<R> CachedRepository<R> {
+    /// Create a new cached repository wrapping the given repo and cache.
     pub fn new(cache: Arc<RedisCache>, repo: R) -> Self {
         Self { cache, repo }
     }
@@ -484,13 +492,18 @@ impl<R> CachedRepository<R> {
 /// Cache statistics
 #[derive(Debug, Clone, Default, serde::Serialize)]
 pub struct CacheStats {
+    /// Number of successful cache lookups.
     pub hits: u64,
+    /// Number of cache lookups that did not find an entry.
     pub misses: u64,
+    /// Number of values written to the cache.
     pub sets: u64,
+    /// Number of values removed from the cache.
     pub deletes: u64,
 }
 
 impl CacheStats {
+    /// Calculate the cache hit rate as a fraction between 0.0 and 1.0.
     pub fn hit_rate(&self) -> f64 {
         let total = self.hits + self.misses;
         if total == 0 {

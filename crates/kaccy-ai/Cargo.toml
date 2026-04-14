@@ -7,6 +7,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+readme = "README.md"
 description = "AI-powered intelligence for Kaccy Protocol - forecasting, optimization, and insights"
 categories = ["api-bindings", "asynchronous"]
 keywords = ["ai", "machine-learning", "oracle", "fraud-detection", "llm"]

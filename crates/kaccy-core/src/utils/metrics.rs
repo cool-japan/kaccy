@@ -13,21 +13,29 @@ use std::time::{Duration, Instant};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum MetricType {
+    /// Monotonically increasing value
     Counter,
+    /// Value that can increase or decrease
     Gauge,
+    /// Distribution of values in configurable buckets
     Histogram,
+    /// Sliding-window percentile summary
     Summary,
 }
 
 /// Counter metric - monotonically increasing value
 #[derive(Debug)]
 pub struct Counter {
+    /// Atomic counter value
     value: AtomicU64,
+    /// Help text describing what this counter measures
     help: String,
+    /// Label key-value pairs for this metric instance
     labels: HashMap<String, String>,
 }
 
 impl Counter {
+    /// Create a new counter with the given help text
     pub fn new(help: impl Into<String>) -> Self {
         Self {
             value: AtomicU64::new(0),
@@ -36,6 +44,7 @@ impl Counter {
         }
     }
 
+    /// Attach label key-value pairs to this counter
     pub fn with_labels(mut self, labels: HashMap<String, String>) -> Self {
         self.labels = labels;
         self
@@ -65,12 +74,16 @@ impl Counter {
 /// Gauge metric - value that can go up or down
 #[derive(Debug)]
 pub struct Gauge {
+    /// Current gauge value
     value: Arc<RwLock<f64>>,
+    /// Help text describing what this gauge measures
     help: String,
+    /// Label key-value pairs for this metric instance
     labels: HashMap<String, String>,
 }
 
 impl Gauge {
+    /// Create a new gauge with the given help text
     pub fn new(help: impl Into<String>) -> Self {
         Self {
             value: Arc::new(RwLock::new(0.0)),
@@ -79,6 +92,7 @@ impl Gauge {
         }
     }
 
+    /// Attach label key-value pairs to this gauge
     pub fn with_labels(mut self, labels: HashMap<String, String>) -> Self {
         self.labels = labels;
         self
@@ -118,11 +132,17 @@ impl Gauge {
 /// Histogram - tracks distribution of values with configurable buckets
 #[derive(Debug)]
 pub struct Histogram {
+    /// Upper bounds of each histogram bucket
     buckets: Vec<f64>,
+    /// Number of observations in each bucket
     counts: Vec<AtomicU64>,
+    /// Sum of all observed values
     sum: Arc<RwLock<f64>>,
+    /// Total number of observations
     count: AtomicU64,
+    /// Help text describing what this histogram measures
     help: String,
+    /// Label key-value pairs for this metric instance
     labels: HashMap<String, String>,
 }
 
@@ -151,6 +171,7 @@ impl Histogram {
         }
     }
 
+    /// Attach label key-value pairs to this histogram
     pub fn with_labels(mut self, labels: HashMap<String, String>) -> Self {
         self.labels = labels;
         self
@@ -193,31 +214,45 @@ impl Histogram {
     }
 }
 
+/// Snapshot of histogram statistics
 #[derive(Debug, Clone, Serialize)]
 pub struct HistogramStats {
+    /// Sum of all observed values
     pub sum: f64,
+    /// Total number of observations
     pub count: u64,
+    /// Per-bucket observation counts
     pub buckets: Vec<BucketCount>,
 }
 
+/// Count of observations up to an inclusive bucket boundary
 #[derive(Debug, Clone, Serialize)]
 pub struct BucketCount {
-    pub le: f64, // Less than or equal to
+    /// Bucket upper bound (less than or equal to)
+    pub le: f64,
+    /// Cumulative count of observations in this bucket
     pub count: u64,
 }
 
 /// Summary - tracks percentiles of observed values
 #[derive(Debug)]
 pub struct Summary {
+    /// Sliding window of recent observed values
     observations: Arc<RwLock<Vec<f64>>>,
+    /// Maximum age of observations before cleanup
     max_age: Duration,
+    /// Maximum number of observations to retain
     max_observations: usize,
+    /// Help text describing what this summary measures
     help: String,
+    /// Label key-value pairs for this metric instance
     labels: HashMap<String, String>,
+    /// Timestamp of the last cleanup pass
     last_cleanup: Arc<RwLock<Instant>>,
 }
 
 impl Summary {
+    /// Create a new summary with the given help text
     pub fn new(help: impl Into<String>) -> Self {
         Self {
             observations: Arc::new(RwLock::new(Vec::new())),
@@ -229,6 +264,7 @@ impl Summary {
         }
     }
 
+    /// Attach label key-value pairs to this summary
     pub fn with_labels(mut self, labels: HashMap<String, String>) -> Self {
         self.labels = labels;
         self
@@ -294,25 +330,36 @@ impl Summary {
     }
 }
 
+/// Snapshot of summary statistics
 #[derive(Debug, Clone, Serialize)]
 pub struct SummaryStats {
+    /// Total number of observations in the window
     pub count: u64,
+    /// Sum of all observations in the window
     pub sum: f64,
-    pub p50: f64, // Median
+    /// 50th percentile (median)
+    pub p50: f64,
+    /// 90th percentile
     pub p90: f64,
+    /// 99th percentile
     pub p99: f64,
 }
 
 /// Metrics registry
 #[derive(Debug, Default)]
 pub struct MetricsRegistry {
+    /// Registered counters by name
     counters: Arc<RwLock<HashMap<String, Arc<Counter>>>>,
+    /// Registered gauges by name
     gauges: Arc<RwLock<HashMap<String, Arc<Gauge>>>>,
+    /// Registered histograms by name
     histograms: Arc<RwLock<HashMap<String, Arc<Histogram>>>>,
+    /// Registered summaries by name
     summaries: Arc<RwLock<HashMap<String, Arc<Summary>>>>,
 }
 
 impl MetricsRegistry {
+    /// Create a new empty metrics registry
     pub fn new() -> Self {
         Self::default()
     }

@@ -13,9 +13,11 @@ use std::time::{Duration, SystemTime};
 /// Allows different curve types or parameters at different supply ranges
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultiSegmentCurve {
+    /// Ordered list of contiguous curve segments
     pub segments: Vec<CurveSegment>,
 }
 
+/// A single supply-range segment within a multi-segment curve
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CurveSegment {
     /// Start of supply range for this segment (inclusive)
@@ -28,15 +30,33 @@ pub struct CurveSegment {
     pub base_price: Decimal,
 }
 
+/// Bonding curve formula for a single segment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SegmentCurveType {
-    Linear { slope: Decimal },
-    Exponential { rate: Decimal },
-    Logarithmic { scale: Decimal },
-    SquareRoot { coefficient: Decimal },
+    /// P = base_price + slope × supply
+    Linear {
+        /// Price increase per unit of supply
+        slope: Decimal,
+    },
+    /// P = base_price × e^(rate × supply)
+    Exponential {
+        /// Exponential growth rate
+        rate: Decimal,
+    },
+    /// P = base_price + scale × ln(1 + supply)
+    Logarithmic {
+        /// Logarithmic scale factor
+        scale: Decimal,
+    },
+    /// P = base_price + coefficient × sqrt(supply)
+    SquareRoot {
+        /// Square-root scale coefficient
+        coefficient: Decimal,
+    },
 }
 
 impl MultiSegmentCurve {
+    /// Create a new multi-segment curve, validating that segments are contiguous
     pub fn new(segments: Vec<CurveSegment>) -> Result<Self, CoreError> {
         if segments.is_empty() {
             return Err(CoreError::Validation(
@@ -159,63 +179,104 @@ impl MultiSegmentCurve {
 /// Allows transitioning between different curve types based on conditions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CurveSwitchingManager {
+    /// ID of the currently active curve
     pub current_curve_id: String,
+    /// All curves that can be activated
     pub available_curves: Vec<NamedCurve>,
+    /// Ordered rules that trigger automatic curve switches
     pub switching_rules: Vec<SwitchingRule>,
+    /// Chronological log of past curve switches
     pub switch_history: Vec<SwitchEvent>,
 }
 
+/// A bonding curve with a human-readable identifier
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NamedCurve {
+    /// Unique string identifier for this curve
     pub curve_id: String,
+    /// Mathematical configuration of the curve
     pub curve_config: CurveConfig,
 }
 
+/// Bonding curve configuration variants
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CurveConfig {
+    /// Linear bonding curve
     Linear {
+        /// Price slope per unit supply
         slope: Decimal,
+        /// Price at zero supply
         base_price: Decimal,
     },
+    /// Exponential bonding curve
     Exponential {
+        /// Growth rate exponent
         rate: Decimal,
+        /// Price at zero supply
         base_price: Decimal,
     },
+    /// S-shaped sigmoid bonding curve
     Sigmoid {
+        /// Supply at which the curve is steepest
         midpoint: Decimal,
+        /// Steepness of the S-curve transition
         steepness: Decimal,
     },
 }
 
+/// A rule that triggers a curve switch when a condition is met
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SwitchingRule {
+    /// Unique identifier of the rule
     pub rule_id: String,
+    /// Curve that must be active for this rule to fire
     pub from_curve_id: String,
+    /// Curve to switch to when the condition is met
     pub to_curve_id: String,
+    /// Condition that triggers the switch
     pub condition: SwitchCondition,
 }
 
+/// Condition that triggers an automated curve switch
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SwitchCondition {
     /// Switch when supply reaches threshold
-    SupplyThreshold { threshold: Decimal },
+    SupplyThreshold {
+        /// Supply level that triggers the switch.
+        threshold: Decimal,
+    },
     /// Switch when price reaches threshold
-    PriceThreshold { threshold: Decimal },
+    PriceThreshold {
+        /// Price level that triggers the switch.
+        threshold: Decimal,
+    },
     /// Switch when volatility exceeds threshold
-    VolatilityThreshold { threshold: Decimal },
+    VolatilityThreshold {
+        /// Volatility level that triggers the switch.
+        threshold: Decimal,
+    },
     /// Switch after time period
-    TimeElapsed { duration: Duration },
+    TimeElapsed {
+        /// Duration to wait before switching.
+        duration: Duration,
+    },
 }
 
+/// Record of a completed curve switch
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SwitchEvent {
+    /// When the switch occurred
     pub timestamp: SystemTime,
+    /// Curve that was active before the switch
     pub from_curve_id: String,
+    /// Curve that became active after the switch
     pub to_curve_id: String,
+    /// Description of the condition that triggered the switch
     pub trigger_reason: String,
 }
 
 impl CurveSwitchingManager {
+    /// Create a new curve switching manager
     pub fn new(
         current_curve_id: String,
         available_curves: Vec<NamedCurve>,
@@ -280,23 +341,35 @@ impl CurveSwitchingManager {
 /// Allows curve parameters to evolve over time
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParameterEvolution {
+    /// Name of the parameter being evolved
     pub parameter_name: String,
+    /// Mathematical profile of the evolution
     pub evolution_type: EvolutionType,
+    /// Parameter value at the start of the evolution
     pub start_value: Decimal,
+    /// Parameter value at the end of the evolution
     pub end_value: Decimal,
+    /// Wall-clock time when the evolution began
     pub start_time: SystemTime,
+    /// Total duration of the evolution from start to end
     pub duration: Duration,
 }
 
+/// Mathematical curve describing how a parameter evolves over time
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EvolutionType {
+    /// Linear interpolation from start to end
     Linear,
+    /// Exponential growth/decay from start to end
     Exponential,
+    /// Logarithmic progression from start to end
     Logarithmic,
+    /// S-shaped sigmoid transition from start to end
     Sigmoid,
 }
 
 impl ParameterEvolution {
+    /// Create a new parameter evolution starting now
     pub fn new(
         parameter_name: String,
         evolution_type: EvolutionType,

@@ -24,20 +24,30 @@ use crate::maintenance::MaintenanceService;
 
 /// Orchestrates all reputation system services (Phases 0-6)
 pub struct ReputationOrchestrator {
+    /// Core reputation scoring engine.
     pub engine: ReputationEngine,
+    /// Service for minting Soulbound Tokens.
     pub sbt_service: SBTService,
+    /// Service for AI-assisted quality evaluation and fraud detection.
     pub ai_service: AIScoringService,
+    /// Service for managing user-raised disputes.
     pub dispute_service: DisputeService,
+    /// Service for importing and exporting reputation data.
     pub portability_service: PortabilityService,
-    // Phase 6 services
+    /// Service for system-wide analytics and insights.
     pub analytics_service: AnalyticsService,
+    /// Service for audit trail management.
     pub audit_service: AuditService,
+    /// Service for bulk/batch reputation operations.
     pub batch_service: BatchService,
+    /// Service for leaderboards and achievement rankings.
     pub leaderboard_service: LeaderboardService,
+    /// Service for automated periodic maintenance tasks.
     pub maintenance_service: MaintenanceService,
 }
 
 impl ReputationOrchestrator {
+    /// Create a new [`ReputationOrchestrator`] initialising all services with the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self {
             engine: ReputationEngine::new(pool.clone()),
@@ -664,63 +674,96 @@ impl ReputationOrchestrator {
 /// Complete reputation profile for a user
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CompleteReputationProfile {
+    /// Current reputation score.
     pub score: rust_decimal::Decimal,
+    /// Current reputation tier.
     pub tier: ReputationTier,
+    /// Whether the user has an SBT.
     pub has_sbt: bool,
+    /// Whether the SBT has been minted on-chain.
     pub sbt_minted: bool,
+    /// Number of verified external reputation sources.
     pub verified_external_sources: usize,
+    /// Number of active fraud flags on this account.
     pub fraud_flags: usize,
+    /// Whether the account has no fraud flags.
     pub clean_record: bool,
 }
 
 /// System health check report combining maintenance and analytics
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SystemHealthReport {
+    /// Whether the database connection is healthy.
     pub database_healthy: bool,
+    /// Total number of registered users.
     pub total_users: i64,
+    /// Number of active users.
     pub active_users: i64,
+    /// Number of detected score anomalies.
     pub anomalies_count: usize,
+    /// Number of users with critically low scores.
     pub low_score_users_count: usize,
+    /// Detailed health check report from the maintenance service.
     pub health_report: crate::maintenance::HealthCheckReport,
 }
 
 /// Daily maintenance operations report
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DailyMaintenanceReport {
+    /// Number of users who had time-decay applied.
     pub users_decayed: i64,
+    /// Number of commitments marked as expired.
     pub commitments_expired: i64,
+    /// Number of scores recalculated from events.
     pub scores_recalculated: i64,
+    /// Timestamp when the maintenance run completed.
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 /// Comprehensive analytics dashboard data
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AnalyticsDashboard {
+    /// System-wide statistics.
     pub system_stats: crate::analytics::SystemStats,
+    /// User and commitment growth metrics.
     pub growth_metrics: crate::analytics::GrowthMetrics,
+    /// Top-ranked users.
     pub top_performers: Vec<crate::analytics::UserRanking>,
+    /// Distribution of scores across ranges.
     pub score_distribution: crate::analytics::ScoreDistribution,
+    /// Global leaderboard snapshot.
     pub global_leaderboard: crate::leaderboard::Leaderboard,
 }
 
 /// User activity report combining audit trail and analytics
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UserActivityReport {
+    /// User these activity metrics belong to.
     pub user_id: Uuid,
+    /// Total number of audit events recorded for this user.
     pub audit_events_count: usize,
+    /// Fraction of commitments that were fulfilled (0.0–1.0).
     pub commitment_success_rate: f64,
+    /// Total number of commitments created by this user.
     pub total_commitments: i32,
+    /// User's global rank position.
     pub rank: i32,
+    /// Number of achievements earned by this user.
     pub achievements_count: usize,
+    /// Length of the activity window analysed in days.
     pub activity_period_days: i32,
 }
 
 /// Bulk verification report for admin operations
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct BulkVerificationReport {
+    /// Total number of commitments processed.
     pub total_processed: usize,
+    /// Number of commitments successfully verified.
     pub verified_count: usize,
+    /// Number of commitments that could not be verified.
     pub failed_count: usize,
+    /// Administrator who initiated the bulk operation.
     pub admin_id: Uuid,
 }
 
@@ -731,22 +774,34 @@ pub struct BulkVerificationReport {
 /// User onboarding report
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UserOnboardingReport {
+    /// Newly onboarded user.
     pub user_id: Uuid,
+    /// Score assigned at the time of onboarding.
     pub initial_score: rust_decimal::Decimal,
+    /// Tier assigned at the time of onboarding.
     pub initial_tier: ReputationTier,
+    /// Whether an SBT was created during onboarding.
     pub sbt_created: bool,
+    /// User's rank immediately after onboarding.
     pub initial_rank: i32,
+    /// Total number of users at the time of onboarding.
     pub total_users: i32,
+    /// Number of baseline commitments created during onboarding.
     pub baseline_commitments: i32,
+    /// Timestamp when onboarding completed.
     pub onboarded_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Crisis type enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum CrisisType {
+    /// A large number of user scores show anomalous values.
     MassScoreAnomaly,
+    /// Database integrity has been compromised.
     DatabaseCorruption,
+    /// A mass fraud attempt has been detected.
     MassFraudDetection,
+    /// The system is under excessive load.
     SystemOverload,
 }
 
@@ -783,9 +838,13 @@ impl std::str::FromStr for CrisisType {
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
 pub enum CrisisSeverity {
+    /// Minor issue with limited impact.
     Low,
+    /// Moderate issue requiring monitoring.
     Medium,
+    /// Severe issue requiring prompt action.
     High,
+    /// System-threatening issue requiring immediate response.
     Critical,
 }
 
@@ -820,34 +879,53 @@ impl std::str::FromStr for CrisisSeverity {
 /// Crisis response report
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CrisisResponse {
+    /// Type of crisis that was handled.
     pub crisis_type: CrisisType,
+    /// List of actions taken during crisis response.
     pub actions_taken: Vec<String>,
+    /// Number of users affected by the crisis.
     pub affected_users: i32,
+    /// Assessed severity of the crisis.
     pub severity: CrisisSeverity,
+    /// Timestamp when the crisis response was completed.
     pub handled_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Performance metrics for monitoring
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PerformanceMetrics {
+    /// Total number of registered users.
     pub total_users: i32,
+    /// Number of active users.
     pub active_users: i32,
+    /// Whether the database connection is healthy.
     pub database_healthy: bool,
+    /// Number of score anomalies detected.
     pub score_anomalies: i32,
+    /// Number of commitments stuck in a transitional state.
     pub stuck_commitments: i32,
+    /// Number of orphaned records detected.
     pub orphaned_records: i32,
+    /// Ratio of successful operations (0.0–1.0).
     pub processing_efficiency: f64,
+    /// System-wide average reputation score.
     pub average_score: rust_decimal::Decimal,
+    /// Time taken to collect these metrics in milliseconds.
     pub collection_duration_ms: i64,
+    /// Timestamp when these metrics were collected.
     pub collected_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Intervention type enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum InterventionType {
+    /// Force-expire overdue commitments.
     ExpireCommitments,
+    /// Identify and correct score anomalies.
     FixScoreAnomalies,
+    /// Apply time-based score decay.
     ApplyTimeDecay,
+    /// Rebuild the historical tier transition table.
     RebuildTierHistory,
 }
 
@@ -882,41 +960,67 @@ impl std::str::FromStr for InterventionType {
 /// Individual intervention action
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct InterventionAction {
+    /// Type of intervention performed.
     pub action_type: InterventionType,
+    /// Human-readable description of the action.
     pub description: String,
+    /// Number of users affected by this action.
     pub users_affected: i32,
+    /// Whether the action completed without error.
     pub success: bool,
 }
 
 /// Intervention report
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct InterventionReport {
+    /// List of individual intervention actions taken.
     pub interventions: Vec<InterventionAction>,
+    /// Total number of users affected across all interventions.
     pub total_users_affected: i32,
+    /// Number of distinct intervention actions executed.
     pub interventions_count: usize,
+    /// Timestamp when the intervention batch was executed.
     pub executed_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Comprehensive user profile with all data
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ComprehensiveUserProfile {
+    /// User identifier.
     pub user_id: Uuid,
+    /// Current reputation score.
     pub score: rust_decimal::Decimal,
+    /// Current reputation tier.
     pub tier: ReputationTier,
+    /// Global leaderboard rank.
     pub rank: i32,
+    /// Percentile among all users (0.0–100.0).
     pub percentile: f64,
+    /// Total number of registered users.
     pub total_users: i32,
+    /// Whether the user has an SBT.
     pub has_sbt: bool,
+    /// Whether the SBT has been minted on-chain.
     pub sbt_minted: bool,
+    /// Number of verified external reputation sources.
     pub verified_external_sources: usize,
+    /// Number of active fraud flags.
     pub fraud_flags: usize,
+    /// Whether the account has no active fraud flags.
     pub clean_record: bool,
+    /// Total commitments created by this user.
     pub total_commitments: i32,
+    /// Number of commitments verified as fulfilled.
     pub verified_commitments: i32,
+    /// Number of commitments that failed.
     pub failed_commitments: i32,
+    /// Number of commitments pending verification.
     pub pending_commitments: i32,
+    /// Fraction of commitments that were verified (0.0–1.0).
     pub success_rate: f64,
+    /// Number of achievements earned.
     pub achievements_count: usize,
+    /// Number of recent activity events.
     pub recent_activity_count: usize,
 }
 

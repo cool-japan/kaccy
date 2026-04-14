@@ -61,34 +61,53 @@ impl QueryLogConfig {
 /// Record of a slow query
 #[derive(Debug, Clone, Serialize)]
 pub struct SlowQueryRecord {
+    /// Hash identifying the normalized query pattern.
     pub query_hash: u64,
+    /// Truncated preview of the query SQL.
     pub query_preview: String,
+    /// Execution duration in milliseconds.
     pub duration_ms: u64,
+    /// Timestamp when the slow query was executed.
     pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Optional source location (file/line) where the query was issued.
     pub location: Option<String>,
 }
 
 /// Statistics for a specific query pattern
 #[derive(Debug, Clone, Serialize)]
 pub struct QueryStats {
+    /// Hash identifying the normalized query pattern.
     pub query_hash: u64,
+    /// Truncated preview of the query SQL.
     pub query_preview: String,
+    /// Total number of times this query was executed.
     pub call_count: u64,
+    /// Sum of all execution durations in milliseconds.
     pub total_duration_ms: u64,
+    /// Average execution duration in milliseconds.
     pub avg_duration_ms: f64,
+    /// Maximum recorded execution duration in milliseconds.
     pub max_duration_ms: u64,
+    /// Minimum recorded execution duration in milliseconds.
     pub min_duration_ms: u64,
+    /// Number of executions that exceeded the slow query threshold.
     pub slow_count: u64,
 }
 
 /// Aggregate statistics
 #[derive(Debug, Clone, Serialize)]
 pub struct AggregateStats {
+    /// Total number of queries executed since startup.
     pub total_queries: u64,
+    /// Total number of queries that exceeded the slow-query threshold.
     pub total_slow_queries: u64,
+    /// Cumulative execution time of all queries in milliseconds.
     pub total_duration_ms: u64,
+    /// Mean query duration in milliseconds.
     pub avg_duration_ms: f64,
+    /// Observed query throughput (queries per second).
     pub queries_per_second: f64,
+    /// Number of seconds the logger has been running.
     pub uptime_seconds: u64,
 }
 
@@ -114,6 +133,7 @@ struct QueryStatsInner {
 }
 
 impl QueryLogger {
+    /// Create a new `QueryLogger` with the provided configuration.
     pub fn new(config: QueryLogConfig) -> Self {
         Self {
             config,
@@ -126,6 +146,7 @@ impl QueryLogger {
         }
     }
 
+    /// Create a new `QueryLogger` using default configuration values.
     pub fn with_default_config() -> Self {
         Self::new(QueryLogConfig::default())
     }
@@ -302,6 +323,7 @@ pub struct QueryTimer<'a> {
 }
 
 impl<'a> QueryTimer<'a> {
+    /// Create a new `QueryTimer` that will record timing to the given logger.
     pub fn new(logger: &'a QueryLogger, query: impl Into<String>) -> Self {
         Self {
             logger,
@@ -311,6 +333,7 @@ impl<'a> QueryTimer<'a> {
         }
     }
 
+    /// Attach a source location label to be included in the log entry.
     pub fn with_location(mut self, location: impl Into<String>) -> Self {
         self.location = Some(location.into());
         self

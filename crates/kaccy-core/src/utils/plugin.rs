@@ -1,4 +1,4 @@
-// Plugin and extension system for custom indicators and extensibility
+//! Plugin and extension system for custom indicators and extensibility
 use crate::error::CoreError;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -8,8 +8,11 @@ use uuid::Uuid;
 /// Plugin API version for compatibility checking
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct ApiVersion {
+    /// Breaking-change version component
     pub major: u32,
+    /// Backwards-compatible feature version component
     pub minor: u32,
+    /// Bug-fix version component
     pub patch: u32,
 }
 
@@ -32,27 +35,44 @@ impl ApiVersion {
 /// Plugin metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginMetadata {
+    /// Unique identifier of the plugin
     pub id: Uuid,
+    /// Human-readable plugin name
     pub name: String,
+    /// Plugin version string (e.g. "1.2.3")
     pub version: String,
+    /// Plugin author or organisation
     pub author: String,
+    /// Short description of the plugin's functionality
     pub description: String,
+    /// Minimum API version required by this plugin
     pub api_version: ApiVersion,
+    /// Permissions this plugin requires to operate
     pub permissions: Vec<PluginPermission>,
+    /// Names of other plugins this plugin depends on
     pub dependencies: Vec<String>,
+    /// When the plugin was first registered
     pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Whether the plugin has been verified by the marketplace
     pub verified: bool,
 }
 
 /// Plugin permissions
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PluginPermission {
+    /// Permission to read market data
     ReadMarketData,
+    /// Permission to read user profile data
     ReadUserData,
+    /// Permission to submit trades
     ExecuteTrades,
+    /// Permission to access price feeds
     AccessPriceData,
+    /// Permission to register custom indicators
     CreateIndicators,
+    /// Permission to make external network requests
     NetworkAccess,
+    /// Permission to read or write local files
     FileSystemAccess,
 }
 
@@ -100,19 +120,28 @@ impl PluginMetadata {
 /// Plugin execution sandbox
 #[derive(Debug, Clone)]
 pub struct PluginSandbox {
+    /// Plugin running inside this sandbox
     pub plugin_id: Uuid,
+    /// Permissions granted to the sandboxed plugin
     pub allowed_permissions: Vec<PluginPermission>,
+    /// Resource limits enforced for this plugin
     pub resource_limits: ResourceLimits,
+    /// Total number of times the plugin has been executed
     pub execution_count: u64,
+    /// Timestamp of the most recent execution
     pub last_execution: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 /// Resource limits for plugin execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceLimits {
+    /// Maximum heap memory the plugin may consume, in megabytes
     pub max_memory_mb: u64,
+    /// Maximum CPU wall-clock time allowed per execution, in milliseconds
     pub max_cpu_time_ms: u64,
+    /// Maximum outbound network calls per execution
     pub max_network_calls: u32,
+    /// Maximum file read/write operations per execution
     pub max_file_operations: u32,
 }
 
@@ -159,7 +188,9 @@ impl PluginSandbox {
 /// Plugin registry for discovery and management
 #[derive(Debug, Clone)]
 pub struct PluginRegistry {
+    /// All registered plugins indexed by their UUID
     plugins: HashMap<Uuid, PluginMetadata>,
+    /// The API version this registry enforces for compatibility checks
     current_api_version: ApiVersion,
 }
 
@@ -240,22 +271,36 @@ impl PluginRegistry {
 /// Plugin marketplace listing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketplaceListing {
+    /// Unique identifier of this listing
     pub id: Uuid,
+    /// Metadata of the plugin being listed
     pub plugin_metadata: PluginMetadata,
+    /// Listed price
     pub price: Decimal,
+    /// Currency used for the price (e.g. "BTC")
     pub currency: String,
+    /// Total number of downloads
     pub downloads: u64,
+    /// Average user rating (0.0 to 5.0)
     pub rating: Decimal,
+    /// Total number of user reviews
     pub reviews: u32,
+    /// Current lifecycle status of the listing
     pub status: PluginListingStatus,
+    /// When this listing was created
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
+/// Marketplace listing status for a plugin
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PluginListingStatus {
+    /// Listing is live and available for download
     Active,
+    /// Listing is awaiting review
     Pending,
+    /// Listing has been temporarily suspended
     Suspended,
+    /// Listing has been permanently removed
     Removed,
 }
 
@@ -301,56 +346,87 @@ impl MarketplaceListing {
 /// Custom technical indicator
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CustomIndicator {
+    /// Unique identifier of the indicator
     pub id: Uuid,
+    /// Human-readable indicator name (e.g. "SMA", "RSI")
     pub name: String,
+    /// Short description of what the indicator measures
     pub description: String,
+    /// User who created this indicator
     pub creator_id: Uuid,
+    /// Mathematical formula used to compute the indicator
     pub formula: IndicatorFormula,
+    /// User-configurable parameters keyed by parameter name
     pub parameters: HashMap<String, IndicatorParameter>,
+    /// When the indicator was created
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Indicator formula definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum IndicatorFormula {
+    /// Simple expression-based formula
     Simple {
+        /// Mathematical expression string
         expression: String,
     },
+    /// Moving average formula
     MovingAverage {
+        /// Number of periods
         period: u32,
+        /// Weighting scheme
         weight_type: WeightType,
     },
+    /// Composite formula combining multiple indicators
     Composite {
+        /// UUIDs of the base indicators to combine
         base_indicators: Vec<Uuid>,
+        /// Combination expression
         combination: String,
     },
+    /// Arbitrary custom code formula
     Custom {
+        /// Source code string to execute in sandbox
         code: String,
     },
 }
 
+/// Weight scheme for moving average calculations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum WeightType {
+    /// Equal weight for all periods (SMA)
     Equal,
+    /// Exponentially decreasing weight (EMA)
     Exponential,
+    /// Linearly increasing weight (WMA)
     Weighted,
 }
 
 /// Indicator parameter
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndicatorParameter {
+    /// Parameter name
     pub name: String,
+    /// Data type of the parameter value
     pub param_type: ParameterType,
+    /// String representation of the default value
     pub default_value: String,
+    /// Minimum allowable value (inclusive)
     pub min_value: Option<Decimal>,
+    /// Maximum allowable value (inclusive)
     pub max_value: Option<Decimal>,
 }
 
+/// Data type of an indicator parameter
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ParameterType {
+    /// 32-bit integer value
     Integer,
+    /// Arbitrary-precision decimal value
     Decimal,
+    /// UTF-8 string value
     String,
+    /// Boolean flag
     Boolean,
 }
 
@@ -464,20 +540,32 @@ impl CustomIndicator {
 /// Indicator backtesting framework
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndicatorBacktest {
+    /// Indicator that was backtested
     pub indicator_id: Uuid,
+    /// Start of the backtesting period
     pub start_date: chrono::DateTime<chrono::Utc>,
+    /// End of the backtesting period
     pub end_date: chrono::DateTime<chrono::Utc>,
+    /// Aggregated performance results
     pub results: BacktestResults,
 }
 
+/// Aggregated performance statistics for a backtest run
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BacktestResults {
+    /// Total number of signals generated
     pub total_signals: u32,
+    /// Number of signals that produced a positive return
     pub profitable_signals: u32,
+    /// Win rate (profitable / total)
     pub win_rate: Decimal,
+    /// Average profit on winning signals
     pub avg_profit: Decimal,
+    /// Average loss on losing signals
     pub avg_loss: Decimal,
+    /// Maximum peak-to-trough drawdown observed
     pub max_drawdown: Decimal,
+    /// Sharpe ratio of the strategy
     pub sharpe_ratio: Decimal,
 }
 
@@ -533,27 +621,45 @@ impl Default for BacktestResults {
     }
 }
 
+/// Single signal result from a backtest run
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignalResult {
+    /// Timestamp of the signal
     pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Profit or loss realised from acting on this signal
     pub profit: Decimal,
 }
 
 /// Indicator composition for combining multiple indicators
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndicatorComposition {
+    /// Unique identifier of this composition
     pub id: Uuid,
+    /// Human-readable name for the combined indicator
     pub name: String,
+    /// IDs of the constituent indicators
     pub base_indicators: Vec<Uuid>,
+    /// Rule used to combine the base indicator signals
     pub composition_logic: CompositionLogic,
 }
 
+/// Logic for combining multiple indicator signals
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CompositionLogic {
-    And,                                // All indicators must agree
-    Or,                                 // Any indicator triggers
-    Weighted { weights: Vec<Decimal> }, // Weighted combination
-    Custom { expression: String },
+    /// All indicators must agree for a signal
+    And,
+    /// Any single indicator triggers a signal
+    Or,
+    /// Weighted combination of indicator signals
+    Weighted {
+        /// Per-indicator weights (aligned with base_indicators)
+        weights: Vec<Decimal>,
+    },
+    /// Custom expression-based combination
+    Custom {
+        /// Expression string for signal combination
+        expression: String,
+    },
 }
 
 impl IndicatorComposition {

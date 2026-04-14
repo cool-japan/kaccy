@@ -36,6 +36,7 @@
 pub mod access_control;
 pub mod ai_evaluator;
 pub mod batch;
+pub mod custom_endpoint;
 pub mod dashboard;
 pub mod document;
 pub mod error;
@@ -63,8 +64,8 @@ pub mod utils;
 pub mod verifier;
 
 pub use access_control::{
-    AccessControlManager, AccessTier, AiFeature, CustomAgentConfig, FeatureQuota, TierConfig,
-    TokenHolder,
+    AccessControlManager, AccessTier, AiFeature, CustomAgentConfig, FeatureQuota,
+    IssuerPersonalizationRef, TierConfig, TokenHolder,
 };
 pub use ai_evaluator::{
     AiCommitmentVerifier, AiEvaluator, AiFraudDetector, EvaluatorConfig, FraudCheckRequest,
@@ -72,6 +73,10 @@ pub use ai_evaluator::{
 };
 pub use batch::{
     BatchCodeEvaluator, BatchCommitmentVerifier, BatchConfig, BatchFraudDetector, BatchResult,
+};
+pub use custom_endpoint::{
+    CustomEndpointAuth, CustomEndpointClient, CustomEndpointConfig, CustomEndpointError,
+    CustomEndpointRegistry, EndpointRequestFormat, IssuerPersonalization, ResponseStyle,
 };
 pub use dashboard::{
     ComponentHealth, DashboardMetrics, GrafanaDataPoint, HealthCheckStatus, MetricType,

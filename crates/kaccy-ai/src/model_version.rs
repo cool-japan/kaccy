@@ -427,7 +427,9 @@ impl ModelRegistry {
 /// Comparison between two model versions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VersionComparison {
+    /// First version being compared.
     pub version1: ModelVersion,
+    /// Second version being compared.
     pub version2: ModelVersion,
     /// Accuracy difference (version1 - version2)
     pub accuracy_diff: f64,

@@ -35,27 +35,39 @@ type CandlestickKey = (Uuid, CandlestickInterval);
 /// Order book snapshot for initial synchronization
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrderBookSnapshot {
+    /// Token this snapshot belongs to
     pub token_id: Uuid,
+    /// Snapshot timestamp in milliseconds since UNIX epoch
     pub timestamp: u64,
+    /// Monotonically increasing sequence number
     pub sequence_number: u64,
+    /// Bid price levels ordered best-to-worst
     pub bids: Vec<PriceLevel>,
+    /// Ask price levels ordered best-to-worst
     pub asks: Vec<PriceLevel>,
 }
 
 /// Price level in the order book
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PriceLevel {
+    /// Price at this level
     pub price: Decimal,
+    /// Total quantity resting at this price
     pub quantity: Decimal,
+    /// Number of distinct orders at this price
     pub order_count: usize,
 }
 
 /// Order book delta update (incremental changes)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrderBookDelta {
+    /// Token this delta belongs to
     pub token_id: Uuid,
+    /// Delta timestamp in milliseconds since UNIX epoch
     pub timestamp: u64,
+    /// Monotonically increasing sequence number
     pub sequence_number: u64,
+    /// List of individual price-level changes
     pub changes: Vec<OrderBookChange>,
 }
 
@@ -64,72 +76,112 @@ pub struct OrderBookDelta {
 pub enum OrderBookChange {
     /// Add or update a price level
     Upsert {
+        /// Side of the order book (bid or ask)
         side: OrderSide,
+        /// Price level being upserted
         price: Decimal,
+        /// New total quantity at this price level
         quantity: Decimal,
+        /// New number of orders at this price level
         order_count: usize,
     },
     /// Remove a price level (quantity became zero)
-    Remove { side: OrderSide, price: Decimal },
+    Remove {
+        /// Side of the order book (bid or ask)
+        side: OrderSide,
+        /// Price level being removed
+        price: Decimal,
+    },
 }
 
 /// Trade event for market data streaming
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeEvent {
+    /// Unique identifier of the trade
     pub trade_id: Uuid,
+    /// Token that was traded
     pub token_id: Uuid,
+    /// Trade timestamp in milliseconds since UNIX epoch
     pub timestamp: u64,
+    /// Execution price
     pub price: Decimal,
+    /// Traded quantity
     pub quantity: Decimal,
+    /// Side of the taker order
     pub side: OrderSide,
+    /// Whether the order was a maker (resting) order
     pub is_maker: bool,
 }
 
 /// Ticker update (24h statistics)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TickerUpdate {
+    /// Token this ticker belongs to
     pub token_id: Uuid,
+    /// Ticker timestamp in milliseconds since UNIX epoch
     pub timestamp: u64,
+    /// Last traded price
     pub last_price: Decimal,
+    /// 24-hour high price
     pub high_24h: Decimal,
+    /// 24-hour low price
     pub low_24h: Decimal,
+    /// 24-hour trading volume
     pub volume_24h: Decimal,
+    /// Absolute price change over 24 hours
     pub price_change_24h: Decimal,
+    /// Percentage price change over 24 hours
     pub price_change_percent_24h: Decimal,
 }
 
 /// OHLCV candlestick update
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CandlestickUpdate {
+    /// Token this candlestick belongs to
     pub token_id: Uuid,
+    /// Candlestick time interval
     pub interval: CandlestickInterval,
+    /// Candle open timestamp in milliseconds since UNIX epoch
     pub timestamp: u64,
+    /// Opening price
     pub open: Decimal,
+    /// Highest price within the interval
     pub high: Decimal,
+    /// Lowest price within the interval
     pub low: Decimal,
+    /// Closing price (or current price if not yet closed)
     pub close: Decimal,
+    /// Trading volume within the interval
     pub volume: Decimal,
+    /// Whether this candle is finalised (interval has closed)
     pub is_closed: bool,
 }
 
 /// Candlestick interval
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum CandlestickInterval {
+    /// 1-minute candlestick
     #[serde(rename = "1m")]
     OneMinute,
+    /// 5-minute candlestick
     #[serde(rename = "5m")]
     FiveMinutes,
+    /// 15-minute candlestick
     #[serde(rename = "15m")]
     FifteenMinutes,
+    /// 1-hour candlestick
     #[serde(rename = "1h")]
     OneHour,
+    /// 4-hour candlestick
     #[serde(rename = "4h")]
     FourHours,
+    /// 1-day candlestick
     #[serde(rename = "1d")]
     OneDay,
 }
 
 impl CandlestickInterval {
+    /// Return the wall-clock duration corresponding to this interval
     pub fn duration(&self) -> Duration {
         match self {
             Self::OneMinute => Duration::from_secs(60),
@@ -145,46 +197,72 @@ impl CandlestickInterval {
 /// User position update
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PositionUpdate {
+    /// User who holds this position
     pub user_id: Uuid,
+    /// Token of the position
     pub token_id: Uuid,
+    /// Update timestamp in milliseconds since UNIX epoch
     pub timestamp: u64,
+    /// Current position size
     pub quantity: Decimal,
+    /// Volume-weighted average entry price
     pub average_price: Decimal,
+    /// Unrealised profit/loss at current mark price
     pub unrealized_pnl: Decimal,
+    /// Realised profit/loss from closed trades
     pub realized_pnl: Decimal,
 }
 
 /// Order status update
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrderUpdate {
+    /// Unique identifier of the order
     pub order_id: Uuid,
+    /// User who placed the order
     pub user_id: Uuid,
+    /// Token being traded
     pub token_id: Uuid,
+    /// Update timestamp in milliseconds since UNIX epoch
     pub timestamp: u64,
+    /// Current order status
     pub status: OrderStatus,
+    /// Quantity already filled
     pub filled_quantity: Decimal,
+    /// Quantity still open
     pub remaining_quantity: Decimal,
 }
 
-/// Order status
+/// Order lifecycle status
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum OrderStatus {
+    /// Order submitted, not yet matched
     Pending,
+    /// Order partially filled
     PartiallyFilled,
+    /// Order fully filled
     Filled,
+    /// Order cancelled by user
     Cancelled,
+    /// Order expired without being filled
     Expired,
+    /// Order rejected by the engine
     Rejected,
 }
 
 /// Balance update
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BalanceUpdate {
+    /// User whose balance changed
     pub user_id: Uuid,
+    /// Update timestamp in milliseconds since UNIX epoch
     pub timestamp: u64,
+    /// Currency or asset symbol
     pub currency: String,
+    /// Available (spendable) balance
     pub available: Decimal,
+    /// Reserved balance locked in open orders
     pub reserved: Decimal,
+    /// Total balance (available + reserved)
     pub total: Decimal,
 }
 
@@ -209,15 +287,25 @@ pub enum StreamMessage {
     /// Balance update
     Balance(BalanceUpdate),
     /// Heartbeat (keep-alive)
-    Heartbeat { timestamp: u64 },
+    Heartbeat {
+        /// Heartbeat timestamp in milliseconds since UNIX epoch
+        timestamp: u64,
+    },
     /// Error message
-    Error { code: String, message: String },
+    Error {
+        /// Machine-readable error code
+        code: String,
+        /// Human-readable error message
+        message: String,
+    },
 }
 
 /// Subscription request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubscriptionRequest {
+    /// Channel to subscribe to
     pub channel: StreamChannel,
+    /// Optional filters to apply to the stream
     pub filters: HashMap<String, String>,
 }
 
@@ -226,35 +314,61 @@ pub struct SubscriptionRequest {
 #[serde(tag = "channel", rename_all = "snake_case")]
 pub enum StreamChannel {
     /// Order book updates for a specific token
-    OrderBook { token_id: Uuid },
+    OrderBook {
+        /// Token to stream order book updates for
+        token_id: Uuid,
+    },
     /// Trade feed for a specific token
-    Trades { token_id: Uuid },
+    Trades {
+        /// Token to stream trades for
+        token_id: Uuid,
+    },
     /// Ticker updates for a specific token
-    Ticker { token_id: Uuid },
+    Ticker {
+        /// Token to stream ticker data for
+        token_id: Uuid,
+    },
     /// Candlestick updates for a specific token and interval
     Candlesticks {
+        /// Token to stream candlesticks for
         token_id: Uuid,
+        /// Candlestick time interval
         interval: CandlestickInterval,
     },
     /// User-specific position updates
-    Positions { user_id: Uuid },
+    Positions {
+        /// User whose positions to stream
+        user_id: Uuid,
+    },
     /// User-specific order updates
-    Orders { user_id: Uuid },
+    Orders {
+        /// User whose orders to stream
+        user_id: Uuid,
+    },
     /// User-specific balance updates
-    Balances { user_id: Uuid },
+    Balances {
+        /// User whose balances to stream
+        user_id: Uuid,
+    },
 }
 
 /// WebSocket connection state
 #[derive(Debug)]
 pub struct ConnectionState {
+    /// Unique identifier for this connection
     pub connection_id: Uuid,
+    /// Authenticated user, if any
     pub user_id: Option<Uuid>,
-    pub subscriptions: HashMap<StreamChannel, u64>, // channel -> last sequence number
+    /// Active subscriptions mapping channel to last received sequence number
+    pub subscriptions: HashMap<StreamChannel, u64>,
+    /// When the connection was established
     pub connected_at: SystemTime,
+    /// Timestamp of the most recent message activity
     pub last_activity: SystemTime,
 }
 
 impl ConnectionState {
+    /// Create a new connection state for the given user
     pub fn new(user_id: Option<Uuid>) -> Self {
         let now = SystemTime::now();
         Self {
@@ -266,20 +380,24 @@ impl ConnectionState {
         }
     }
 
+    /// Subscribe this connection to a channel, tracking the given sequence number
     pub fn subscribe(&mut self, channel: StreamChannel, sequence_number: u64) {
         self.subscriptions.insert(channel, sequence_number);
         self.last_activity = SystemTime::now();
     }
 
+    /// Unsubscribe this connection from a channel
     pub fn unsubscribe(&mut self, channel: &StreamChannel) {
         self.subscriptions.remove(channel);
         self.last_activity = SystemTime::now();
     }
 
+    /// Record that the connection was recently active
     pub fn update_activity(&mut self) {
         self.last_activity = SystemTime::now();
     }
 
+    /// Return whether this connection is subscribed to the given channel
     pub fn is_subscribed(&self, channel: &StreamChannel) -> bool {
         self.subscriptions.contains_key(channel)
     }
@@ -296,6 +414,7 @@ pub struct OrderBookStreamManager {
 }
 
 impl OrderBookStreamManager {
+    /// Create a new order book stream manager
     pub fn new() -> Self {
         Self {
             streams: Arc::new(RwLock::new(HashMap::new())),
@@ -393,6 +512,7 @@ pub struct MarketDataStreamManager {
 }
 
 impl MarketDataStreamManager {
+    /// Create a new market data stream manager
     pub fn new() -> Self {
         Self {
             trade_streams: Arc::new(RwLock::new(HashMap::new())),
@@ -474,6 +594,7 @@ pub struct UserStreamManager {
 }
 
 impl UserStreamManager {
+    /// Create a new user stream manager
     pub fn new() -> Self {
         Self {
             position_streams: Arc::new(RwLock::new(HashMap::new())),

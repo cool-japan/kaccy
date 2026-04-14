@@ -106,7 +106,9 @@ pub struct MarginPosition {
 /// Position side
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PositionSide {
+    /// Long position (profits when price rises).
     Long,
+    /// Short position (profits when price falls).
     Short,
 }
 
@@ -520,9 +522,13 @@ impl MarginTradingManager {
 /// Liquidation result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiquidationResult {
+    /// Identifier of the account that was liquidated.
     pub account_id: String,
+    /// Number of positions closed during liquidation.
     pub positions_closed: usize,
+    /// Total realized profit and loss from closed positions.
     pub total_pnl: Decimal,
+    /// Equity remaining after liquidation penalties.
     pub remaining_equity: Decimal,
 }
 

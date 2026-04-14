@@ -10,12 +10,15 @@ use uuid::Uuid;
 #[serde(rename_all = "lowercase")]
 #[derive(Default)]
 pub enum SortDirection {
+    /// Ascending order (smallest first)
     Asc,
+    /// Descending order (largest first)
     #[default]
     Desc,
 }
 
 impl SortDirection {
+    /// Convert to the SQL keyword (`ASC` or `DESC`)
     pub fn to_sql(&self) -> &'static str {
         match self {
             SortDirection::Asc => "ASC",
@@ -35,6 +38,7 @@ pub struct SortBy {
 }
 
 impl SortBy {
+    /// Create a sort specification for `field` in the given `direction`
     pub fn new(field: impl Into<String>, direction: SortDirection) -> Self {
         Self {
             field: field.into(),
@@ -42,10 +46,12 @@ impl SortBy {
         }
     }
 
+    /// Create an ascending sort on `field`
     pub fn asc(field: impl Into<String>) -> Self {
         Self::new(field, SortDirection::Asc)
     }
 
+    /// Create a descending sort on `field`
     pub fn desc(field: impl Into<String>) -> Self {
         Self::new(field, SortDirection::Desc)
     }
@@ -63,20 +69,32 @@ impl SortBy {
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum FilterOperator {
-    Eq,      // Equal
-    Ne,      // Not equal
-    Gt,      // Greater than
-    Gte,     // Greater than or equal
-    Lt,      // Less than
-    Lte,     // Less than or equal
-    Like,    // SQL LIKE
-    In,      // IN (...)
-    NotIn,   // NOT IN (...)
-    IsNull,  // IS NULL
-    NotNull, // IS NOT NULL
+    /// Equal (`=`)
+    Eq,
+    /// Not equal (`!=`)
+    Ne,
+    /// Greater than (`>`)
+    Gt,
+    /// Greater than or equal (`>=`)
+    Gte,
+    /// Less than (`<`)
+    Lt,
+    /// Less than or equal (`<=`)
+    Lte,
+    /// SQL `LIKE` pattern match
+    Like,
+    /// SQL `IN (...)` membership check
+    In,
+    /// SQL `NOT IN (...)` exclusion check
+    NotIn,
+    /// SQL `IS NULL` null check
+    IsNull,
+    /// SQL `IS NOT NULL` non-null check
+    NotNull,
 }
 
 impl FilterOperator {
+    /// Convert to the SQL operator string
     pub fn to_sql(&self) -> &'static str {
         match self {
             FilterOperator::Eq => "=",
@@ -106,6 +124,7 @@ pub struct Filter {
 }
 
 impl Filter {
+    /// Create a filter without a value (for null-check operators)
     pub fn new(field: impl Into<String>, operator: FilterOperator) -> Self {
         Self {
             field: field.into(),
@@ -114,6 +133,7 @@ impl Filter {
         }
     }
 
+    /// Set the comparison value for this filter
     pub fn with_value(mut self, value: serde_json::Value) -> Self {
         self.value = Some(value);
         self
@@ -178,15 +198,19 @@ impl Filter {
 /// Date range filter helper
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DateRange {
+    /// Inclusive lower bound of the date range
     pub from: Option<DateTime<Utc>>,
+    /// Inclusive upper bound of the date range
     pub to: Option<DateTime<Utc>>,
 }
 
 impl DateRange {
+    /// Create a date range with optional lower and upper bounds
     pub fn new(from: Option<DateTime<Utc>>, to: Option<DateTime<Utc>>) -> Self {
         Self { from, to }
     }
 
+    /// Create a range with only a lower bound
     pub fn from(from: DateTime<Utc>) -> Self {
         Self {
             from: Some(from),
@@ -194,6 +218,7 @@ impl DateRange {
         }
     }
 
+    /// Create a range with only an upper bound
     pub fn to(to: DateTime<Utc>) -> Self {
         Self {
             from: None,
@@ -201,6 +226,7 @@ impl DateRange {
         }
     }
 
+    /// Create a closed range with both lower and upper bounds
     pub fn between(from: DateTime<Utc>, to: DateTime<Utc>) -> Self {
         Self {
             from: Some(from),
@@ -233,15 +259,19 @@ impl DateRange {
 /// Numeric range filter helper
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct NumericRange {
+    /// Inclusive lower bound
     pub min: Option<Decimal>,
+    /// Inclusive upper bound
     pub max: Option<Decimal>,
 }
 
 impl NumericRange {
+    /// Create a numeric range with optional lower and upper bounds
     pub fn new(min: Option<Decimal>, max: Option<Decimal>) -> Self {
         Self { min, max }
     }
 
+    /// Create a range with only a lower bound
     pub fn min(min: Decimal) -> Self {
         Self {
             min: Some(min),
@@ -249,6 +279,7 @@ impl NumericRange {
         }
     }
 
+    /// Create a range with only an upper bound
     pub fn max(max: Decimal) -> Self {
         Self {
             min: None,
@@ -256,6 +287,7 @@ impl NumericRange {
         }
     }
 
+    /// Create a closed range with both bounds
     pub fn between(min: Decimal, max: Decimal) -> Self {
         Self {
             min: Some(min),
@@ -288,11 +320,14 @@ impl NumericRange {
 /// Query builder for complex queries
 #[derive(Debug, Clone, Default)]
 pub struct QueryBuilder {
+    /// Accumulated filter conditions
     filters: Vec<Filter>,
+    /// Accumulated sort specifications
     sort_by: Vec<SortBy>,
 }
 
 impl QueryBuilder {
+    /// Create an empty query builder
     pub fn new() -> Self {
         Self::default()
     }

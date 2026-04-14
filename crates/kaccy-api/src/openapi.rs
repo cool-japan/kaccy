@@ -223,14 +223,23 @@ pub struct UpdateProfileRequestSchema {
     "created_at": "2024-01-15T10:00:00Z"
 }))]
 pub struct TokenSchema {
+    /// Unique token ID
     pub token_id: String,
+    /// User ID of the token issuer
     pub issuer_id: String,
+    /// Token symbol
     pub symbol: String,
+    /// Token name
     pub name: String,
+    /// Token description
     pub description: Option<String>,
+    /// Current circulating supply
     pub current_supply: f64,
+    /// Current price in BTC
     pub current_price_btc: f64,
+    /// Token status
     pub status: String,
+    /// Creation timestamp (ISO 8601)
     pub created_at: String,
 }
 
@@ -239,11 +248,11 @@ pub struct TokenSchema {
 pub struct TokenListSchema {
     /// List of tokens
     pub tokens: Vec<TokenSchema>,
-    /// Total count
+    /// Total number of tokens
     pub total: i64,
-    /// Current page
+    /// Current page number
     pub page: i32,
-    /// Items per page
+    /// Number of items per page
     pub per_page: i32,
 }
 
@@ -319,15 +328,15 @@ pub struct SellOrderRequestSchema {
 /// Order information
 #[derive(utoipa::ToSchema)]
 pub struct OrderSchema {
-    /// Order ID
+    /// Unique order ID
     pub order_id: String,
-    /// User ID
+    /// ID of the user who placed the order
     pub user_id: String,
-    /// Token ID
+    /// ID of the token being ordered
     pub token_id: String,
     /// Order type (buy/sell)
     pub order_type: String,
-    /// Amount
+    /// Amount of tokens
     pub amount: f64,
     /// Price in BTC
     pub price_btc: f64,
@@ -335,14 +344,16 @@ pub struct OrderSchema {
     pub status: String,
     /// BTC payment address (for buy orders)
     pub btc_address: Option<String>,
-    /// Creation time
+    /// Order creation timestamp (ISO 8601)
     pub created_at: String,
 }
 
 /// Paginated order list
 #[derive(utoipa::ToSchema)]
 pub struct OrderListSchema {
+    /// List of orders
     pub orders: Vec<OrderSchema>,
+    /// Total number of orders
     pub total: i64,
 }
 
@@ -376,7 +387,9 @@ pub struct TradeSchema {
 /// Paginated trade list
 #[derive(utoipa::ToSchema)]
 pub struct TradeListSchema {
+    /// List of trades
     pub trades: Vec<TradeSchema>,
+    /// Total number of trades
     pub total: i64,
 }
 
@@ -409,16 +422,27 @@ pub struct TradeSummarySchema {
     "created_at": "2024-01-15T10:00:00Z"
 }))]
 pub struct CommitmentSchema {
+    /// Unique commitment ID
     pub commitment_id: String,
+    /// ID of the user who created the commitment
     pub user_id: String,
+    /// ID of the associated token
     pub token_id: String,
+    /// Commitment title
     pub title: String,
+    /// Detailed description
     pub description: Option<String>,
+    /// Commitment deadline (ISO 8601)
     pub deadline: String,
+    /// Current status (pending, completed, verified, failed)
     pub status: String,
+    /// HTTPS URL to submitted evidence
     pub evidence_url: Option<String>,
+    /// Description of submitted evidence
     pub evidence_description: Option<String>,
+    /// Timestamp when commitment was verified (ISO 8601)
     pub verified_at: Option<String>,
+    /// Creation timestamp (ISO 8601)
     pub created_at: String,
 }
 

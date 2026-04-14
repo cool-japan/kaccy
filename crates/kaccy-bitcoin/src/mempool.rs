@@ -17,28 +17,46 @@ use crate::error::{BitcoinError, Result};
 /// Mempool transaction information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MempoolTransaction {
+    /// Transaction identifier (hex-encoded txid).
     pub txid: String,
+    /// Bitcoin addresses referenced by this transaction's inputs/outputs.
     pub addresses: Vec<String>,
+    /// Net amount in satoshis (positive = incoming, negative = outgoing).
     pub amount_sats: i64,
+    /// Miner fee in satoshis.
     pub fee_sats: u64,
+    /// Virtual size of the transaction in bytes.
     pub size: u64,
+    /// Unix timestamp when the transaction was broadcast.
     pub time: i64,
+    /// Unix timestamp when this node first saw the transaction.
     pub first_seen: i64,
 }
 
 /// Mempool entry from Bitcoin Core
 #[derive(Debug, Clone, Serialize)]
 pub struct MempoolEntry {
+    /// Transaction identifier (hex-encoded txid).
     pub txid: String,
+    /// Virtual size of the transaction in vbytes.
     pub vsize: u64,
+    /// Transaction weight units (vsize * 4 for legacy, lower for SegWit).
     pub weight: u64,
+    /// Base fee in satoshis.
     pub fee: u64,
+    /// Unix timestamp when the transaction entered this node's mempool.
     pub time: i64,
+    /// Number of in-mempool descendant transactions (including this one).
     pub descendant_count: u64,
+    /// Total virtual size of all descendants in vbytes.
     pub descendant_size: u64,
+    /// Total fees of all descendants in satoshis.
     pub descendant_fees: u64,
+    /// Number of in-mempool ancestor transactions (including this one).
     pub ancestor_count: u64,
+    /// Total virtual size of all ancestors in vbytes.
     pub ancestor_size: u64,
+    /// Total fees of all ancestors in satoshis.
     pub ancestor_fees: u64,
 }
 
@@ -47,24 +65,40 @@ pub struct MempoolEntry {
 pub enum MempoolEvent {
     /// New transaction detected in mempool matching watched addresses
     TransactionDetected {
+        /// Transaction identifier (hex-encoded txid).
         txid: String,
+        /// The watched address that matched this transaction.
         address: String,
+        /// Net amount in satoshis (positive = incoming, negative = outgoing).
         amount_sats: i64,
+        /// Miner fee in satoshis.
         fee_sats: u64,
     },
     /// Transaction confirmed (moved from mempool to block)
     TransactionConfirmed {
+        /// Transaction identifier (hex-encoded txid).
         txid: String,
+        /// Hash of the block that confirmed the transaction.
         block_hash: String,
+        /// Number of confirmations at the time of this event.
         confirmations: u32,
     },
     /// Transaction removed from mempool (replaced or expired)
-    TransactionRemoved { txid: String, reason: RemovalReason },
+    TransactionRemoved {
+        /// Transaction identifier (hex-encoded txid).
+        txid: String,
+        /// Why the transaction was removed from the mempool.
+        reason: RemovalReason,
+    },
     /// Block reorganization detected
     Reorganization {
+        /// Block hash of the chain tip before the reorganization.
         old_tip: String,
+        /// Block hash of the new chain tip after the reorganization.
         new_tip: String,
+        /// Number of blocks rolled back during the reorganization.
         depth: u32,
+        /// Transaction IDs that were affected (evicted from mined blocks).
         affected_txids: Vec<String>,
     },
 }
@@ -75,7 +109,10 @@ pub enum RemovalReason {
     /// Transaction was included in a block
     Confirmed,
     /// Transaction was replaced (RBF)
-    Replaced { replacement_txid: String },
+    Replaced {
+        /// Txid of the RBF replacement transaction.
+        replacement_txid: String,
+    },
     /// Transaction expired from mempool
     Expired,
     /// Transaction was double-spent
@@ -544,7 +581,10 @@ impl AddressWatcher {
 /// Unconfirmed payment notification
 #[derive(Debug, Clone, Serialize)]
 pub struct UnconfirmedPayment {
+    /// Bitcoin address that received the unconfirmed payment.
     pub address: String,
+    /// Amount of the payment in satoshis.
     pub amount_sats: u64,
+    /// Unix timestamp when the unconfirmed payment was first detected.
     pub detected_at: i64,
 }

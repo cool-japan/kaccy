@@ -43,20 +43,32 @@ pub enum CoverageType {
 /// Insurance claim
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InsuranceClaim {
+    /// Unique identifier for this claim
     pub claim_id: Uuid,
+    /// User who filed the claim
     pub user_id: Uuid,
+    /// Type of coverage being claimed
     pub coverage_type: CoverageType,
+    /// Amount the user is claiming
     pub amount_claimed: Decimal,
+    /// Detailed description of the loss event
     pub description: String,
+    /// Evidence supporting the claim (e.g., transaction hashes)
     pub evidence: Vec<String>,
+    /// Current status of this claim
     pub status: ClaimStatus,
+    /// When this claim was submitted
     pub submitted_at: DateTime<Utc>,
+    /// When this claim was reviewed
     pub reviewed_at: Option<DateTime<Utc>>,
+    /// Approved payout amount (set on approval)
     pub payout_amount: Option<Decimal>,
+    /// Reason the claim was rejected (set on rejection)
     pub rejection_reason: Option<String>,
 }
 
 impl InsuranceClaim {
+    /// Create a new insurance claim
     pub fn new(
         user_id: Uuid,
         coverage_type: CoverageType,
@@ -168,17 +180,26 @@ impl Default for InsurancePoolConfig {
 /// Insurance coverage policy
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoveragePolicy {
+    /// Unique identifier for this policy
     pub policy_id: Uuid,
+    /// Policy holder
     pub user_id: Uuid,
+    /// Type of risk covered by this policy
     pub coverage_type: CoverageType,
+    /// Maximum amount this policy will pay out
     pub coverage_amount: Decimal,
+    /// Premium amount paid for this policy
     pub premium_paid: Decimal,
+    /// When this policy becomes active
     pub start_date: DateTime<Utc>,
+    /// When this policy expires
     pub end_date: DateTime<Utc>,
+    /// Whether this policy has been cancelled
     pub is_active: bool,
 }
 
 impl CoveragePolicy {
+    /// Create a new coverage policy for the given user and risk type
     pub fn new(
         user_id: Uuid,
         coverage_type: CoverageType,
@@ -228,13 +249,21 @@ impl CoveragePolicy {
 /// Insurance pool statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InsurancePoolStats {
+    /// Total premiums collected since pool inception
     pub total_premiums_collected: Decimal,
+    /// Total claim payouts made since pool inception
     pub total_claims_paid: Decimal,
+    /// Sum of all active policy coverage amounts
     pub total_active_coverage: Decimal,
+    /// Total number of claims ever submitted
     pub total_claims: usize,
+    /// Number of claims that were approved
     pub approved_claims: usize,
+    /// Number of claims that were rejected
     pub rejected_claims: usize,
+    /// Number of claims awaiting review
     pub pending_claims: usize,
+    /// Current funds available in the pool
     pub pool_balance: Decimal,
 }
 
@@ -255,15 +284,20 @@ impl Default for InsurancePoolStats {
 
 /// Insurance pool manager
 pub struct InsurancePool {
+    /// Pool configuration
     config: InsurancePoolConfig,
+    /// Active coverage policies indexed by policy ID
     policies: HashMap<Uuid, CoveragePolicy>,
+    /// Claims indexed by claim ID
     claims: HashMap<Uuid, InsuranceClaim>,
+    /// Aggregated pool statistics
     stats: InsurancePoolStats,
-    /// User ID -> Total coverage amount
+    /// Total active coverage amount per user
     user_coverage: HashMap<Uuid, Decimal>,
 }
 
 impl InsurancePool {
+    /// Create a new insurance pool with the given configuration
     pub fn new(config: InsurancePoolConfig) -> Self {
         Self {
             config,

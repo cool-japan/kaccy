@@ -15,10 +15,13 @@ use std::collections::HashMap;
 /// comprehensive tail risk measure than VaR.
 #[derive(Debug, Clone)]
 pub struct ExpectedShortfallCalculator {
+    /// Confidence level (e.g. 0.95 for 95%)
     confidence_level: Decimal,
+    /// Method used for the ES calculation
     method: ESMethod,
 }
 
+/// Method used to calculate Expected Shortfall
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ESMethod {
     /// Historical simulation using actual return distribution
@@ -204,17 +207,23 @@ impl ESResult {
 /// Stress VaR calculator for crisis scenarios
 #[derive(Debug, Clone)]
 pub struct StressVarCalculator {
+    /// Named stress scenarios available for calculation
     scenarios: HashMap<String, StressScenario>,
 }
 
+/// A named stress scenario with per-asset market shocks
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StressScenario {
+    /// Name of the scenario
     pub name: String,
+    /// Human-readable description
     pub description: String,
+    /// Per-asset shock magnitudes (negative = loss)
     pub market_shocks: HashMap<String, Decimal>,
 }
 
 impl StressScenario {
+    /// Create a new stress scenario with the given name and description
     pub fn new(name: impl Into<String>, description: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -223,12 +232,14 @@ impl StressScenario {
         }
     }
 
+    /// Register a shock magnitude for the given asset
     pub fn add_shock(&mut self, asset: impl Into<String>, shock: Decimal) {
         self.market_shocks.insert(asset.into(), shock);
     }
 }
 
 impl StressVarCalculator {
+    /// Create a new stress VaR calculator
     pub fn new() -> Self {
         Self {
             scenarios: HashMap::new(),
@@ -302,21 +313,28 @@ impl Default for StressVarCalculator {
     }
 }
 
+/// Result of a stress VaR calculation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StressVarResult {
+    /// Name of the applied stress scenario
     pub scenario_name: String,
+    /// Total portfolio loss under the scenario
     pub total_loss: Decimal,
+    /// Per-position stressed P&L
     pub stressed_positions: Vec<(String, Decimal)>,
 }
 
 /// Incremental Risk Charge (IRC) calculator
 #[derive(Debug, Clone)]
 pub struct IncrementalRiskCalculator {
+    /// Holding horizon in trading days
     horizon_days: u32,
+    /// Confidence level for the IRC calculation
     confidence_level: Decimal,
 }
 
 impl IncrementalRiskCalculator {
+    /// Create a new IRC calculator with the given horizon and confidence level
     pub fn new(horizon_days: u32, confidence_level: Decimal) -> Result<Self> {
         if confidence_level <= Decimal::ZERO || confidence_level >= Decimal::ONE {
             return Err(CoreError::Validation(
@@ -361,12 +379,18 @@ impl IncrementalRiskCalculator {
     }
 }
 
+/// Result of an Incremental Risk Charge calculation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IRCResult {
+    /// Total incremental risk charge
     pub total_irc: Decimal,
+    /// Component due to default risk
     pub default_risk: Decimal,
+    /// Component due to rating migration risk
     pub migration_risk: Decimal,
+    /// Holding horizon in trading days
     pub horizon_days: u32,
+    /// Confidence level used for the calculation
     pub confidence_level: Decimal,
 }
 

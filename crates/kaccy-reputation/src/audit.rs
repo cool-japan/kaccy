@@ -17,6 +17,7 @@ pub struct AuditService {
 }
 
 impl AuditService {
+    /// Create a new [`AuditService`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -321,50 +322,85 @@ impl AuditService {
 /// Audit event to be logged
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditEvent {
+    /// Classification of the audit event.
     pub event_type: AuditEventType,
+    /// User who was affected by the event.
     pub user_id: Uuid,
+    /// User or system that triggered the event, if different from `user_id`.
     pub actor_id: Option<Uuid>,
+    /// Type of entity that was modified.
     pub entity_type: EntityType,
+    /// Identifier of the entity that was modified.
     pub entity_id: Uuid,
+    /// Human-readable description of the action performed.
     pub action: String,
+    /// Previous value of the modified field, if applicable.
     pub old_value: Option<JsonValue>,
+    /// New value of the modified field, if applicable.
     pub new_value: Option<JsonValue>,
+    /// Additional structured context for the event.
     pub metadata: Option<JsonValue>,
+    /// IP address of the requester, if available.
     pub ip_address: Option<String>,
+    /// User-agent string of the requester, if available.
     pub user_agent: Option<String>,
 }
 
 /// Audit record from database
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditRecord {
+    /// Unique identifier for this audit record.
     pub event_id: Uuid,
+    /// Classification of the audit event.
     pub event_type: AuditEventType,
+    /// User who was affected.
     pub user_id: Uuid,
+    /// User or system that triggered the event, if different from `user_id`.
     pub actor_id: Option<Uuid>,
+    /// Type of entity that was modified.
     pub entity_type: EntityType,
+    /// Identifier of the entity that was modified.
     pub entity_id: Uuid,
+    /// Human-readable description of the action.
     pub action: String,
+    /// Previous value, if applicable.
     pub old_value: Option<JsonValue>,
+    /// New value, if applicable.
     pub new_value: Option<JsonValue>,
+    /// Additional structured context.
     pub metadata: Option<JsonValue>,
+    /// IP address of the requester, if available.
     pub ip_address: Option<String>,
+    /// User-agent string of the requester, if available.
     pub user_agent: Option<String>,
+    /// Timestamp when this record was created.
     pub created_at: DateTime<Utc>,
 }
 
 /// Type of audit event
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AuditEventType {
+    /// User's reputation score changed.
     ScoreChange,
+    /// User's reputation tier changed.
     TierChange,
+    /// A new commitment was created.
     CommitmentCreated,
+    /// A commitment was verified as fulfilled.
     CommitmentVerified,
+    /// A commitment was marked as failed.
     CommitmentFailed,
+    /// An administrator performed a manual action.
     AdminAction,
+    /// A dispute was opened against a commitment.
     DisputeCreated,
+    /// A dispute was resolved with an outcome.
     DisputeResolved,
+    /// A Soulbound Token was minted for a user.
     SBTMinted,
+    /// A Soulbound Token was updated.
     SBTUpdated,
+    /// An achievement was awarded to a user.
     AchievementAwarded,
 }
 
@@ -410,10 +446,15 @@ impl std::str::FromStr for AuditEventType {
 /// Type of entity being audited
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum EntityType {
+    /// A platform user.
     User,
+    /// A commitment record.
     Commitment,
+    /// A dispute record.
     Dispute,
+    /// A Soulbound Token.
     SBT,
+    /// An achievement record.
     Achievement,
 }
 
@@ -447,26 +488,37 @@ impl std::str::FromStr for EntityType {
 /// Audit summary for a date range
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditSummary {
+    /// Start of the summary period.
     pub start_date: DateTime<Utc>,
+    /// End of the summary period.
     pub end_date: DateTime<Utc>,
+    /// Total number of audit events in this period.
     pub total_events: i32,
+    /// Breakdown of event counts by type.
     pub events_by_type: Vec<EventTypeCount>,
 }
 
 /// Event count by type
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventTypeCount {
+    /// The audit event type.
     pub event_type: AuditEventType,
+    /// Number of events of this type in the period.
     pub count: i32,
 }
 
 /// Search criteria for audit trail
 #[derive(Debug, Clone, Default)]
 pub struct AuditSearch {
+    /// Filter by user ID, or `None` to match all users.
     pub user_id: Option<Uuid>,
+    /// Filter by event type, or `None` to match all types.
     pub event_type: Option<AuditEventType>,
+    /// Filter by entity type, or `None` to match all entity types.
     pub entity_type: Option<EntityType>,
+    /// Restrict to events at or after this timestamp.
     pub start_date: Option<DateTime<Utc>>,
+    /// Restrict to events at or before this timestamp.
     pub end_date: Option<DateTime<Utc>>,
 }
 

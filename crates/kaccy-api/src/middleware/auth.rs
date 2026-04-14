@@ -13,11 +13,15 @@ use uuid::Uuid;
 
 use crate::state::AppState;
 
+/// JWT claims used for authentication
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: String, // user_id
-    pub exp: i64,    // expiration time
-    pub iat: i64,    // issued at
+    /// Subject (user ID)
+    pub sub: String,
+    /// Expiration time (Unix timestamp)
+    pub exp: i64,
+    /// Issued at (Unix timestamp)
+    pub iat: i64,
 }
 
 impl FromRequestParts<AppState> for Claims {
@@ -41,6 +45,7 @@ impl FromRequestParts<AppState> for Claims {
     }
 }
 
+/// Generate a JWT token for a user
 pub fn generate_token(
     user_id: Uuid,
     jwt_secret: &str,
@@ -61,6 +66,7 @@ pub fn generate_token(
     )
 }
 
+/// Verify and decode a JWT token
 pub fn verify_token(token: &str, jwt_secret: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
     decode::<Claims>(
         token,
@@ -70,6 +76,7 @@ pub fn verify_token(token: &str, jwt_secret: &str) -> Result<Claims, jsonwebtoke
     .map(|data| data.claims)
 }
 
+/// Middleware that requires JWT authentication
 pub async fn require_auth(
     State(state): State<AppState>,
     mut req: Request,

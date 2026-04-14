@@ -88,9 +88,13 @@ impl HdWalletConfig {
 /// Address cache entry
 #[derive(Debug, Clone)]
 pub struct CachedAddress {
+    /// The Bitcoin address string
     pub address: String,
+    /// Derivation index for this address
     pub index: u32,
+    /// Whether this is a change address
     pub is_change: bool,
+    /// Whether this address has been used in a transaction
     pub used: bool,
 }
 
@@ -463,6 +467,7 @@ impl Default for AddressBook {
 }
 
 impl AddressBook {
+    /// Create a new empty address book
     pub fn new() -> Self {
         Self {
             labels: RwLock::new(HashMap::new()),

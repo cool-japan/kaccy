@@ -10,32 +10,49 @@ use crate::error::Result;
 /// Reputation event data from database
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct ReputationEventRow {
+    /// Unique identifier for this reputation event.
     pub event_id: Uuid,
+    /// User whose reputation was affected.
     pub user_id: Uuid,
+    /// Type of event that triggered the reputation change.
     pub event_type: String,
+    /// Signed reputation change (positive or negative).
     pub delta: Decimal,
+    /// Optional explanation for the change.
     pub reason: Option<String>,
+    /// Timestamp when the event was recorded.
     pub created_at: DateTime<Utc>,
 }
 
 /// Summary of reputation events by type
 #[derive(Debug, Clone)]
 pub struct EventTypeSummary {
+    /// Event type name.
     pub event_type: String,
+    /// Number of events of this type.
     pub count: i64,
+    /// Sum of all deltas for this event type.
     pub total_delta: Decimal,
+    /// Average delta per event.
     pub avg_delta: Decimal,
 }
 
 /// User's reputation history summary
 #[derive(Debug, Clone)]
 pub struct ReputationHistorySummary {
+    /// User identifier.
     pub user_id: Uuid,
+    /// Total number of reputation events.
     pub total_events: i64,
+    /// Sum of all positive deltas.
     pub total_positive_delta: Decimal,
+    /// Sum of all negative deltas (absolute value).
     pub total_negative_delta: Decimal,
+    /// Net change in reputation.
     pub net_delta: Decimal,
+    /// Timestamp of the first reputation event.
     pub first_event_at: Option<DateTime<Utc>>,
+    /// Timestamp of the most recent reputation event.
     pub last_event_at: Option<DateTime<Utc>>,
 }
 
@@ -45,6 +62,7 @@ pub struct ReputationEventRepository {
 }
 
 impl ReputationEventRepository {
+    /// Create a new `ReputationEventRepository` backed by the given connection pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -498,29 +516,43 @@ impl ReputationEventRepository {
 /// User reputation gain statistics
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct UserReputationGain {
+    /// Unique identifier of the user.
     pub user_id: Uuid,
+    /// Total number of reputation events for this user.
     pub event_count: i64,
+    /// Net sum of all reputation deltas.
     pub total_delta: Decimal,
+    /// Sum of positive (gain) deltas only.
     pub positive_delta: Decimal,
+    /// Sum of negative (loss) deltas only.
     pub negative_delta: Decimal,
 }
 
 /// Daily reputation statistics
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct DailyReputationStats {
+    /// The calendar date these statistics apply to.
     pub date: chrono::NaiveDate,
+    /// Number of reputation events recorded on this date.
     pub event_count: i64,
+    /// Number of distinct users with events on this date.
     pub unique_users: i64,
+    /// Net sum of all deltas on this date.
     pub total_delta: Decimal,
+    /// Sum of positive deltas on this date.
     pub positive_delta: Decimal,
+    /// Sum of negative deltas on this date.
     pub negative_delta: Decimal,
 }
 
 /// Event balance (positive vs negative events)
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct EventBalance {
+    /// Number of events with a positive delta.
     pub positive_count: Option<i64>,
+    /// Number of events with a negative delta.
     pub negative_count: Option<i64>,
+    /// Number of events with a zero delta.
     pub neutral_count: Option<i64>,
 }
 

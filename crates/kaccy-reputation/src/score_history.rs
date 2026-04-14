@@ -13,21 +13,28 @@ use crate::tier::ReputationTier;
 /// Daily score snapshot for a user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScoreSnapshot {
+    /// Unique identifier for this snapshot.
     pub snapshot_id: Uuid,
+    /// User this snapshot belongs to.
     pub user_id: Uuid,
+    /// Calendar date of the snapshot.
     pub snapshot_date: NaiveDate,
+    /// Overall reputation score on this date.
     pub score: Decimal,
+    /// Reputation tier on this date.
     pub tier: ReputationTier,
     /// Score change from previous day
     pub delta_from_previous: Decimal,
     /// Components at time of snapshot (serialized JSON)
     pub components_json: Option<String>,
+    /// Timestamp when this snapshot was recorded.
     pub created_at: DateTime<Utc>,
 }
 
 /// Score trend analysis
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScoreTrend {
+    /// User this trend belongs to.
     pub user_id: Uuid,
     /// Average score over the period
     pub average_score: Decimal,
@@ -49,10 +56,14 @@ pub struct ScoreTrend {
     pub snapshot_count: i64,
 }
 
+/// Direction of a score trend.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TrendDirection {
+    /// Score is increasing over the period.
     Rising,
+    /// Score is decreasing over the period.
     Falling,
+    /// Score is relatively flat over the period.
     Stable,
 }
 
@@ -83,6 +94,7 @@ impl std::str::FromStr for TrendDirection {
 }
 
 impl TrendDirection {
+    /// Classify a score change as Rising, Falling, or Stable based on a threshold.
     pub fn from_change(change: Decimal, threshold: Decimal) -> Self {
         if change > threshold {
             Self::Rising
@@ -100,6 +112,7 @@ pub struct ScoreHistoryRepository {
 }
 
 impl ScoreHistoryRepository {
+    /// Create a new [`ScoreHistoryRepository`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }

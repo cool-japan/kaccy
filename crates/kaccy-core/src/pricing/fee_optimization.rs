@@ -12,17 +12,27 @@ use std::time::{Duration, SystemTime};
 /// Dynamic rebate program configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RebateProgram {
+    /// Unique identifier of this rebate program
     pub program_id: String,
+    /// Category of rebate this program offers
     pub rebate_type: RebateType,
+    /// Conditions a user must meet to be eligible
     pub eligibility_criteria: Vec<EligibilityCriterion>,
+    /// Percentage of the fee returned as a rebate
     pub rebate_percentage: Decimal,
+    /// Maximum rebate a single user can receive in this program
     pub max_rebate_per_user: Option<Decimal>,
+    /// Total budget allocated to this program
     pub program_budget: Decimal,
+    /// Remaining unspent budget
     pub remaining_budget: Decimal,
+    /// When the program becomes active
     pub start_time: SystemTime,
+    /// When the program expires (None = indefinite)
     pub end_time: Option<SystemTime>,
 }
 
+/// Type of rebate program
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RebateType {
     /// Maker rebate for providing liquidity
@@ -35,37 +45,60 @@ pub enum RebateType {
     OnboardingRebate,
 }
 
+/// Criterion a user must meet to qualify for a rebate program.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EligibilityCriterion {
     /// Minimum trading volume required
-    MinVolume { threshold: Decimal },
+    MinVolume {
+        /// Volume threshold in quote currency.
+        threshold: Decimal,
+    },
     /// Minimum liquidity provided
-    MinLiquidity { threshold: Decimal },
+    MinLiquidity {
+        /// Liquidity threshold.
+        threshold: Decimal,
+    },
     /// User must be maker (not taker)
     MakerOnly,
     /// Minimum account age
-    MinAccountAge { duration: Duration },
+    MinAccountAge {
+        /// Minimum age of the account.
+        duration: Duration,
+    },
     /// Specific token pairs
-    TokenPairs { pairs: Vec<(String, String)> },
+    TokenPairs {
+        /// List of (base, quote) symbol pairs that qualify.
+        pairs: Vec<(String, String)>,
+    },
 }
 
 /// Rebate manager for dynamic rebate programs
 pub struct RebateManager {
+    /// Active rebate programs indexed by program ID
     programs: HashMap<String, RebateProgram>,
+    /// Per-user rebate history indexed by user ID
     user_rebates: HashMap<String, Vec<UserRebate>>,
 }
 
+/// Record of a single rebate awarded to a user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserRebate {
+    /// User who received the rebate
     pub user_id: String,
+    /// Program that generated the rebate
     pub program_id: String,
+    /// Amount rebated
     pub rebate_amount: Decimal,
+    /// Original fee amount before rebate
     pub original_fee: Decimal,
+    /// When the rebate was issued
     pub timestamp: SystemTime,
+    /// Trade that qualified for the rebate
     pub trade_id: String,
 }
 
 impl RebateManager {
+    /// Create a new rebate manager
     pub fn new() -> Self {
         Self {
             programs: HashMap::new(),
@@ -241,24 +274,37 @@ pub struct FeeOptimizer {
     strategy: OptimizationStrategy,
 }
 
+/// Historical snapshot of fee performance metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeePerformance {
+    /// When this snapshot was recorded
     pub timestamp: SystemTime,
+    /// Fee rate in effect at the time
     pub fee_rate: Decimal,
+    /// Total trading volume during this period
     pub trading_volume: Decimal,
+    /// Revenue collected during this period
     pub revenue: Decimal,
+    /// Number of active users during this period
     pub user_count: usize,
 }
 
+/// Fee rate configuration for the exchange
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeConfiguration {
+    /// Base fee rate applied by default
     pub base_fee: Decimal,
+    /// Fee rate charged to market makers
     pub maker_fee: Decimal,
+    /// Fee rate charged to market takers
     pub taker_fee: Decimal,
+    /// Minimum allowable fee rate
     pub min_fee: Decimal,
+    /// Maximum allowable fee rate
     pub max_fee: Decimal,
 }
 
+/// Fee optimisation strategy
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OptimizationStrategy {
     /// Maximize total revenue
@@ -272,6 +318,7 @@ pub enum OptimizationStrategy {
 }
 
 impl FeeOptimizer {
+    /// Create a new fee optimizer with the given initial configuration and strategy
     pub fn new(initial_config: FeeConfiguration, strategy: OptimizationStrategy) -> Self {
         Self {
             fee_history: Vec::new(),
@@ -386,17 +433,25 @@ impl FeeOptimizer {
     }
 }
 
+/// Suggested fee adjustment from the optimizer
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeAdjustment {
+    /// Whether to raise, lower, or hold fees
     pub direction: AdjustmentDirection,
+    /// Percentage magnitude of the suggested change
     pub magnitude: Decimal,
+    /// Human-readable justification for the suggestion
     pub reason: String,
 }
 
+/// Direction of a fee adjustment
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AdjustmentDirection {
+    /// Increase the fee rate
     Increase,
+    /// Decrease the fee rate
     Decrease,
+    /// Keep the fee rate unchanged
     NoChange,
 }
 
@@ -409,30 +464,45 @@ pub struct GasOptimizer {
     pending_transactions: Vec<PendingTransaction>,
 }
 
+/// Observed gas price at a specific block
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GasPrice {
+    /// When this gas price was observed
     pub timestamp: SystemTime,
+    /// Gas price in gwei
     pub price: Decimal,
+    /// Block number at which this was observed
     pub block_number: u64,
 }
 
+/// A transaction waiting to be submitted on-chain
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PendingTransaction {
+    /// Unique identifier of the transaction
     pub tx_id: String,
+    /// Urgency level for ordering
     pub priority: TransactionPriority,
+    /// Maximum gas units this transaction may consume
     pub gas_limit: u64,
+    /// When the transaction was enqueued
     pub created_at: SystemTime,
 }
 
+/// Transaction submission priority
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum TransactionPriority {
+    /// Low urgency, can wait for cheaper gas
     Low = 1,
+    /// Normal urgency
     Medium = 2,
+    /// High urgency, should be included soon
     High = 3,
+    /// Must be included in the next block
     Critical = 4,
 }
 
 impl GasOptimizer {
+    /// Create a new gas optimizer
     pub fn new() -> Self {
         Self {
             gas_price_history: Vec::new(),

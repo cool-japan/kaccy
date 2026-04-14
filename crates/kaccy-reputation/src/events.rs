@@ -206,12 +206,19 @@ impl TryFrom<&str> for EventType {
 /// A reputation event
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ReputationEvent {
+    /// Unique identifier for this event.
     pub event_id: Uuid,
+    /// User whose reputation was affected.
     pub user_id: Uuid,
+    /// String representation of the event type.
     pub event_type: String,
+    /// Score delta applied by this event (positive or negative).
     pub delta: Decimal,
+    /// Human-readable reason for the event.
     pub reason: Option<String>,
+    /// Arbitrary structured metadata attached to the event.
     pub metadata: Option<serde_json::Value>,
+    /// Timestamp when the event was recorded.
     pub created_at: DateTime<Utc>,
 }
 
@@ -225,45 +232,70 @@ impl ReputationEvent {
 /// Request to create a new event
 #[derive(Debug, Clone)]
 pub struct CreateEventRequest {
+    /// User whose reputation should be updated.
     pub user_id: Uuid,
+    /// Typed event classification.
     pub event_type: EventType,
+    /// Optional score delta override; defaults to the event type's standard delta.
     pub delta: Option<Decimal>,
+    /// Human-readable reason for the event.
     pub reason: Option<String>,
+    /// Optional structured metadata to attach.
     pub metadata: Option<serde_json::Value>,
 }
 
 /// Event summary for analytics
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct EventSummary {
+    /// Total number of events in the summary period.
     pub total_events: i64,
+    /// Number of events with a positive score delta.
     pub positive_events: i64,
+    /// Number of events with a negative score delta.
     pub negative_events: i64,
+    /// Sum of all positive deltas.
     pub total_positive_delta: Decimal,
+    /// Sum of all negative deltas (expressed as a positive value).
     pub total_negative_delta: Decimal,
+    /// Net score change (positive minus negative).
     pub net_delta: Decimal,
+    /// Event counts broken down by event type string.
     pub events_by_type: HashMap<String, i64>,
 }
 
 /// User score recalculated from events
 #[derive(Debug, Clone, Serialize)]
 pub struct RecalculatedScore {
+    /// User whose score was recalculated.
     pub user_id: Uuid,
+    /// Score derived by replaying all events.
     pub calculated_score: Decimal,
+    /// Score currently stored in the database.
     pub current_score: Decimal,
+    /// Difference between calculated and current scores.
     pub difference: Decimal,
+    /// Number of events replayed during recalculation.
     pub event_count: i64,
 }
 
 /// Notification for score changes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScoreNotification {
+    /// User whose score changed.
     pub user_id: Uuid,
+    /// String representation of the triggering event type.
     pub event_type: String,
+    /// Score before the change.
     pub old_score: Decimal,
+    /// Score after the change.
     pub new_score: Decimal,
+    /// Score delta applied.
     pub delta: Decimal,
+    /// Human-readable notification message.
     pub message: String,
+    /// Severity level of this notification.
     pub severity: NotificationSeverity,
+    /// Timestamp when the notification was created.
     pub created_at: DateTime<Utc>,
 }
 
@@ -273,8 +305,11 @@ pub struct ScoreNotification {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum NotificationSeverity {
+    /// Informational notification; no immediate action required.
     Info,
+    /// Warning notification; user should be aware of this change.
     Warning,
+    /// Critical notification; urgent attention required.
     Critical,
 }
 
@@ -353,6 +388,7 @@ pub struct EventService {
 
 /// Trait for handling notifications
 pub trait NotificationHandler: Send + Sync {
+    /// Process a score-change notification.
     fn handle(&self, notification: &ScoreNotification);
 }
 
@@ -398,6 +434,7 @@ impl NotificationHandler for LogNotificationHandler {
 }
 
 impl EventService {
+    /// Create a new [`EventService`] with the default log-based notification handler.
     pub fn new(pool: PgPool) -> Self {
         Self {
             pool,

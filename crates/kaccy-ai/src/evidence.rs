@@ -72,26 +72,57 @@ pub enum EvidenceType {
 pub enum StructuredEvidence {
     /// GitHub-specific evidence
     GitHub {
+        /// Repository owner login.
         owner: String,
+        /// Repository name.
         repo: String,
+        /// The specific GitHub resource kind.
         evidence_kind: GitHubEvidenceKind,
     },
     /// `YouTube` video evidence
-    YouTube { video_id: String },
+    YouTube {
+        /// YouTube video identifier.
+        video_id: String,
+    },
     /// Twitter/X post evidence
-    Twitter { tweet_id: String, username: String },
+    Twitter {
+        /// Tweet snowflake ID.
+        tweet_id: String,
+        /// Twitter username.
+        username: String,
+    },
     /// Generic URL evidence
-    Generic { domain: String },
+    Generic {
+        /// Domain of the URL.
+        domain: String,
+    },
 }
 
 /// Kind of GitHub evidence
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GitHubEvidenceKind {
+    /// A repository link with no specific resource.
     Repository,
-    Commit { hash: String },
-    Release { tag: String },
-    PullRequest { number: u64 },
-    Issue { number: u64 },
+    /// A specific commit.
+    Commit {
+        /// Commit SHA hash.
+        hash: String,
+    },
+    /// A release.
+    Release {
+        /// Release tag name.
+        tag: String,
+    },
+    /// A pull request.
+    PullRequest {
+        /// Pull request number.
+        number: u64,
+    },
+    /// An issue.
+    Issue {
+        /// Issue number.
+        number: u64,
+    },
 }
 
 /// Suggested verification decision for admin
@@ -126,6 +157,7 @@ impl Default for EvidenceParser {
 }
 
 impl EvidenceParser {
+    /// Create a new `EvidenceParser`.
     #[must_use]
     pub fn new() -> Self {
         Self

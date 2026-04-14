@@ -13,6 +13,7 @@ pub struct WalletManager {
 }
 
 impl WalletManager {
+    /// Create a new wallet manager using the given Bitcoin client
     pub fn new(client: Arc<BitcoinClient>) -> Self {
         Self { client }
     }
@@ -53,17 +54,25 @@ impl WalletManager {
 /// Represents a deposit that was detected
 #[derive(Debug, Clone)]
 pub struct DetectedDeposit {
+    /// Receiving address for this deposit
     pub address: String,
+    /// Amount of the deposit
     pub amount: Amount,
+    /// Transaction ID
     pub txid: String,
+    /// Number of confirmations
     pub confirmations: u32,
 }
 
 /// Represents a pending withdrawal
 #[derive(Debug, Clone)]
 pub struct PendingWithdrawal {
+    /// User requesting the withdrawal
     pub user_id: Uuid,
+    /// Bitcoin address to send funds to
     pub destination_address: String,
+    /// Withdrawal amount
     pub amount: Amount,
+    /// Estimated network fee
     pub fee: Amount,
 }

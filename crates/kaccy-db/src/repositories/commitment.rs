@@ -11,54 +11,91 @@ use crate::helpers::calculate_offset;
 /// Output commitment data from database
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct CommitmentRow {
+    /// Unique identifier for the commitment.
     pub commitment_id: Uuid,
+    /// User who made the commitment.
     pub user_id: Uuid,
+    /// Token associated with the commitment.
     pub token_id: Uuid,
+    /// Short title describing the commitment.
     pub title: String,
+    /// Optional detailed description of the commitment.
     pub description: Option<String>,
+    /// Deadline by which the commitment must be fulfilled.
     pub deadline: DateTime<Utc>,
+    /// Current status (e.g., pending, completed, verified, failed).
     pub status: String,
+    /// URL to submitted evidence, if any.
     pub evidence_url: Option<String>,
+    /// Description of the submitted evidence.
     pub evidence_description: Option<String>,
+    /// Timestamp when the commitment was verified, if verified.
     pub verified_at: Option<DateTime<Utc>>,
+    /// User ID of the verifier, if verified.
     pub verified_by: Option<Uuid>,
+    /// Timestamp when the commitment was created.
     pub created_at: DateTime<Utc>,
 }
 
 /// Commitment with user and token details
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct CommitmentWithDetails {
+    /// Unique identifier for the commitment.
     pub commitment_id: Uuid,
+    /// User who made the commitment.
     pub user_id: Uuid,
+    /// Token associated with the commitment.
     pub token_id: Uuid,
+    /// Short title describing the commitment.
     pub title: String,
+    /// Optional detailed description.
     pub description: Option<String>,
+    /// Deadline for fulfillment.
     pub deadline: DateTime<Utc>,
+    /// Current status string.
     pub status: String,
+    /// URL to submitted evidence.
     pub evidence_url: Option<String>,
+    /// Description of the evidence.
     pub evidence_description: Option<String>,
+    /// Timestamp when verified.
     pub verified_at: Option<DateTime<Utc>>,
+    /// User ID of the verifier.
     pub verified_by: Option<Uuid>,
+    /// Creation timestamp.
     pub created_at: DateTime<Utc>,
     // User details
+    /// Username of the commitment author.
     pub username: String,
+    /// Display name of the commitment author.
     pub display_name: Option<String>,
+    /// Reputation score of the commitment author.
     pub reputation_score: rust_decimal::Decimal,
     // Token details
+    /// Trading symbol of the associated token.
     pub token_symbol: String,
+    /// Full name of the associated token.
     pub token_name: String,
 }
 
 /// Commitment statistics for a user
 #[derive(Debug, Clone)]
 pub struct CommitmentStats {
+    /// User these statistics belong to.
     pub user_id: Uuid,
+    /// Total number of commitments made.
     pub total_commitments: i64,
+    /// Number of commitments still pending.
     pub pending_count: i64,
+    /// Number of commitments marked as completed.
     pub completed_count: i64,
+    /// Number of commitments that have been verified.
     pub verified_count: i64,
+    /// Number of commitments that failed.
     pub failed_count: i64,
+    /// Number of commitments that expired before completion.
     pub expired_count: i64,
+    /// Ratio of verified to total (0.0–1.0).
     pub fulfillment_rate: f64,
 }
 
@@ -68,6 +105,7 @@ pub struct CommitmentRepository {
 }
 
 impl CommitmentRepository {
+    /// Create a new commitment repository.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -737,38 +775,61 @@ impl CommitmentRepository {
 /// Token commitment statistics
 #[derive(Debug, Clone)]
 pub struct TokenCommitmentStats {
+    /// Token these statistics belong to.
     pub token_id: Uuid,
+    /// Total commitments involving this token.
     pub total_commitments: i64,
+    /// Number of pending commitments.
     pub pending_count: i64,
+    /// Number of completed commitments.
     pub completed_count: i64,
+    /// Number of verified commitments.
     pub verified_count: i64,
+    /// Number of failed commitments.
     pub failed_count: i64,
+    /// Number of expired commitments.
     pub expired_count: i64,
+    /// Ratio of verified to total (0.0–1.0).
     pub fulfillment_rate: f64,
 }
 
 /// User performance metrics
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct UserPerformance {
+    /// Unique identifier of the user.
     pub user_id: Uuid,
+    /// Username of the user.
     pub username: String,
+    /// Display name of the user.
     pub display_name: Option<String>,
+    /// Current reputation score.
     pub reputation_score: Decimal,
+    /// Total number of commitments.
     pub total_commitments: i64,
+    /// Number of verified commitments.
     pub verified_count: i64,
+    /// Number of failed commitments.
     pub failed_count: i64,
+    /// Ratio of verified to total (0.0–1.0).
     pub fulfillment_rate: f64,
 }
 
 /// Commitment trend data (daily aggregation)
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct CommitmentTrend {
+    /// Date of the aggregation bucket.
     pub date: chrono::NaiveDate,
+    /// Total commitments for this day.
     pub total: i64,
+    /// Pending commitments on this day.
     pub pending: i64,
+    /// Completed commitments on this day.
     pub completed: i64,
+    /// Verified commitments on this day.
     pub verified: i64,
+    /// Failed commitments on this day.
     pub failed: i64,
+    /// Expired commitments on this day.
     pub expired: i64,
 }
 

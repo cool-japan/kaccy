@@ -92,12 +92,19 @@ pub async fn get_user(
 /// Public user profile (without email)
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct PublicUserProfile {
+    /// Unique user ID
     pub user_id: Uuid,
+    /// Username
     pub username: String,
+    /// Display name
     pub display_name: Option<String>,
+    /// Profile bio
     pub bio: Option<String>,
+    /// Avatar image URL
     pub avatar_url: Option<String>,
+    /// Account creation timestamp
     pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Reputation score (0-1000)
     pub reputation_score: Decimal,
 }
 
@@ -167,19 +174,29 @@ struct PortfolioItem {
     circulating_supply: Decimal,
 }
 
+/// A single portfolio holding
 #[derive(Debug, Serialize)]
 pub struct PortfolioItemResponse {
+    /// Token ID
     pub token_id: Uuid,
+    /// Token symbol
     pub symbol: String,
+    /// Token name
     pub name: String,
+    /// Amount of tokens held
     pub amount: Decimal,
+    /// Current spot price in BTC
     pub current_price_btc: Decimal,
+    /// Total value of holding in BTC
     pub value_btc: Decimal,
 }
 
+/// User's token portfolio
 #[derive(Debug, Serialize)]
 pub struct Portfolio {
+    /// Total portfolio value in BTC
     pub total_value_btc: Decimal,
+    /// Individual token holdings
     pub items: Vec<PortfolioItemResponse>,
 }
 
@@ -214,28 +231,43 @@ pub async fn get_user_tokens(
     Ok(Json(tokens))
 }
 
+/// Summary of a token issued by a user
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct UserTokenSummary {
+    /// Unique token ID
     pub token_id: Uuid,
+    /// Token symbol
     pub symbol: String,
+    /// Token name
     pub name: String,
+    /// Current circulating supply
     pub circulating_supply: Decimal,
+    /// Maximum total supply
     pub total_supply: Decimal,
+    /// Initial price in BTC
     pub initial_price_btc: Decimal,
+    /// Price increment per token in BTC
     pub price_increment_btc: Decimal,
+    /// Token creation timestamp
     pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Token status (active, paused, etc.)
     pub status: String,
+    /// Number of unique token holders
     pub holder_count: i64,
+    /// All-time total trading volume in BTC
     pub total_volume_btc: Decimal,
 }
 
-/// Get user's trade history
+/// Query parameters for trade history
 #[derive(Debug, Deserialize)]
 pub struct TradeHistoryQuery {
+    /// Maximum number of trades to return
     pub limit: Option<i64>,
+    /// Number of records to skip for pagination
     pub offset: Option<i64>,
 }
 
+/// Get the authenticated user's trade history
 pub async fn get_my_trades(
     State(state): State<AppState>,
     Extension(user_id): Extension<Uuid>,
@@ -272,15 +304,25 @@ pub async fn get_my_trades(
     Ok(Json(trades))
 }
 
+/// A trade history entry for a user
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct TradeHistoryItem {
+    /// Unique trade ID
     pub trade_id: Uuid,
+    /// Token ID that was traded
     pub token_id: Uuid,
+    /// Symbol of the traded token
     pub token_symbol: String,
+    /// Direction of the trade (buy or sell)
     pub trade_type: String,
+    /// Amount of tokens traded
     pub amount: Decimal,
+    /// Price per token in BTC
     pub price_btc: Decimal,
+    /// Total trade value in BTC
     pub total_btc: Decimal,
+    /// Platform fee paid in BTC
     pub platform_fee_btc: Decimal,
+    /// Timestamp when trade was executed
     pub executed_at: chrono::DateTime<chrono::Utc>,
 }

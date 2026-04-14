@@ -11,78 +11,122 @@ use crate::state::AppState;
 /// Health check response
 #[derive(Debug, Serialize)]
 pub struct HealthResponse {
+    /// Overall health status (healthy, degraded, unhealthy)
     pub status: String,
+    /// Application version
     pub version: String,
+    /// Application uptime in seconds
     pub uptime_seconds: u64,
+    /// Database health details
     pub database: DatabaseHealth,
+    /// Redis health details (omitted if not configured)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub redis: Option<RedisHealth>,
+    /// Disk space health details
     pub disk: DiskHealth,
+    /// Bitcoin RPC health details (omitted if not configured)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bitcoin: Option<BitcoinHealth>,
+    /// Event bus health details (omitted if not configured)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_bus: Option<EventBusHealth>,
+    /// Job processor health details (omitted if not configured)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub job_processor: Option<JobProcessorHealth>,
+    /// External service health details
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub external_services: Vec<ExternalServiceHealth>,
 }
 
+/// Database connection health
 #[derive(Debug, Serialize)]
 pub struct DatabaseHealth {
+    /// Whether the database is connected
     pub connected: bool,
+    /// Total pool size
     pub pool_size: u32,
+    /// Number of idle connections
     pub pool_idle: u32,
+    /// Connection latency in milliseconds
     pub latency_ms: Option<u64>,
 }
 
+/// Redis connection health
 #[derive(Debug, Serialize)]
 pub struct RedisHealth {
+    /// Whether Redis is connected
     pub connected: bool,
+    /// Connection latency in milliseconds
     pub latency_ms: Option<u64>,
 }
 
+/// Disk space health
 #[derive(Debug, Serialize)]
 pub struct DiskHealth {
+    /// Available disk space in gigabytes
     pub available_gb: f64,
+    /// Total disk space in gigabytes
     pub total_gb: f64,
+    /// Percentage of disk space used
     pub used_percent: f64,
+    /// Whether disk usage is within healthy limits
     pub healthy: bool,
 }
 
+/// Bitcoin RPC connection health
 #[derive(Debug, Serialize)]
 pub struct BitcoinHealth {
+    /// Whether Bitcoin RPC is connected
     pub connected: bool,
+    /// Current best block height
     pub block_height: Option<u64>,
+    /// Bitcoin network (mainnet, testnet, regtest)
     pub network: Option<String>,
+    /// Connection latency in milliseconds
     pub latency_ms: Option<u64>,
 }
 
+/// External service health
 #[derive(Debug, Serialize)]
 pub struct ExternalServiceHealth {
+    /// Service name
     pub name: String,
+    /// Service status
     pub status: String,
+    /// Connection latency in milliseconds
     pub latency_ms: Option<u64>,
+    /// Error message if unhealthy
     pub error: Option<String>,
 }
 
+/// Event bus health
 #[derive(Debug, Serialize)]
 pub struct EventBusHealth {
+    /// Whether the event bus is configured
     pub configured: bool,
+    /// Number of registered event handlers
     pub handler_count: usize,
 }
 
+/// Job processor health
 #[derive(Debug, Serialize)]
 pub struct JobProcessorHealth {
+    /// Whether the job processor is configured
     pub configured: bool,
+    /// Number of worker threads
     pub worker_count: usize,
+    /// Queue statistics (if available)
     pub queue_stats: Option<JobQueueStats>,
 }
 
+/// Job queue statistics
 #[derive(Debug, Serialize)]
 pub struct JobQueueStats {
+    /// Number of jobs waiting to be processed
     pub pending_jobs: usize,
+    /// Number of jobs currently being processed
     pub processing_jobs: usize,
+    /// Total jobs in the queue
     pub total_jobs: usize,
 }
 

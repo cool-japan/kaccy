@@ -56,6 +56,7 @@ impl MarketConditions {
     }
 }
 
+/// Current market state classification used for dynamic parameter adjustment
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MarketState {
     /// Normal market conditions
@@ -299,6 +300,7 @@ pub struct IncentiveOptimizer {
     allocations: Vec<IncentiveAllocation>,
 }
 
+/// Allocation of incentives to a specific protocol category
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IncentiveAllocation {
     /// Category name (e.g., "Liquidity Mining", "Staking Rewards")

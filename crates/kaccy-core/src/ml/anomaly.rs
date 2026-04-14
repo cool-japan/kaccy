@@ -11,36 +11,54 @@ use std::collections::VecDeque;
 /// Anomaly detection result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Anomaly {
+    /// Timestamp when the anomaly was detected
     pub timestamp: DateTime<Utc>,
+    /// Classification of the anomaly
     pub anomaly_type: AnomalyType,
+    /// Severity level of the anomaly
     pub severity: AnomalySeverity,
+    /// Numeric anomaly score (higher = more anomalous)
     pub score: f64,
+    /// Human-readable description of the anomaly
     pub description: String,
+    /// The observed value that triggered the anomaly
     pub value: f64,
+    /// The expected range for the observed value
     pub expected_range: (f64, f64),
 }
 
 /// Type of anomaly detected
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AnomalyType {
+    /// Abnormal upward price movement
     PriceSpike,
+    /// Abnormal downward price movement
     PriceDrop,
+    /// Abnormal upward volume movement
     VolumeSpike,
+    /// Abnormal downward volume movement
     VolumeDrop,
+    /// Excessive price volatility
     Volatility,
+    /// Suspicious trading pattern
     Pattern,
 }
 
 /// Severity level of anomaly
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum AnomalySeverity {
+    /// Minor deviation, informational only
     Low,
+    /// Noteworthy deviation, warrants monitoring
     Medium,
+    /// Significant deviation, warrants investigation
     High,
+    /// Extreme deviation, immediate action may be required
     Critical,
 }
 
 impl AnomalySeverity {
+    /// Derive severity from a numeric anomaly score
     pub fn from_score(score: f64) -> Self {
         if score >= 4.0 {
             Self::Critical
@@ -72,13 +90,18 @@ pub trait AnomalyDetector: Send + Sync {
 /// Z-score based anomaly detector
 #[derive(Debug, Clone)]
 pub struct ZScoreDetector {
+    /// Number of past data points used to compute mean and std dev
     window_size: usize,
+    /// Z-score threshold above which a point is flagged as anomalous
     threshold: f64,
+    /// Sliding window of recent price values
     price_history: VecDeque<f64>,
+    /// Sliding window of recent volume values
     volume_history: VecDeque<f64>,
 }
 
 impl ZScoreDetector {
+    /// Create a new Z-score detector with the given window and threshold
     pub fn new(window_size: usize, threshold: f64) -> Self {
         Self {
             window_size,
@@ -237,12 +260,16 @@ impl AnomalyDetector for ZScoreDetector {
 /// Interquartile range (IQR) based anomaly detector
 #[derive(Debug, Clone)]
 pub struct IQRDetector {
+    /// Number of past data points used to compute IQR bounds
     window_size: usize,
+    /// IQR fence multiplier (1.5 = standard, 3.0 = extreme outlier)
     multiplier: f64,
+    /// Sliding window of recent price values
     price_history: VecDeque<f64>,
 }
 
 impl IQRDetector {
+    /// Create a new IQR detector with the given window and multiplier
     pub fn new(window_size: usize, multiplier: f64) -> Self {
         Self {
             window_size,
@@ -348,12 +375,16 @@ impl AnomalyDetector for IQRDetector {
 /// Volatility-based anomaly detector
 #[derive(Debug, Clone)]
 pub struct VolatilityDetector {
+    /// Number of past price points to include in volatility calculation
     window_size: usize,
+    /// Volatility threshold above which an anomaly is flagged
     threshold: f64,
+    /// Sliding window of recent price values
     price_history: VecDeque<f64>,
 }
 
 impl VolatilityDetector {
+    /// Create a new volatility detector with the given window and threshold
     pub fn new(window_size: usize, threshold: f64) -> Self {
         Self {
             window_size,
@@ -445,29 +476,35 @@ impl AnomalyDetector for VolatilityDetector {
 
 /// Composite anomaly detector that combines multiple detectors
 pub struct CompositeAnomalyDetector {
+    /// Individual detectors to run in parallel
     detectors: Vec<Box<dyn AnomalyDetector>>,
 }
 
 impl CompositeAnomalyDetector {
+    /// Create a new empty composite detector
     pub fn new() -> Self {
         Self {
             detectors: Vec::new(),
         }
     }
 
+    /// Add a detector to this composite
     pub fn add_detector(mut self, detector: Box<dyn AnomalyDetector>) -> Self {
         self.detectors.push(detector);
         self
     }
 
+    /// Add a default Z-score detector
     pub fn with_zscore(self) -> Self {
         self.add_detector(Box::new(ZScoreDetector::default()))
     }
 
+    /// Add a default IQR detector
     pub fn with_iqr(self) -> Self {
         self.add_detector(Box::new(IQRDetector::default()))
     }
 
+    /// Add a default volatility detector
     pub fn with_volatility(self) -> Self {
         self.add_detector(Box::new(VolatilityDetector::default()))
     }

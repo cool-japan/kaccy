@@ -36,15 +36,34 @@ pub struct PsbtAnalysis {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationWarning {
     /// Fee is unusually high
-    HighFee { fee: u64, percentage: f64 },
+    HighFee {
+        /// Fee amount in satoshis
+        fee: u64,
+        /// Fee as percentage of total input value
+        percentage: f64,
+    },
     /// Fee rate is very high
-    HighFeeRate { rate: f64 },
+    HighFeeRate {
+        /// Fee rate in sat/vB
+        rate: f64,
+    },
     /// Missing witness data
-    MissingWitnessData { input_index: usize },
+    MissingWitnessData {
+        /// Index of the input missing witness data
+        input_index: usize,
+    },
     /// Missing UTXO information
-    MissingUtxoInfo { input_index: usize },
+    MissingUtxoInfo {
+        /// Index of the input missing UTXO info
+        input_index: usize,
+    },
     /// Dust output detected
-    DustOutput { output_index: usize, amount: u64 },
+    DustOutput {
+        /// Index of the dust output
+        output_index: usize,
+        /// Output amount in satoshis
+        amount: u64,
+    },
     /// Change output not identified
     UnidentifiedChange,
 }
@@ -53,13 +72,24 @@ pub enum ValidationWarning {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SecurityIssue {
     /// Potential fee overpayment attack
-    FeeOverpayment { expected_fee: u64, actual_fee: u64 },
+    FeeOverpayment {
+        /// Expected fee in satoshis
+        expected_fee: u64,
+        /// Actual fee in satoshis
+        actual_fee: u64,
+    },
     /// Unverified input amounts
     UnverifiedInputAmounts,
     /// Reused address detected
-    AddressReuse { output_index: usize },
+    AddressReuse {
+        /// Index of the output using a reused address
+        output_index: usize,
+    },
     /// Suspicious script type
-    SuspiciousScript { input_index: usize },
+    SuspiciousScript {
+        /// Index of the input with a suspicious script
+        input_index: usize,
+    },
 }
 
 /// Input analysis

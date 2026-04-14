@@ -141,9 +141,13 @@ impl Default for RiskMetrics {
 /// Risk level classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RiskLevel {
+    /// Minimal risk; no action required.
     Low,
+    /// Moderate risk; monitoring recommended.
     Medium,
+    /// Elevated risk; action may be required.
     High,
+    /// Severe risk; immediate action required.
     Critical,
 }
 

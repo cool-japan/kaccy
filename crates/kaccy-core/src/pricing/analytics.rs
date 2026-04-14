@@ -11,7 +11,9 @@ use uuid::Uuid;
 /// OHLCV candlestick data
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Candle {
+    /// Unique identifier of this candle record.
     pub candle_id: Uuid,
+    /// Token this candle represents price data for.
     pub token_id: Uuid,
     /// Candle interval (1m, 5m, 15m, 1h, 4h, 1d, etc.)
     pub interval: CandleInterval,
@@ -31,9 +33,11 @@ pub struct Candle {
     pub start_time: DateTime<Utc>,
     /// Candle end time
     pub end_time: DateTime<Utc>,
+    /// Timestamp when this candle record was created.
     pub created_at: DateTime<Utc>,
 }
 
+/// Interval duration of an OHLCV candle.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "lowercase")]
 #[derive(Default)]
@@ -173,6 +177,7 @@ pub struct VwapCalculator {
 }
 
 impl VwapCalculator {
+    /// Creates a new `VwapCalculator` for the specified token.
     pub fn new(token_id: Uuid) -> Self {
         Self {
             _token_id: token_id,
@@ -213,6 +218,7 @@ pub struct TwapCalculator {
 }
 
 impl TwapCalculator {
+    /// Creates a new `TwapCalculator` with a rolling window of at most `max_samples` samples.
     pub fn new(token_id: Uuid, max_samples: usize) -> Self {
         Self {
             _token_id: token_id,
@@ -264,6 +270,7 @@ impl TwapCalculator {
 /// Market depth snapshot
 #[derive(Debug, Clone, Serialize)]
 pub struct MarketDepth {
+    /// Token this market depth snapshot is for.
     pub token_id: Uuid,
     /// Buy orders (price, quantity)
     pub bids: Vec<(Decimal, Decimal)>,
@@ -277,10 +284,12 @@ pub struct MarketDepth {
     pub spread: Option<Decimal>,
     /// Spread percentage
     pub spread_percentage: Option<Decimal>,
+    /// Timestamp when this depth snapshot was taken.
     pub snapshot_time: DateTime<Utc>,
 }
 
 impl MarketDepth {
+    /// Creates an empty `MarketDepth` snapshot for the given token.
     pub fn new(token_id: Uuid) -> Self {
         Self {
             token_id,
@@ -329,6 +338,7 @@ impl MarketDepth {
 /// Trading statistics for a token
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct TradingStats {
+    /// Token these trading statistics are for.
     pub token_id: Uuid,
     /// 24h trading volume
     pub volume_24h: Decimal,
@@ -350,10 +360,12 @@ pub struct TradingStats {
     pub atl_price: Option<Decimal>,
     /// All-time low time
     pub atl_time: Option<DateTime<Utc>>,
+    /// Timestamp of the most recent statistics update.
     pub updated_at: DateTime<Utc>,
 }
 
 impl TradingStats {
+    /// Creates a zeroed `TradingStats` record for the given token.
     pub fn new(token_id: Uuid) -> Self {
         Self {
             token_id,

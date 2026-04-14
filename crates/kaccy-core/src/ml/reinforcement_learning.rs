@@ -28,11 +28,16 @@ pub enum RLAlgorithm {
 /// Trading action in RL environment
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TradingAction {
+    /// Buy at market price
     Buy,
+    /// Sell at market price
     Sell,
+    /// Take no action this step
     Hold,
-    BuyAmount(u32),  // Buy specific amount (discretized)
-    SellAmount(u32), // Sell specific amount (discretized)
+    /// Buy a discretised quantity
+    BuyAmount(u32),
+    /// Sell a discretised quantity
+    SellAmount(u32),
 }
 
 /// Market state observation
@@ -53,6 +58,7 @@ pub struct MarketState {
 }
 
 impl MarketState {
+    /// Flatten all state fields into a single feature vector for the network
     pub fn to_feature_vector(&self) -> Vec<f64> {
         let mut features = vec![self.price, self.position, self.capital];
         features.extend(&self.price_history);
@@ -64,28 +70,41 @@ impl MarketState {
 
 /// RL Agent for trading
 pub struct RLTradingAgent {
+    /// Which RL algorithm this agent uses
     pub algorithm: RLAlgorithm,
+    /// Dimensionality of the input state vector
     pub state_dim: usize,
+    /// Number of discrete actions available
     pub action_dim: usize,
+    /// Optimizer learning rate
     pub learning_rate: f64,
+    /// Reward discount factor (gamma)
     pub discount_factor: f64,
-    pub epsilon: f64, // Exploration rate
+    /// Epsilon for epsilon-greedy exploration
+    pub epsilon: f64,
     /// Experience replay buffer
     pub replay_buffer: Vec<Experience>,
+    /// Cumulative reward across all steps
     pub total_reward: f64,
 }
 
 /// Experience tuple for replay buffer
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Experience {
+    /// State observation at time t
     pub state: Vec<f64>,
+    /// Action taken at time t
     pub action: TradingAction,
+    /// Reward received after taking the action
     pub reward: f64,
+    /// State observation at time t+1
     pub next_state: Vec<f64>,
+    /// Whether this transition ended the episode
     pub done: bool,
 }
 
 impl RLTradingAgent {
+    /// Create a new untrained RL trading agent
     pub fn new(algorithm: RLAlgorithm, state_dim: usize, action_dim: usize) -> Self {
         Self {
             algorithm,
@@ -155,7 +174,9 @@ impl RLTradingAgent {
 
 /// Multi-agent trading system
 pub struct MultiAgentSystem {
+    /// Individual RL agents in this system
     pub agents: Vec<RLTradingAgent>,
+    /// How agents interact with one another
     pub cooperation_mode: CooperationMode,
 }
 
@@ -171,6 +192,7 @@ pub enum CooperationMode {
 }
 
 impl MultiAgentSystem {
+    /// Create a new multi-agent system with identical agents
     pub fn new(
         num_agents: usize,
         algorithm: RLAlgorithm,
@@ -224,12 +246,16 @@ impl MultiAgentSystem {
 
 /// Adversarial training setup
 pub struct AdversarialTraining {
+    /// Agent trying to generate realistic-looking trading behaviour
     pub generator_agent: RLTradingAgent,
+    /// Agent trying to distinguish generated from real behaviour
     pub discriminator_agent: RLTradingAgent,
+    /// Number of adversarial training rounds completed
     pub num_iterations: usize,
 }
 
 impl AdversarialTraining {
+    /// Create a new adversarial training setup
     pub fn new(state_dim: usize, action_dim: usize) -> Self {
         Self {
             generator_agent: RLTradingAgent::new(RLAlgorithm::PPO, state_dim, action_dim),
@@ -254,8 +280,11 @@ impl AdversarialTraining {
 
 /// Transfer learning across markets
 pub struct TransferLearning {
+    /// Agent pre-trained on the source market
     pub source_agent: RLTradingAgent,
+    /// Agent being adapted to the target market
     pub target_agent: RLTradingAgent,
+    /// Which transfer learning strategy to use
     pub transfer_method: TransferMethod,
 }
 
@@ -273,6 +302,7 @@ pub enum TransferMethod {
 }
 
 impl TransferLearning {
+    /// Create a new transfer learning setup
     pub fn new(
         source_algorithm: RLAlgorithm,
         state_dim: usize,

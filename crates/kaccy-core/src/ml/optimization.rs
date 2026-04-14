@@ -3,21 +3,27 @@
 //! This module provides algorithms for optimizing trading strategies and
 //! finding optimal hyperparameters for ML models and trading algorithms.
 
-use rand::Rng;
+use rand::RngExt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Parameter definition for optimization
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Parameter {
+    /// Name of the parameter
     pub name: String,
+    /// Minimum allowed value
     pub min_value: f64,
+    /// Maximum allowed value
     pub max_value: f64,
+    /// Discrete step size for grid-based search
     pub step_size: Option<f64>,
+    /// Whether this parameter must be an integer
     pub is_integer: bool,
 }
 
 impl Parameter {
+    /// Create a new continuous parameter
     pub fn new(name: impl Into<String>, min_value: f64, max_value: f64) -> Self {
         Self {
             name: name.into(),
@@ -28,11 +34,13 @@ impl Parameter {
         }
     }
 
+    /// Set a discrete step size for grid search
     pub fn with_step(mut self, step: f64) -> Self {
         self.step_size = Some(step);
         self
     }
 
+    /// Mark this parameter as integer-valued
     pub fn as_integer(mut self) -> Self {
         self.is_integer = true;
         self
@@ -91,13 +99,18 @@ pub type ParameterSet = HashMap<String, f64>;
 /// Optimization result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptimizationResult {
+    /// Parameter set that produced the best score
     pub best_parameters: ParameterSet,
+    /// Highest score achieved
     pub best_score: f64,
+    /// Total number of evaluations performed
     pub iterations: usize,
+    /// Full history of (parameters, score) tuples
     pub all_results: Vec<(ParameterSet, f64)>,
 }
 
 impl OptimizationResult {
+    /// Create a new optimization result
     pub fn new(best_parameters: ParameterSet, best_score: f64, iterations: usize) -> Self {
         Self {
             best_parameters,
@@ -107,6 +120,7 @@ impl OptimizationResult {
         }
     }
 
+    /// Attach the full evaluation history
     pub fn with_history(mut self, results: Vec<(ParameterSet, f64)>) -> Self {
         self.all_results = results;
         self
@@ -129,11 +143,14 @@ pub trait ObjectiveFunction: Send + Sync {
 
 /// Grid search optimizer
 pub struct GridSearchOptimizer {
+    /// Parameter definitions to search over
     parameters: Vec<Parameter>,
+    /// Optional limit on the number of grid combinations to evaluate
     max_combinations: Option<usize>,
 }
 
 impl GridSearchOptimizer {
+    /// Create a new grid search optimizer
     pub fn new(parameters: Vec<Parameter>) -> Self {
         Self {
             parameters,
@@ -141,6 +158,7 @@ impl GridSearchOptimizer {
         }
     }
 
+    /// Limit the number of parameter combinations evaluated
     pub fn with_max_combinations(mut self, max: usize) -> Self {
         self.max_combinations = Some(max);
         self
@@ -189,6 +207,7 @@ impl GridSearchOptimizer {
         combinations
     }
 
+    /// Run grid search and return the best parameter set found
     pub fn optimize<F>(&self, objective: &F) -> anyhow::Result<OptimizationResult>
     where
         F: ObjectiveFunction,
@@ -222,11 +241,14 @@ impl GridSearchOptimizer {
 
 /// Random search optimizer
 pub struct RandomSearchOptimizer {
+    /// Parameter definitions to search over
     parameters: Vec<Parameter>,
+    /// Number of random evaluations to perform
     iterations: usize,
 }
 
 impl RandomSearchOptimizer {
+    /// Create a new random search optimizer
     pub fn new(parameters: Vec<Parameter>, iterations: usize) -> Self {
         Self {
             parameters,
@@ -241,6 +263,7 @@ impl RandomSearchOptimizer {
             .collect()
     }
 
+    /// Run random search and return the best parameter set found
     pub fn optimize<F>(&self, objective: &F) -> anyhow::Result<OptimizationResult>
     where
         F: ObjectiveFunction,
@@ -269,12 +292,16 @@ impl RandomSearchOptimizer {
 
 /// Bayesian-inspired optimizer (simplified)
 pub struct BayesianOptimizer {
+    /// Parameter definitions to search over
     parameters: Vec<Parameter>,
+    /// Number of initial random evaluations before guided exploration
     initial_random: usize,
+    /// Total number of evaluations (including initial random)
     total_iterations: usize,
 }
 
 impl BayesianOptimizer {
+    /// Create a new Bayesian optimizer
     pub fn new(parameters: Vec<Parameter>, total_iterations: usize) -> Self {
         Self {
             parameters,
@@ -283,6 +310,7 @@ impl BayesianOptimizer {
         }
     }
 
+    /// Override the number of initial random evaluations
     pub fn with_initial_random(mut self, n: usize) -> Self {
         self.initial_random = n;
         self
@@ -323,6 +351,7 @@ impl BayesianOptimizer {
         new_params
     }
 
+    /// Run Bayesian optimization and return the best parameter set found
     pub fn optimize<F>(&self, objective: &F) -> anyhow::Result<OptimizationResult>
     where
         F: ObjectiveFunction,
@@ -365,14 +394,20 @@ impl BayesianOptimizer {
 
 /// Genetic algorithm optimizer
 pub struct GeneticOptimizer {
+    /// Parameter definitions to search over
     parameters: Vec<Parameter>,
+    /// Number of individuals in each generation
     population_size: usize,
+    /// Number of generations to evolve
     generations: usize,
+    /// Probability of mutating any individual parameter
     mutation_rate: f64,
+    /// Probability of applying crossover rather than cloning a parent
     crossover_rate: f64,
 }
 
 impl GeneticOptimizer {
+    /// Create a new genetic algorithm optimizer
     pub fn new(parameters: Vec<Parameter>, generations: usize) -> Self {
         Self {
             parameters,
@@ -383,11 +418,13 @@ impl GeneticOptimizer {
         }
     }
 
+    /// Override the population size
     pub fn with_population_size(mut self, size: usize) -> Self {
         self.population_size = size;
         self
     }
 
+    /// Override the per-gene mutation probability
     pub fn with_mutation_rate(mut self, rate: f64) -> Self {
         self.mutation_rate = rate;
         self
@@ -426,6 +463,7 @@ impl GeneticOptimizer {
         child
     }
 
+    /// Run genetic optimization and return the best parameter set found
     pub fn optimize<F>(&self, objective: &F) -> anyhow::Result<OptimizationResult>
     where
         F: ObjectiveFunction,

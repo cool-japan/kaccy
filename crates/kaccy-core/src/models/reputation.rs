@@ -13,6 +13,7 @@ use super::user::ValidationError;
 /// Output commitment made by a token issuer
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct OutputCommitment {
+    /// Unique identifier for this commitment
     pub commitment_id: Uuid,
     /// Token associated with this commitment
     pub token_id: Uuid,
@@ -46,7 +47,9 @@ pub struct OutputCommitment {
     pub is_public: bool,
     /// Milestone number (for multi-milestone commitments)
     pub milestone_number: Option<i32>,
+    /// Timestamp when the commitment was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp when the commitment was last updated
     pub updated_at: DateTime<Utc>,
 }
 
@@ -201,16 +204,24 @@ impl fmt::Display for OutputCommitment {
 /// Request to create a new commitment
 #[derive(Debug, Deserialize)]
 pub struct CreateCommitmentRequest {
+    /// Short title of the commitment
     pub title: String,
+    /// Detailed description of what is being committed to
     pub description: String,
+    /// Deadline by which the commitment must be fulfilled
     pub deadline: DateTime<Utc>,
+    /// Category of the commitment
     pub category: CommitmentCategory,
+    /// Reputation points at stake (positive)
     pub reputation_impact: Decimal,
+    /// Whether this commitment is publicly visible
     pub is_public: bool,
+    /// Milestone number for multi-milestone commitments
     pub milestone_number: Option<i32>,
 }
 
 impl CreateCommitmentRequest {
+    /// Validate the create-commitment request fields
     pub fn validate(&self) -> Result<(), ValidationError> {
         if self.title.is_empty() {
             return Err(ValidationError("Title is required".to_string()));
@@ -262,10 +273,12 @@ impl CreateCommitmentRequest {
 /// Request to submit evidence for a commitment
 #[derive(Debug, Deserialize)]
 pub struct SubmitEvidenceRequest {
+    /// URL or textual description of the evidence
     pub evidence: String,
 }
 
 impl SubmitEvidenceRequest {
+    /// Validate the evidence submission request
     pub fn validate(&self) -> Result<(), ValidationError> {
         if self.evidence.is_empty() {
             return Err(ValidationError("Evidence is required".to_string()));
@@ -282,11 +295,14 @@ impl SubmitEvidenceRequest {
 /// Request to verify a commitment (admin only)
 #[derive(Debug, Deserialize)]
 pub struct VerifyCommitmentRequest {
+    /// Verification outcome
     pub result: VerificationResult,
+    /// Optional reviewer notes or explanation
     pub notes: Option<String>,
 }
 
 impl VerifyCommitmentRequest {
+    /// Validate the verification request fields
     pub fn validate(&self) -> Result<(), ValidationError> {
         if let Some(ref notes) = self.notes {
             if notes.len() > 2000 {
@@ -302,7 +318,9 @@ impl VerifyCommitmentRequest {
 /// Reputation event tracking changes to user reputation
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ReputationEvent {
+    /// Unique identifier for this reputation event
     pub event_id: Uuid,
+    /// User whose reputation was changed
     pub user_id: Uuid,
     /// Type of event that caused reputation change
     pub event_type: ReputationEventType,
@@ -318,6 +336,7 @@ pub struct ReputationEvent {
     pub description: String,
     /// Admin who triggered this event (if manually adjusted)
     pub triggered_by_user_id: Option<Uuid>,
+    /// Timestamp when this event was recorded
     pub created_at: DateTime<Utc>,
 }
 
@@ -495,11 +514,17 @@ impl ReputationCalculator {
 /// Reputation tier classification
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ReputationTier {
+    /// Score below 25 — very poor standing
     VeryPoor,
+    /// Score 25–39 — poor standing
     Poor,
+    /// Score 40–59 — acceptable standing
     Fair,
+    /// Score 60–74 — good standing
     Good,
+    /// Score 75–89 — very good standing
     VeryGood,
+    /// Score 90+ — excellent standing
     Excellent,
 }
 
@@ -519,15 +544,25 @@ impl fmt::Display for ReputationTier {
 /// Reputation statistics for a user
 #[derive(Debug, Serialize)]
 pub struct ReputationStats {
+    /// User this stats summary belongs to
     pub user_id: Uuid,
+    /// Current reputation score (0–100)
     pub current_score: Decimal,
+    /// Current reputation tier
     pub tier: ReputationTier,
+    /// Total number of commitments created
     pub total_commitments: i32,
+    /// Number of commitments that were fulfilled
     pub fulfilled_commitments: i32,
+    /// Number of commitments that failed or were rejected
     pub failed_commitments: i32,
+    /// Number of commitments currently pending
     pub pending_commitments: i32,
+    /// Fulfillment rate as a percentage (0–100)
     pub fulfillment_rate_percent: Decimal,
+    /// Cumulative reputation points gained across all events
     pub total_reputation_gained: Decimal,
+    /// Cumulative reputation points lost across all events
     pub total_reputation_lost: Decimal,
 }
 

@@ -312,3 +312,394 @@ impl TierTracker {
         self.history_repo.get_summary(user_id, current_score).await
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+    use rust_decimal_macros::dec;
+
+    // -----------------------------------------------------------------------
+    // tier_to_string
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn tier_to_string_all_variants() {
+        assert_eq!(tier_to_string(&ReputationTier::Unverified), "unverified");
+        assert_eq!(tier_to_string(&ReputationTier::Bronze), "bronze");
+        assert_eq!(tier_to_string(&ReputationTier::Silver), "silver");
+        assert_eq!(tier_to_string(&ReputationTier::Gold), "gold");
+        assert_eq!(tier_to_string(&ReputationTier::Platinum), "platinum");
+        assert_eq!(tier_to_string(&ReputationTier::Diamond), "diamond");
+    }
+
+    // -----------------------------------------------------------------------
+    // string_to_tier
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn string_to_tier_all_valid_lowercase() {
+        assert_eq!(string_to_tier("unverified"), ReputationTier::Unverified);
+        assert_eq!(string_to_tier("bronze"), ReputationTier::Bronze);
+        assert_eq!(string_to_tier("silver"), ReputationTier::Silver);
+        assert_eq!(string_to_tier("gold"), ReputationTier::Gold);
+        assert_eq!(string_to_tier("platinum"), ReputationTier::Platinum);
+        assert_eq!(string_to_tier("diamond"), ReputationTier::Diamond);
+    }
+
+    #[test]
+    fn string_to_tier_case_insensitive() {
+        assert_eq!(string_to_tier("BRONZE"), ReputationTier::Bronze);
+        assert_eq!(string_to_tier("Silver"), ReputationTier::Silver);
+        assert_eq!(string_to_tier("GOLD"), ReputationTier::Gold);
+        assert_eq!(string_to_tier("Platinum"), ReputationTier::Platinum);
+        assert_eq!(string_to_tier("DIAMOND"), ReputationTier::Diamond);
+    }
+
+    #[test]
+    fn string_to_tier_unknown_falls_back_to_unverified() {
+        assert_eq!(string_to_tier(""), ReputationTier::Unverified);
+        assert_eq!(string_to_tier("unknown"), ReputationTier::Unverified);
+        assert_eq!(string_to_tier("garbage_value"), ReputationTier::Unverified);
+        assert_eq!(string_to_tier("123"), ReputationTier::Unverified);
+    }
+
+    // -----------------------------------------------------------------------
+    // Roundtrip: tier → string → tier
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn tier_string_roundtrip_all_variants() {
+        for tier in ReputationTier::all_variants() {
+            let s = tier_to_string(&tier);
+            let recovered = string_to_tier(&s);
+            assert_eq!(
+                recovered, tier,
+                "Roundtrip failed for tier {:?}: got string '{}', recovered {:?}",
+                tier, s, recovered
+            );
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // TierHistoryRecord construction and field access
+    // -----------------------------------------------------------------------
+
+    fn make_record(
+        previous_tier: ReputationTier,
+        new_tier: ReputationTier,
+        direction: TierChangeDirection,
+        previous_score: Decimal,
+        new_score: Decimal,
+        reason: Option<&str>,
+    ) -> TierHistoryRecord {
+        TierHistoryRecord {
+            id: Uuid::new_v4(),
+            user_id: Uuid::new_v4(),
+            previous_tier,
+            new_tier,
+            direction,
+            previous_score,
+            new_score,
+            changed_at: Utc::now(),
+            reason: reason.map(|s| s.to_string()),
+        }
+    }
+
+    #[test]
+    fn tier_history_record_promotion_fields() {
+        let rec = make_record(
+            ReputationTier::Bronze,
+            ReputationTier::Silver,
+            TierChangeDirection::Promotion,
+            dec!(350),
+            dec!(420),
+            Some("verified KYC"),
+        );
+
+        assert_eq!(rec.previous_tier, ReputationTier::Bronze);
+        assert_eq!(rec.new_tier, ReputationTier::Silver);
+        assert_eq!(rec.direction, TierChangeDirection::Promotion);
+        assert_eq!(rec.previous_score, dec!(350));
+        assert_eq!(rec.new_score, dec!(420));
+        assert_eq!(
+            rec.reason.as_deref().expect("reason should be Some"),
+            "verified KYC"
+        );
+    }
+
+    #[test]
+    fn tier_history_record_demotion_fields() {
+        let rec = make_record(
+            ReputationTier::Gold,
+            ReputationTier::Silver,
+            TierChangeDirection::Demotion,
+            dec!(620),
+            dec!(395),
+            None,
+        );
+
+        assert_eq!(rec.previous_tier, ReputationTier::Gold);
+        assert_eq!(rec.new_tier, ReputationTier::Silver);
+        assert!(rec.direction.is_negative());
+        assert!(rec.reason.is_none());
+    }
+
+    // -----------------------------------------------------------------------
+    // Score delta computation on TierHistoryRecord
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn score_delta_positive_for_promotion() {
+        let rec = make_record(
+            ReputationTier::Bronze,
+            ReputationTier::Silver,
+            TierChangeDirection::Promotion,
+            dec!(350),
+            dec!(420),
+            None,
+        );
+        let delta = rec.new_score - rec.previous_score;
+        assert!(delta > dec!(0), "Promotion should yield a positive delta");
+        assert_eq!(delta, dec!(70));
+    }
+
+    #[test]
+    fn score_delta_negative_for_demotion() {
+        let rec = make_record(
+            ReputationTier::Gold,
+            ReputationTier::Silver,
+            TierChangeDirection::Demotion,
+            dec!(620),
+            dec!(395),
+            None,
+        );
+        let delta = rec.new_score - rec.previous_score;
+        assert!(delta < dec!(0), "Demotion should yield a negative delta");
+        assert_eq!(delta, dec!(-225));
+    }
+
+    #[test]
+    fn score_delta_zero_for_identical_scores() {
+        let score = dec!(500);
+        let rec = make_record(
+            ReputationTier::Silver,
+            ReputationTier::Silver,
+            // In practice detect() would return None, but we can still construct the record
+            TierChangeDirection::Promotion,
+            score,
+            score,
+            None,
+        );
+        assert_eq!(rec.new_score - rec.previous_score, dec!(0));
+    }
+
+    // -----------------------------------------------------------------------
+    // TierHistorySummary construction
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn tier_history_summary_empty_recent_changes() {
+        let user_id = Uuid::new_v4();
+        let summary = TierHistorySummary {
+            user_id,
+            current_tier: ReputationTier::Unverified,
+            highest_tier: ReputationTier::Unverified,
+            total_promotions: 0,
+            total_demotions: 0,
+            days_at_current_tier: None,
+            recent_changes: vec![],
+        };
+
+        assert_eq!(summary.user_id, user_id);
+        assert_eq!(summary.current_tier, ReputationTier::Unverified);
+        assert_eq!(summary.total_promotions, 0);
+        assert_eq!(summary.total_demotions, 0);
+        assert!(summary.days_at_current_tier.is_none());
+        assert!(summary.recent_changes.is_empty());
+    }
+
+    #[test]
+    fn tier_history_summary_with_records() {
+        let user_id = Uuid::new_v4();
+        let rec1 = make_record(
+            ReputationTier::Bronze,
+            ReputationTier::Silver,
+            TierChangeDirection::Promotion,
+            dec!(350),
+            dec!(420),
+            None,
+        );
+        let rec2 = make_record(
+            ReputationTier::Silver,
+            ReputationTier::Gold,
+            TierChangeDirection::Promotion,
+            dec!(420),
+            dec!(610),
+            None,
+        );
+
+        let summary = TierHistorySummary {
+            user_id,
+            current_tier: ReputationTier::Gold,
+            highest_tier: ReputationTier::Gold,
+            total_promotions: 2,
+            total_demotions: 0,
+            days_at_current_tier: Some(30),
+            recent_changes: vec![rec1, rec2],
+        };
+
+        assert_eq!(summary.total_promotions, 2);
+        assert_eq!(summary.total_demotions, 0);
+        assert_eq!(
+            summary.days_at_current_tier.expect("days should be set"),
+            30
+        );
+        assert_eq!(summary.recent_changes.len(), 2);
+
+        // highest_tier should be the max of all new_tier values in history
+        let derived_highest = summary
+            .recent_changes
+            .iter()
+            .map(|r| r.new_tier)
+            .max()
+            .unwrap_or(summary.current_tier);
+        assert_eq!(derived_highest, ReputationTier::Gold);
+    }
+
+    // -----------------------------------------------------------------------
+    // Direction classification via direction string mapping
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn direction_string_mapping_promotion() {
+        let direction = TierChangeDirection::Promotion;
+        let s = match direction {
+            TierChangeDirection::Promotion => "promotion",
+            TierChangeDirection::Demotion => "demotion",
+        };
+        assert_eq!(s, "promotion");
+
+        // Reconstruct as done in get_user_history
+        let reconstructed = match s {
+            "promotion" => TierChangeDirection::Promotion,
+            _ => TierChangeDirection::Demotion,
+        };
+        assert_eq!(reconstructed, TierChangeDirection::Promotion);
+        assert!(reconstructed.is_positive());
+    }
+
+    #[test]
+    fn direction_string_mapping_demotion() {
+        let direction = TierChangeDirection::Demotion;
+        let s = match direction {
+            TierChangeDirection::Promotion => "promotion",
+            TierChangeDirection::Demotion => "demotion",
+        };
+        assert_eq!(s, "demotion");
+
+        let reconstructed = match s {
+            "promotion" => TierChangeDirection::Promotion,
+            _ => TierChangeDirection::Demotion,
+        };
+        assert_eq!(reconstructed, TierChangeDirection::Demotion);
+        assert!(reconstructed.is_negative());
+    }
+
+    // -----------------------------------------------------------------------
+    // JSON serialization roundtrip
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn tier_history_record_serializes_to_json() {
+        let user_id = Uuid::new_v4();
+        let record_id = Uuid::new_v4();
+        let rec = TierHistoryRecord {
+            id: record_id,
+            user_id,
+            previous_tier: ReputationTier::Silver,
+            new_tier: ReputationTier::Gold,
+            direction: TierChangeDirection::Promotion,
+            previous_score: dec!(580),
+            new_score: dec!(610),
+            changed_at: Utc::now(),
+            reason: Some("completed first trade".to_string()),
+        };
+
+        let json = serde_json::to_string(&rec).expect("TierHistoryRecord must serialize");
+        // ReputationTier derives serde with no rename, so variants serialize as PascalCase
+        assert!(
+            json.contains("Silver"),
+            "JSON should contain previous_tier variant"
+        );
+        assert!(
+            json.contains("Gold"),
+            "JSON should contain new_tier variant"
+        );
+        assert!(
+            json.contains("completed first trade"),
+            "JSON should contain reason"
+        );
+    }
+
+    #[test]
+    fn tier_history_summary_serializes_to_json() {
+        let user_id = Uuid::new_v4();
+        let summary = TierHistorySummary {
+            user_id,
+            current_tier: ReputationTier::Platinum,
+            highest_tier: ReputationTier::Diamond,
+            total_promotions: 5,
+            total_demotions: 1,
+            days_at_current_tier: Some(14),
+            recent_changes: vec![],
+        };
+
+        let json = serde_json::to_string(&summary).expect("TierHistorySummary must serialize");
+        assert!(json.contains("\"total_promotions\":5"));
+        assert!(json.contains("\"total_demotions\":1"));
+    }
+
+    // -----------------------------------------------------------------------
+    // Single-entry history — min/max/average are all the same entry
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn single_entry_history_min_max_same() {
+        let user_id = Uuid::new_v4();
+        let rec = make_record(
+            ReputationTier::Bronze,
+            ReputationTier::Silver,
+            TierChangeDirection::Promotion,
+            dec!(350),
+            dec!(420),
+            None,
+        );
+        let records = vec![rec];
+
+        let max_score = records
+            .iter()
+            .map(|r| r.new_score)
+            .max()
+            .expect("non-empty iterator must yield a max");
+        let min_score = records
+            .iter()
+            .map(|r| r.new_score)
+            .min()
+            .expect("non-empty iterator must yield a min");
+
+        assert_eq!(max_score, dec!(420));
+        assert_eq!(min_score, dec!(420));
+
+        let summary = TierHistorySummary {
+            user_id,
+            current_tier: ReputationTier::Silver,
+            highest_tier: ReputationTier::Silver,
+            total_promotions: 1,
+            total_demotions: 0,
+            days_at_current_tier: Some(1),
+            recent_changes: records,
+        };
+        assert_eq!(summary.recent_changes.len(), 1);
+    }
+}

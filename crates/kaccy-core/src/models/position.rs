@@ -13,8 +13,11 @@ use super::user::ValidationError;
 /// User's trading position for a token
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Position {
+    /// Unique identifier for this position
     pub position_id: Uuid,
+    /// Owner of this position
     pub user_id: Uuid,
+    /// Token held in this position
     pub token_id: Uuid,
     /// Total tokens held
     pub quantity: Decimal,
@@ -34,12 +37,15 @@ pub struct Position {
     pub closed_at: Option<DateTime<Utc>>,
 }
 
+/// Status of a trading position
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "lowercase")]
 #[derive(Default)]
 pub enum PositionStatus {
+    /// Position is currently open
     #[default]
     Open,
+    /// Position has been fully closed
     Closed,
 }
 
@@ -141,6 +147,7 @@ impl fmt::Display for Position {
 /// Position limits and risk controls
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PositionLimits {
+    /// Owner of these limits
     pub user_id: Uuid,
     /// Maximum position size per token
     pub max_position_size: Option<Decimal>,
@@ -156,7 +163,9 @@ pub struct PositionLimits {
     pub current_daily_loss: Decimal,
     /// Last reset time for daily limits
     pub last_reset_at: DateTime<Utc>,
+    /// Timestamp when these limits were created
     pub created_at: DateTime<Utc>,
+    /// Timestamp when these limits were last modified
     pub updated_at: DateTime<Utc>,
 }
 
@@ -236,9 +245,13 @@ impl PositionLimits {
 /// Position history entry
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PositionHistory {
+    /// Unique identifier for this history record
     pub history_id: Uuid,
+    /// Position this record belongs to
     pub position_id: Uuid,
+    /// User who owns the position
     pub user_id: Uuid,
+    /// Token involved in the action
     pub token_id: Uuid,
     /// Action type (open, add, reduce, close)
     pub action: PositionAction,
@@ -248,17 +261,23 @@ pub struct PositionHistory {
     pub price: Decimal,
     /// PnL realized from this action (if any)
     pub realized_pnl: Option<Decimal>,
+    /// When this action occurred
     pub occurred_at: DateTime<Utc>,
 }
 
+/// Type of action taken on a position
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "lowercase")]
 #[derive(Default)]
 pub enum PositionAction {
+    /// Position was opened
     #[default]
     Open,
+    /// Quantity was added to the position
     Add,
+    /// Quantity was removed from the position
     Reduce,
+    /// Position was fully closed
     Close,
 }
 
@@ -276,26 +295,41 @@ impl fmt::Display for PositionAction {
 /// Trading portfolio summary
 #[derive(Debug, Serialize)]
 pub struct TradingPortfolio {
+    /// Portfolio owner
     pub user_id: Uuid,
+    /// Total number of positions (open + closed)
     pub total_positions: i32,
+    /// Number of currently open positions
     pub open_positions: i32,
+    /// Total cost basis across all open positions
     pub total_cost_basis: Decimal,
+    /// Total current market value across all open positions
     pub total_market_value: Decimal,
+    /// Total unrealized profit/loss
     pub total_unrealized_pnl: Decimal,
+    /// Total realized profit/loss
     pub total_realized_pnl: Decimal,
+    /// Combined realized and unrealized PnL
     pub total_pnl: Decimal,
+    /// Portfolio return on investment as a percentage
     pub portfolio_roi: Decimal,
+    /// Individual positions with current prices
     pub positions: Vec<PositionWithPrice>,
 }
 
 /// Position with current market data
 #[derive(Debug, Serialize)]
 pub struct PositionWithPrice {
+    /// Underlying position record
     #[serde(flatten)]
     pub position: Position,
+    /// Current market price of the token
     pub current_price: Decimal,
+    /// Current market value of the position
     pub market_value: Decimal,
+    /// Unrealized profit/loss at current price
     pub unrealized_pnl: Decimal,
+    /// Unrealized PnL as a percentage of cost basis
     pub unrealized_pnl_percentage: Decimal,
 }
 

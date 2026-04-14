@@ -1,19 +1,34 @@
 //! Database repositories for Kaccy Protocol
 
+/// API key repository: storage and lookup of API keys.
 pub mod api_key;
+/// API key usage repository: per-key request tracking and statistics.
 pub mod api_key_usage;
+/// Audit log repository: immutable record of administrative actions.
 pub mod audit;
+/// Audit event repository: structured event capture for compliance.
 pub mod audit_event;
+/// Background job repository: persistent async job queue management.
 pub mod background_job;
+/// Balance repository: token holdings per user.
 pub mod balance;
+/// Commitment repository: user commitment records and statistics.
 pub mod commitment;
+/// Notification preferences repository: per-user channel preferences.
 pub mod notification_preferences;
+/// Order repository: limit and market order management.
 pub mod order;
+/// Reputation event repository: immutable reputation-change audit trail.
 pub mod reputation_event;
+/// Session repository: user authentication session lifecycle.
 pub mod session;
+/// System configuration repository: runtime key-value configuration.
 pub mod system_config;
+/// Token repository: token issuance, supply, and status management.
 pub mod token;
+/// Trade repository: executed trade records and analytics.
 pub mod trade;
+/// User repository: account management and profile data.
 pub mod user;
 
 pub use api_key::{ApiKey, ApiKeyRepository, ApiKeySummary, CreateApiKey};

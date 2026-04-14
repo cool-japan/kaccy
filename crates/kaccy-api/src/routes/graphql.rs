@@ -15,59 +15,94 @@ use crate::middleware::auth::Claims;
 /// GraphQL User type
 #[derive(SimpleObject, Clone)]
 pub struct GqlUser {
+    /// Unique user ID
     pub id: ID,
+    /// Username
     pub username: String,
+    /// Display name
     pub display_name: Option<String>,
+    /// Profile bio
     pub bio: Option<String>,
+    /// Avatar URL
     pub avatar_url: Option<String>,
+    /// Reputation score (0-1000)
     pub reputation_score: i32,
+    /// Account creation timestamp (ISO 8601)
     pub created_at: String,
 }
 
 /// GraphQL Token type
 #[derive(SimpleObject, Clone)]
 pub struct GqlToken {
+    /// Unique token ID
     pub id: ID,
+    /// Token symbol
     pub symbol: String,
+    /// Token name
     pub name: String,
+    /// Token description
     pub description: Option<String>,
+    /// Maximum total supply
     pub total_supply: String,
+    /// Current circulating supply
     pub current_supply: String,
+    /// User ID of the token issuer
     pub issuer_id: ID,
+    /// Bonding curve type
     pub curve_type: String,
+    /// Initial price in BTC
     pub initial_price: String,
+    /// Bonding curve reserve ratio
     pub reserve_ratio: String,
+    /// Token creation timestamp (ISO 8601)
     pub created_at: String,
 }
 
 /// GraphQL Order type
 #[derive(SimpleObject, Clone)]
 pub struct GqlOrder {
+    /// Unique order ID
     pub id: ID,
+    /// User ID who placed the order
     pub user_id: ID,
+    /// Token ID being ordered
     pub token_id: ID,
+    /// Order type (buy or sell)
     pub order_type: String,
+    /// Amount of tokens
     pub amount: String,
+    /// Price per token in BTC
     pub price_btc: String,
+    /// Total order value in BTC
     pub total_btc: String,
+    /// Order status
     pub status: String,
+    /// Order creation timestamp (ISO 8601)
     pub created_at: String,
 }
 
 /// GraphQL Trade type
 #[derive(SimpleObject, Clone)]
 pub struct GqlTrade {
+    /// Unique trade ID
     pub id: ID,
+    /// Token ID that was traded
     pub token_id: ID,
+    /// Buyer user ID
     pub buyer_id: ID,
+    /// Seller user ID
     pub seller_id: ID,
+    /// Amount of tokens traded
     pub amount: String,
+    /// Price per token in BTC
     pub price_btc: String,
+    /// Total trade value in BTC
     pub total_btc: String,
+    /// Trade execution timestamp (ISO 8601)
     pub created_at: String,
 }
 
-/// GraphQL Query root
+/// Root query type for the GraphQL schema
 pub struct QueryRoot;
 
 #[Object]
@@ -267,7 +302,7 @@ impl QueryRoot {
     }
 }
 
-/// GraphQL Mutation root
+/// Root mutation type for the GraphQL schema
 pub struct MutationRoot;
 
 #[Object]
@@ -311,7 +346,7 @@ impl MutationRoot {
     }
 }
 
-/// GraphQL Schema type
+/// Type alias for the complete Kaccy GraphQL schema
 pub type KaccySchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
 
 /// Create GraphQL schema

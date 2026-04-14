@@ -117,18 +117,31 @@ impl std::str::FromStr for RecurrenceFrequency {
 /// A recurring commitment definition
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct RecurringCommitment {
+    /// Unique identifier for this recurring commitment.
     pub recurring_id: Uuid,
+    /// User who owns this recurring commitment.
     pub user_id: Uuid,
+    /// Token associated with this recurring commitment.
     pub token_id: Uuid,
+    /// Short descriptive title.
     pub title: String,
+    /// Optional extended description.
     pub description: Option<String>,
+    /// String representation of the recurrence frequency.
     pub frequency: String,
+    /// Whether this recurring commitment is currently active.
     pub is_active: bool,
+    /// Total number of instances generated so far.
     pub instances_created: i32,
+    /// Number of instances that have been fulfilled.
     pub instances_fulfilled: i32,
+    /// Number of instances that have failed.
     pub instances_failed: i32,
+    /// Timestamp when the last instance was generated.
     pub last_generated_at: Option<DateTime<Utc>>,
+    /// Deadline for the next generated instance.
     pub next_deadline: DateTime<Utc>,
+    /// When this recurring commitment was created.
     pub created_at: DateTime<Utc>,
 }
 
@@ -152,24 +165,33 @@ impl RecurringCommitment {
 /// Generated commitment instance from a recurring commitment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeneratedCommitment {
+    /// ID of the generated commitment record.
     pub commitment_id: Uuid,
+    /// Parent recurring commitment ID.
     pub recurring_id: Uuid,
+    /// Sequential instance number (1-based).
     pub instance_number: i32,
+    /// Deadline for this specific instance.
     pub deadline: DateTime<Utc>,
 }
 
 /// Request to create a recurring commitment
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateRecurringRequest {
+    /// Token to associate with this recurring commitment.
     pub token_id: Uuid,
+    /// Short descriptive title.
     pub title: String,
+    /// Optional extended description.
     pub description: Option<String>,
+    /// How often instances should be generated.
     pub frequency: RecurrenceFrequency,
     /// When to start the first commitment
     pub start_date: Option<DateTime<Utc>>,
 }
 
 impl CreateRecurringRequest {
+    /// Validate the request, returning an error if any field is invalid.
     pub fn validate(&self) -> Result<()> {
         if self.title.is_empty() {
             return Err(ReputationError::Validation("Title is required".to_string()));
@@ -193,20 +215,30 @@ impl CreateRecurringRequest {
 /// Summary of recurring commitments for a user
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct RecurringSummary {
+    /// Number of currently active recurring commitments.
     pub total_active: i64,
+    /// Total number of generated instances across all recurring commitments.
     pub total_instances: i64,
+    /// Number of instances that were fulfilled.
     pub fulfilled_instances: i64,
+    /// Number of instances that failed.
     pub failed_instances: i64,
+    /// Average fulfillment rate across all instances (0.0–1.0).
     pub average_fulfillment_rate: Decimal,
+    /// Upcoming deadlines sorted by proximity.
     pub upcoming_deadlines: Vec<UpcomingDeadline>,
 }
 
 /// Upcoming deadline info
 #[derive(Debug, Clone, Serialize)]
 pub struct UpcomingDeadline {
+    /// Parent recurring commitment ID.
     pub recurring_id: Uuid,
+    /// Title of the recurring commitment.
     pub title: String,
+    /// Absolute deadline timestamp.
     pub deadline: DateTime<Utc>,
+    /// Number of days until the deadline.
     pub days_until: i64,
 }
 
@@ -216,6 +248,7 @@ pub struct RecurringCommitmentService {
 }
 
 impl RecurringCommitmentService {
+    /// Create a new [`RecurringCommitmentService`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
@@ -595,5 +628,266 @@ impl RecurringCommitmentService {
         .await?;
 
         Ok(result.rows_affected() > 0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+    use rust_decimal_macros::dec;
+    use uuid::Uuid;
+
+    fn fixed_dt(year: i32, month: u32, day: u32) -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(year, month, day, 12, 0, 0)
+            .single()
+            .expect("valid fixed date")
+    }
+
+    // ── RecurrenceFrequency::to_db_string / from_db_string ────────────────────
+
+    #[test]
+    fn test_frequency_to_db_string_all_variants() {
+        assert_eq!(RecurrenceFrequency::Weekly.to_db_string(), "weekly");
+        assert_eq!(RecurrenceFrequency::Biweekly.to_db_string(), "biweekly");
+        assert_eq!(RecurrenceFrequency::Monthly.to_db_string(), "monthly");
+        assert_eq!(RecurrenceFrequency::Quarterly.to_db_string(), "quarterly");
+    }
+
+    #[test]
+    fn test_frequency_from_db_string_roundtrip() {
+        for freq in [
+            RecurrenceFrequency::Weekly,
+            RecurrenceFrequency::Biweekly,
+            RecurrenceFrequency::Monthly,
+            RecurrenceFrequency::Quarterly,
+        ] {
+            let s = freq.to_db_string();
+            let parsed = RecurrenceFrequency::from_db_string(s)
+                .unwrap_or_else(|| panic!("from_db_string failed for {s}"));
+            assert_eq!(parsed, freq);
+        }
+    }
+
+    #[test]
+    fn test_frequency_from_db_string_unknown_returns_none() {
+        assert!(RecurrenceFrequency::from_db_string("daily").is_none());
+        assert!(RecurrenceFrequency::from_db_string("").is_none());
+    }
+
+    #[test]
+    fn test_frequency_from_str_biweekly_aliases() {
+        use std::str::FromStr;
+        assert_eq!(
+            RecurrenceFrequency::from_str("bi-weekly").expect("bi-weekly alias"),
+            RecurrenceFrequency::Biweekly
+        );
+        assert_eq!(
+            RecurrenceFrequency::from_str("bi_weekly").expect("bi_weekly alias"),
+            RecurrenceFrequency::Biweekly
+        );
+    }
+
+    #[test]
+    fn test_frequency_from_str_invalid_returns_error() {
+        use std::str::FromStr;
+        assert!(RecurrenceFrequency::from_str("daily").is_err());
+    }
+
+    // ── RecurrenceFrequency::next_deadline ────────────────────────────────────
+
+    #[test]
+    fn test_next_deadline_weekly_adds_7_days() {
+        let base = fixed_dt(2026, 1, 15);
+        let next = RecurrenceFrequency::Weekly.next_deadline(base);
+        assert_eq!(next, fixed_dt(2026, 1, 22));
+    }
+
+    #[test]
+    fn test_next_deadline_biweekly_adds_14_days() {
+        let base = fixed_dt(2026, 1, 15);
+        let next = RecurrenceFrequency::Biweekly.next_deadline(base);
+        assert_eq!(next, fixed_dt(2026, 1, 29));
+    }
+
+    #[test]
+    fn test_next_deadline_monthly_normal_month() {
+        let base = fixed_dt(2026, 3, 15);
+        let next = RecurrenceFrequency::Monthly.next_deadline(base);
+        assert_eq!(next, fixed_dt(2026, 4, 15));
+    }
+
+    #[test]
+    fn test_next_deadline_monthly_december_rolls_to_january() {
+        let base = fixed_dt(2025, 12, 15);
+        let next = RecurrenceFrequency::Monthly.next_deadline(base);
+        assert_eq!(next, fixed_dt(2026, 1, 15));
+    }
+
+    #[test]
+    fn test_next_deadline_quarterly_normal() {
+        let base = fixed_dt(2026, 1, 15);
+        let next = RecurrenceFrequency::Quarterly.next_deadline(base);
+        assert_eq!(next, fixed_dt(2026, 4, 15));
+    }
+
+    #[test]
+    fn test_next_deadline_quarterly_rollover_to_next_year() {
+        // October + 3 months = January next year
+        let base = fixed_dt(2025, 10, 15);
+        let next = RecurrenceFrequency::Quarterly.next_deadline(base);
+        assert_eq!(next, fixed_dt(2026, 1, 15));
+    }
+
+    #[test]
+    fn test_frequency_description_strings() {
+        assert_eq!(RecurrenceFrequency::Weekly.description(), "every week");
+        assert_eq!(
+            RecurrenceFrequency::Biweekly.description(),
+            "every two weeks"
+        );
+        assert_eq!(RecurrenceFrequency::Monthly.description(), "every month");
+        assert_eq!(
+            RecurrenceFrequency::Quarterly.description(),
+            "every quarter"
+        );
+    }
+
+    // ── RecurringCommitment::fulfillment_rate ─────────────────────────────────
+
+    fn make_recurring(fulfilled: i32, failed: i32) -> RecurringCommitment {
+        RecurringCommitment {
+            recurring_id: Uuid::new_v4(),
+            user_id: Uuid::new_v4(),
+            token_id: Uuid::new_v4(),
+            title: "Test Recurring".to_string(),
+            description: None,
+            frequency: "monthly".to_string(),
+            is_active: true,
+            instances_created: fulfilled + failed,
+            instances_fulfilled: fulfilled,
+            instances_failed: failed,
+            last_generated_at: None,
+            next_deadline: Utc::now() + Duration::days(30),
+            created_at: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn test_fulfillment_rate_no_instances_returns_one() {
+        let r = make_recurring(0, 0);
+        assert_eq!(r.fulfillment_rate(), dec!(1));
+    }
+
+    #[test]
+    fn test_fulfillment_rate_all_fulfilled() {
+        let r = make_recurring(5, 0);
+        assert_eq!(r.fulfillment_rate(), dec!(1));
+    }
+
+    #[test]
+    fn test_fulfillment_rate_half_fulfilled() {
+        let r = make_recurring(5, 5);
+        assert_eq!(r.fulfillment_rate(), dec!(0.5));
+    }
+
+    #[test]
+    fn test_fulfillment_rate_none_fulfilled() {
+        let r = make_recurring(0, 4);
+        assert_eq!(r.fulfillment_rate(), dec!(0));
+    }
+
+    #[test]
+    fn test_fulfillment_rate_partial() {
+        let r = make_recurring(3, 1);
+        // 3/4 = 0.75
+        assert_eq!(r.fulfillment_rate(), dec!(0.75));
+    }
+
+    // ── CreateRecurringRequest::validate ──────────────────────────────────────
+
+    fn valid_recurring_request() -> CreateRecurringRequest {
+        CreateRecurringRequest {
+            token_id: Uuid::new_v4(),
+            title: "Weekly report".to_string(),
+            description: None,
+            frequency: RecurrenceFrequency::Weekly,
+            start_date: None,
+        }
+    }
+
+    #[test]
+    fn test_create_recurring_validate_valid() {
+        valid_recurring_request()
+            .validate()
+            .expect("valid request should pass");
+    }
+
+    #[test]
+    fn test_create_recurring_validate_empty_title_rejected() {
+        let mut req = valid_recurring_request();
+        req.title = String::new();
+        assert!(req.validate().is_err(), "empty title should fail");
+    }
+
+    #[test]
+    fn test_create_recurring_validate_title_too_long_rejected() {
+        let mut req = valid_recurring_request();
+        req.title = "t".repeat(201);
+        assert!(req.validate().is_err(), "title >200 chars should fail");
+    }
+
+    #[test]
+    fn test_create_recurring_validate_title_exactly_200_accepted() {
+        let mut req = valid_recurring_request();
+        req.title = "t".repeat(200);
+        req.validate()
+            .expect("title of exactly 200 chars should pass");
+    }
+
+    #[test]
+    fn test_create_recurring_validate_description_too_long_rejected() {
+        let mut req = valid_recurring_request();
+        req.description = Some("d".repeat(2001));
+        assert!(
+            req.validate().is_err(),
+            "description >2000 chars should fail"
+        );
+    }
+
+    #[test]
+    fn test_create_recurring_validate_description_exactly_2000_accepted() {
+        let mut req = valid_recurring_request();
+        req.description = Some("d".repeat(2000));
+        req.validate()
+            .expect("description of exactly 2000 chars should pass");
+    }
+
+    // ── RecurringSummary default ───────────────────────────────────────────────
+
+    #[test]
+    fn test_recurring_summary_default_zeroed() {
+        let s = RecurringSummary::default();
+        assert_eq!(s.total_active, 0);
+        assert_eq!(s.total_instances, 0);
+        assert_eq!(s.fulfilled_instances, 0);
+        assert_eq!(s.failed_instances, 0);
+        assert!(s.upcoming_deadlines.is_empty());
+    }
+
+    // ── parsed_frequency ──────────────────────────────────────────────────────
+
+    #[test]
+    fn test_parsed_frequency_valid() {
+        let r = make_recurring(0, 0);
+        // make_recurring sets frequency = "monthly"
+        assert_eq!(r.parsed_frequency(), Some(RecurrenceFrequency::Monthly));
+    }
+
+    #[test]
+    fn test_parsed_frequency_invalid_returns_none() {
+        let mut r = make_recurring(0, 0);
+        r.frequency = "daily".to_string();
+        assert!(r.parsed_frequency().is_none());
     }
 }

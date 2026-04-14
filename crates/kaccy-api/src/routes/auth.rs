@@ -20,6 +20,7 @@ use crate::middleware::metrics::{
 };
 use crate::state::AppState;
 
+/// Register a new user account
 pub async fn register(
     State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
@@ -84,6 +85,7 @@ pub async fn register(
     }))
 }
 
+/// Authenticate with email and password
 pub async fn login(
     State(state): State<AppState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,

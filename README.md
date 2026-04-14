@@ -17,10 +17,10 @@ Unlike traditional creator economy platforms, Kaccy focuses on **Proof of Output
 
 | Metric | Value |
 |--------|-------|
-| Total Lines of Code | ~206,000 |
-| Rust Source Files | 538 |
+| Total Lines of Code | ~216,560 |
+| Rust Source Files | 567 |
 | Crates | 7 |
-| Version | 0.1.0 |
+| Version | 0.2.0 |
 
 ## Key Features
 
@@ -178,12 +178,26 @@ sqlx migrate run
 # Build all crates
 cargo build
 
-# Run tests
+# Run tests (or use the helper script)
 cargo nextest run
+# Alternatively: ./scripts/test.sh
+
+# Lint (or use the helper script)
+cargo clippy --all-targets --all-features
+# Alternatively: ./scripts/lint.sh
 
 # Start the API server
 cargo run --bin kaccy-api
 ```
+
+### CI/CD
+
+GitHub Actions workflows are configured in `.github/workflows/`:
+- `ci.yml` — build, test, and clippy on every push/PR
+- `security-audit.yml` — automated dependency vulnerability scanning
+- `docs.yml` — deploy rustdoc to GitHub Pages
+
+A `Dockerfile` (multi-stage, distroless runtime) and `docker-compose.yml` (PostgreSQL 15, Redis 7, optional Bitcoin Core testnet) are included for local development and deployment.
 
 ### Running Tests
 
@@ -240,6 +254,21 @@ When running the API server, OpenAPI documentation is available at:
 ## Contributing
 
 This project is currently in private development. Contribution guidelines will be published after public release.
+
+## Sponsorship
+
+Kaccy is developed and maintained by **COOLJAPAN OU (Team Kitasan)**.
+
+If you find Kaccy useful, please consider sponsoring the project to support continued development of the Pure Rust ecosystem.
+
+[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-red?logo=github)](https://github.com/sponsors/cool-japan)
+
+**[https://github.com/sponsors/cool-japan](https://github.com/sponsors/cool-japan)**
+
+Your sponsorship helps us:
+- Maintain and improve the COOLJAPAN ecosystem
+- Keep the entire ecosystem (OxiBLAS, OxiFFT, SciRS2, etc.) 100% Pure Rust
+- Provide long-term support and security updates
 
 ## License
 

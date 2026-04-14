@@ -335,18 +335,27 @@ impl DistributedRateLimiter {
 /// Rate limiter configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RateLimitConfig {
+    /// Algorithm used to enforce the rate limit.
     pub algorithm: RateLimitAlgorithm,
+    /// Maximum allowed requests per window.
     pub max_requests: u64,
+    /// Length of the rate-limit window in seconds.
     pub window_seconds: u64,
+    /// Optional burst allowance above the base limit.
     pub burst_size: Option<u64>,
 }
 
+/// Rate limiting algorithm selection
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RateLimitAlgorithm {
+    /// Token bucket algorithm allowing configurable bursts.
     TokenBucket,
+    /// Leaky bucket algorithm enforcing a constant drain rate.
     LeakyBucket,
+    /// Sliding window counter algorithm.
     SlidingWindow,
+    /// Distributed rate limiting across multiple nodes.
     Distributed,
 }
 

@@ -21,7 +21,7 @@ static SQL_INJECTION_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
         Regex::new(r"(?i)(exec\s*\(|execute\s*\()").unwrap(),
         Regex::new(r"(?i)(xp_cmdshell|sp_executesql)").unwrap(),
         Regex::new(r"(--|/\*|\*/|;)").unwrap(),
-        Regex::new(r"['\";]{2,}").unwrap(),
+        Regex::new(r#"['\";]{2,}"#).unwrap(),
     ]
 });
 
@@ -73,7 +73,11 @@ impl ParameterSanitizer {
             }
         }
 
-        if !self.allow_special_chars && input.chars().any(|c| !c.is_alphanumeric() && c != ' ' && c != '_' && c != '-') {
+        if !self.allow_special_chars
+            && input
+                .chars()
+                .any(|c| !c.is_alphanumeric() && c != ' ' && c != '_' && c != '-')
+        {
             return Err(SanitizationError::SpecialCharactersNotAllowed);
         }
 
@@ -94,7 +98,10 @@ impl ParameterSanitizer {
             return Err(SanitizationError::InvalidLength { min: 3, max: 50 });
         }
 
-        if !username.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+        if !username
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+        {
             return Err(SanitizationError::InvalidFormat("username".to_string()));
         }
 
@@ -210,7 +217,7 @@ impl DataMasker {
         }
 
         let mask_count = len - visible;
-        let masked: String = std::iter::repeat(self.mask_char).take(mask_count).collect();
+        let masked: String = std::iter::repeat_n(self.mask_char, mask_count).collect();
         let visible_part: String = input.chars().skip(mask_count).collect();
 
         format!("{}{}", masked, visible_part)
@@ -225,7 +232,7 @@ impl DataMasker {
 
         let visible_part: String = input.chars().take(visible).collect();
         let mask_count = len - visible;
-        let masked: String = std::iter::repeat(self.mask_char).take(mask_count).collect();
+        let masked: String = std::iter::repeat_n(self.mask_char, mask_count).collect();
 
         format!("{}{}", visible_part, masked)
     }
@@ -240,7 +247,7 @@ impl DataMasker {
         let start: String = input.chars().take(visible_start).collect();
         let end: String = input.chars().skip(len - visible_end).collect();
         let mask_count = len - visible_start - visible_end;
-        let masked: String = std::iter::repeat(self.mask_char).take(mask_count).collect();
+        let masked: String = std::iter::repeat_n(self.mask_char, mask_count).collect();
 
         format!("{}{}{}", start, masked, end)
     }
@@ -252,7 +259,7 @@ impl DataMasker {
             if local.len() > 1 {
                 let first_char = local.chars().next().unwrap();
                 let mask_count = local.len() - 1;
-                let masked: String = std::iter::repeat(self.mask_char).take(mask_count).collect();
+                let masked: String = std::iter::repeat_n(self.mask_char, mask_count).collect();
                 format!("{}{}{}", first_char, masked, domain)
             } else {
                 email.to_string()
@@ -271,11 +278,29 @@ impl DataMasker {
 /// Errors that can occur during parameter sanitization
 #[derive(Debug, Clone)]
 pub enum SanitizationError {
-    TooLong { actual: usize, max: usize },
-    DangerousPattern { pattern: String },
+    /// Input exceeds the maximum allowed length.
+    TooLong {
+        /// Actual length of the input.
+        actual: usize,
+        /// Maximum allowed length.
+        max: usize,
+    },
+    /// Input matched a dangerous SQL injection pattern.
+    DangerousPattern {
+        /// The regex pattern that was matched.
+        pattern: String,
+    },
+    /// Input contains special characters that are not permitted.
     SpecialCharactersNotAllowed,
+    /// Input does not conform to the expected format (e.g., email, UUID).
     InvalidFormat(String),
-    InvalidLength { min: usize, max: usize },
+    /// Input length is outside the allowed range.
+    InvalidLength {
+        /// Minimum required length.
+        min: usize,
+        /// Maximum allowed length.
+        max: usize,
+    },
 }
 
 impl std::fmt::Display for SanitizationError {
@@ -287,9 +312,7 @@ impl std::fmt::Display for SanitizationError {
             SanitizationError::DangerousPattern { pattern } => {
                 alloc::format!("Dangerous pattern: {}", pattern)
             }
-            SanitizationError::SpecialCharactersNotAllowed => {
-                String::from("Invalid characters")
-            }
+            SanitizationError::SpecialCharactersNotAllowed => String::from("Invalid characters"),
             SanitizationError::InvalidFormat(format_type) => {
                 alloc::format!("Invalid format: {}", format_type)
             }
@@ -396,6 +419,9 @@ mod tests {
     #[test]
     fn test_data_masker_credit_card() {
         let masker = DataMasker::new();
-        assert_eq!(masker.mask_credit_card("1234567890123456"), "************3456");
+        assert_eq!(
+            masker.mask_credit_card("1234567890123456"),
+            "************3456"
+        );
     }
 }

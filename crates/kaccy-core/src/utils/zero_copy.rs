@@ -41,14 +41,18 @@ pub struct OrderBookUpdate {
 }
 
 impl OrderBookUpdate {
-    /// Message type constants
+    /// Message type: add a new price level.
     pub const MSG_ADD: u8 = 1;
+    /// Message type: remove an existing price level.
     pub const MSG_REMOVE: u8 = 2;
+    /// Message type: update quantity at an existing price level.
     pub const MSG_UPDATE: u8 = 3;
+    /// Message type: full order book snapshot.
     pub const MSG_SNAPSHOT: u8 = 4;
 
-    /// Side constants
+    /// Side code for bid (buy) orders.
     pub const SIDE_BID: u8 = 0;
+    /// Side code for ask (sell) orders.
     pub const SIDE_ASK: u8 = 1;
 
     /// Create a new order book update

@@ -61,9 +61,9 @@ pub struct TwoFAStatusResponse {
 /// Generate TOTP secret and QR code
 fn generate_totp_setup(user_email: &str, issuer: &str) -> Result<(String, String, TOTP)> {
     // Generate a random secret (32 bytes = 256 bits)
-    use rand::Rng;
+    use rand::RngExt;
     let mut rng = rand::rng();
-    let secret_bytes: Vec<u8> = (0..32).map(|_| rng.random_range(0..256) as u8).collect();
+    let secret_bytes: Vec<u8> = (0..32).map(|_| rng.random_range(0u8..=255u8)).collect();
 
     let secret = Secret::Raw(secret_bytes.clone());
     let secret_b32 = secret.to_encoded().to_string();
@@ -90,7 +90,7 @@ fn generate_totp_setup(user_email: &str, issuer: &str) -> Result<(String, String
 
 /// Generate backup codes
 fn generate_backup_codes() -> Vec<String> {
-    use rand::Rng;
+    use rand::RngExt;
     let mut rng = rand::rng();
 
     (0..10)

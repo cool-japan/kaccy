@@ -139,10 +139,15 @@ impl TokenHealthScore {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
 pub enum HealthLevel {
+    /// Token is in critical condition requiring immediate attention
     Critical,
+    /// Token is in poor health
     Poor,
+    /// Token health is acceptable but below average
     Fair,
+    /// Token is in good health
     Good,
+    /// Token is in excellent health
     Excellent,
 }
 
@@ -261,10 +266,15 @@ impl TokenPerformanceMetrics {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum PerformanceGrade {
+    /// Significantly underperforming across all metrics
     VeryPoor,
+    /// Underperforming
     Poor,
+    /// Flat or mixed performance
     Neutral,
+    /// Positive performance across key metrics
     Good,
+    /// Strongly outperforming across all metrics
     Excellent,
 }
 
@@ -343,11 +353,17 @@ impl TokenComparator {
 /// Token comparison result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TokenComparison {
+    /// Difference in overall score (positive means Token A is better)
     pub overall_score_diff: Decimal,
+    /// Difference in liquidity score
     pub liquidity_score_diff: Decimal,
+    /// Difference in activity score
     pub activity_score_diff: Decimal,
+    /// Difference in distribution score
     pub distribution_score_diff: Decimal,
+    /// Difference in commitment score
     pub commitment_score_diff: Decimal,
+    /// Which token came out ahead overall
     pub winner: ComparisonWinner,
 }
 
@@ -355,8 +371,11 @@ pub struct TokenComparison {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ComparisonWinner {
+    /// Token A has a higher overall score
     TokenA,
+    /// Token B has a higher overall score
     TokenB,
+    /// Both tokens have the same overall score
     Tie,
 }
 

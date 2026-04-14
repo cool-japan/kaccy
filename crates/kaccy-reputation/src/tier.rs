@@ -5,14 +5,21 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use uuid::Uuid;
 
+/// Reputation tier classification.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ReputationTier {
+    /// Score 0–199: account not yet verified.
     Unverified, // 0-199
-    Bronze,     // 200-399
-    Silver,     // 400-599
-    Gold,       // 600-799
-    Platinum,   // 800-899
-    Diamond,    // 900-1000
+    /// Score 200–399.
+    Bronze, // 200-399
+    /// Score 400–599.
+    Silver, // 400-599
+    /// Score 600–799.
+    Gold, // 600-799
+    /// Score 800–899.
+    Platinum, // 800-899
+    /// Score 900–1000.
+    Diamond, // 900-1000
 }
 
 impl fmt::Display for ReputationTier {
@@ -61,6 +68,7 @@ impl TryFrom<&str> for ReputationTier {
 }
 
 impl ReputationTier {
+    /// Determine the tier that corresponds to the given reputation score.
     pub fn from_score(score: Decimal) -> Self {
         let score_f64 = score.try_into().unwrap_or(0.0);
         match score_f64 {
@@ -157,6 +165,7 @@ impl ReputationTier {
         }
     }
 
+    /// Return the benefits granted by this tier.
     pub fn benefits(&self) -> TierBenefits {
         match self {
             Self::Diamond => TierBenefits {
@@ -268,11 +277,16 @@ impl ReputationTier {
     }
 }
 
+/// Benefits unlocked at a specific reputation tier.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct TierBenefits {
+    /// Maximum number of tokens this tier may issue simultaneously.
     pub max_token_issuance: u32,
+    /// Fee discount percentage (0–100) applied to platform fees.
     pub fee_discount_percent: u32,
+    /// Whether this tier may issue new tokens.
     pub can_issue_tokens: bool,
+    /// Whether this tier is shown with a verified badge.
     pub verified_badge: bool,
 }
 

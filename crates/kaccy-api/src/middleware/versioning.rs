@@ -12,6 +12,7 @@ use std::fmt;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum ApiVersion {
     #[default]
+    /// Version 1 of the API
     V1,
     // V2, // Future versions
 }
@@ -119,7 +120,9 @@ pub fn require_version(
 
 /// Version negotiation error response
 pub struct VersionError {
+    /// The API version that was requested by the client
     pub requested: Option<ApiVersion>,
+    /// The list of API versions supported by this server
     pub supported: Vec<ApiVersion>,
 }
 

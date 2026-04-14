@@ -91,6 +91,7 @@ pub struct ZmqConfig {
 }
 
 impl ZmqConfig {
+    /// Create a new ZMQ configuration with no endpoints set
     pub fn new() -> Self {
         Self {
             hashblock_endpoint: None,
@@ -103,31 +104,37 @@ impl ZmqConfig {
         }
     }
 
+    /// Set the hashblock notification endpoint
     pub fn with_block_endpoint(mut self, endpoint: impl Into<String>) -> Self {
         self.hashblock_endpoint = Some(endpoint.into());
         self
     }
 
+    /// Set the hashtx notification endpoint
     pub fn with_tx_endpoint(mut self, endpoint: impl Into<String>) -> Self {
         self.hashtx_endpoint = Some(endpoint.into());
         self
     }
 
+    /// Set the rawblock notification endpoint
     pub fn with_raw_block_endpoint(mut self, endpoint: impl Into<String>) -> Self {
         self.rawblock_endpoint = Some(endpoint.into());
         self
     }
 
+    /// Set the rawtx notification endpoint
     pub fn with_raw_tx_endpoint(mut self, endpoint: impl Into<String>) -> Self {
         self.rawtx_endpoint = Some(endpoint.into());
         self
     }
 
+    /// Set the sequence notification endpoint
     pub fn with_sequence_endpoint(mut self, endpoint: impl Into<String>) -> Self {
         self.sequence_endpoint = Some(endpoint.into());
         self
     }
 
+    /// Set the notification queue buffer size
     pub fn with_buffer_size(mut self, size: usize) -> Self {
         self.buffer_size = size;
         self
@@ -347,10 +354,12 @@ pub struct BlockMonitor {
 }
 
 impl BlockMonitor {
+    /// Create a new block monitor with no callback set
     pub fn new() -> Self {
         Self { on_block: None }
     }
 
+    /// Set the callback invoked when a new block is announced
     pub fn on_block<F>(mut self, callback: F) -> Self
     where
         F: Fn(String, u32) + Send + Sync + 'static,
@@ -408,10 +417,12 @@ pub struct TransactionMonitor {
 }
 
 impl TransactionMonitor {
+    /// Create a new transaction monitor with no callback set
     pub fn new() -> Self {
         Self { on_tx: None }
     }
 
+    /// Set the callback invoked when a new transaction is announced
     pub fn on_transaction<F>(mut self, callback: F) -> Self
     where
         F: Fn(String, u32) + Send + Sync + 'static,
@@ -469,10 +480,12 @@ pub struct ReorgDetector {
 }
 
 impl ReorgDetector {
+    /// Create a new reorg detector with no callback set
     pub fn new() -> Self {
         Self { on_reorg: None }
     }
 
+    /// Set the callback invoked when a chain reorganization is detected
     pub fn on_reorg<F>(mut self, callback: F) -> Self
     where
         F: Fn(String, u32) + Send + Sync + 'static,

@@ -11,18 +11,29 @@ use std::time::SystemTime;
 /// Enhanced arbitrage opportunity
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ArbitrageOpportunityEnhanced {
+    /// Unique identifier for this opportunity
     pub opportunity_id: String,
+    /// Classification of the arbitrage strategy
     pub arbitrage_type: ArbitrageType,
+    /// Tokens involved in the arbitrage path
     pub tokens_involved: Vec<String>,
+    /// Trading venues involved in the arbitrage path
     pub venues_involved: Vec<String>,
+    /// Estimated profit in BTC
     pub expected_profit: Decimal,
+    /// Profit as a percentage of the invested amount
     pub profit_percentage: Decimal,
+    /// Ordered sequence of trades to execute the arbitrage
     pub execution_path: Vec<TradeStep>,
+    /// Estimated slippage across all execution steps
     pub estimated_slippage: Decimal,
+    /// Confidence score for this opportunity (0–1)
     pub confidence_score: Decimal,
+    /// When the opportunity was detected
     pub detected_at: SystemTime,
 }
 
+/// Classification of arbitrage opportunities across markets
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ArbitrageType {
     /// Simple two-venue arbitrage
@@ -35,13 +46,20 @@ pub enum ArbitrageType {
     MultiHop,
 }
 
+/// A single trade step within an arbitrage execution path
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeStep {
+    /// Position of this step in the overall execution path (1-indexed)
     pub step_number: usize,
+    /// Venue where this trade is executed
     pub venue: String,
+    /// Token sold in this step
     pub from_token: String,
+    /// Token received in this step
     pub to_token: String,
+    /// Expected execution price
     pub expected_price: Decimal,
+    /// Amount to trade in this step
     pub amount: Decimal,
 }
 
@@ -60,14 +78,19 @@ pub struct CrossVenueArbitrageDetector {
     opportunity_counter: u64,
 }
 
+/// Price feed snapshot from a single trading venue
 #[derive(Debug, Clone)]
 pub struct VenuePriceFeed {
+    /// Identifier of the venue providing this feed
     pub venue_id: String,
+    /// Map from token symbol to current price
     pub token_prices: HashMap<String, Decimal>,
+    /// When this feed was last refreshed
     pub last_updated: SystemTime,
 }
 
 impl CrossVenueArbitrageDetector {
+    /// Create a new detector with the given profit and slippage thresholds
     pub fn new(min_profit_threshold: Decimal, max_slippage: Decimal) -> Self {
         Self {
             price_feeds: HashMap::new(),
@@ -78,6 +101,7 @@ impl CrossVenueArbitrageDetector {
         }
     }
 
+    /// Create a detector with sensible default thresholds
     pub fn with_defaults() -> Self {
         Self::new(
             Decimal::new(1, 3), // 0.001 BTC minimum
@@ -315,13 +339,17 @@ pub struct PriceCorrelationAnalyzer {
     price_history: HashMap<String, Vec<PricePoint>>,
 }
 
+/// A single price observation for a token at a point in time
 #[derive(Debug, Clone)]
 pub struct PricePoint {
+    /// When this price was observed
     pub timestamp: SystemTime,
+    /// Token price at this timestamp
     pub price: Decimal,
 }
 
 impl PriceCorrelationAnalyzer {
+    /// Create a new analyzer with no historical data
     pub fn new() -> Self {
         Self {
             price_history: HashMap::new(),
@@ -441,21 +469,29 @@ impl Default for PriceCorrelationAnalyzer {
     }
 }
 
-/// Correlation matrix
+/// Pairwise correlation matrix for a set of tokens
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CorrelationMatrix {
+    /// Ordered list of tokens in this matrix
     pub tokens: Vec<String>,
+    /// Map from (token_a, token_b) pair to Pearson correlation coefficient
     pub correlations: HashMap<(String, String), Decimal>,
 }
 
-/// Correlation breakdown alert
+/// Alert raised when current correlation deviates significantly from history
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CorrelationBreakdown {
+    /// First token in the pair
     pub token_a: String,
+    /// Second token in the pair
     pub token_b: String,
+    /// Long-run historical correlation between the two tokens
     pub historical_correlation: Decimal,
+    /// Correlation measured in the recent window
     pub current_correlation: Decimal,
+    /// Absolute deviation between historical and current correlation
     pub deviation: Decimal,
+    /// When the breakdown was detected
     pub detected_at: SystemTime,
 }
 
@@ -467,6 +503,7 @@ pub struct MarketRegimeDetector {
     current_regime: MarketRegime,
 }
 
+/// Current market regime classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MarketRegime {
     /// Low volatility, sideways movement
@@ -489,6 +526,7 @@ struct VolatilityPoint {
 }
 
 impl MarketRegimeDetector {
+    /// Create a new regime detector with no historical data
     pub fn new() -> Self {
         Self {
             volatility_history: Vec::new(),
@@ -559,10 +597,14 @@ impl Default for MarketRegimeDetector {
     }
 }
 
+/// Summary statistics for the current and historical market regime
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegimeStatistics {
+    /// Most recently classified market regime
     pub current_regime: MarketRegime,
+    /// Mean volatility across all recorded observations
     pub average_volatility: Decimal,
+    /// Number of volatility observations collected
     pub data_points: usize,
 }
 

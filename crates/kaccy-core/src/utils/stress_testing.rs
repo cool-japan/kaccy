@@ -288,7 +288,7 @@ impl MonteCarloSimulator {
 
     /// Run Monte Carlo simulation
     pub fn run(&self) -> Result<MonteCarloResult> {
-        use rand::Rng;
+        use rand::RngExt;
 
         let initial_value = self.portfolio.total_value();
         let mut simulated_values = Vec::with_capacity(self.params.num_simulations);

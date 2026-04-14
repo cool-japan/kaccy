@@ -10,13 +10,18 @@ use serde::{Deserialize, Serialize};
 
 /// UTXO health score (0-100, higher is better)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HealthScore(pub u8);
+pub struct HealthScore(
+    /// Score value between 0 (worst) and 100 (best)
+    pub u8,
+);
 
 impl HealthScore {
+    /// Create a new health score, clamping to 0-100
     pub fn new(score: u8) -> Self {
         Self(score.min(100))
     }
 
+    /// Get the raw score value
     pub fn value(&self) -> u8 {
         self.0
     }
@@ -103,6 +108,7 @@ pub struct UtxoOptimizer {
 }
 
 impl UtxoOptimizer {
+    /// Create a new UTXO optimizer with default thresholds
     pub fn new() -> Self {
         Self {
             low_fee_threshold: 5,     // < 5 sat/vB
@@ -372,6 +378,7 @@ pub struct ConsolidationScheduler {
 }
 
 impl ConsolidationScheduler {
+    /// Create a new consolidation scheduler with hourly check interval
     pub fn new() -> Self {
         Self {
             optimizer: UtxoOptimizer::new(),
@@ -454,11 +461,11 @@ impl Default for ConsolidationScheduler {
 /// Consolidation decision
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConsolidationDecision {
-    /// Whether to consolidate
+    /// Whether consolidation is recommended at this time
     pub should_consolidate: bool,
-    /// Current health metrics
+    /// Current UTXO set health metrics
     pub health: UtxoSetHealth,
-    /// Reason for decision
+    /// Human-readable explanation of the decision
     pub reason: String,
 }
 
@@ -469,6 +476,7 @@ pub struct FeeMarketPredictor {
 }
 
 impl FeeMarketPredictor {
+    /// Create a new fee market predictor with 1 week of history capacity
     pub fn new() -> Self {
         Self {
             fee_history: Vec::new(),

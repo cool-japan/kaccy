@@ -30,51 +30,79 @@ pub enum KycLevel {
 /// KYC status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum KycStatus {
+    /// Verification not yet started
     NotStarted,
+    /// Documents submitted, verification in progress
     InProgress,
+    /// Submitted and awaiting manual review
     PendingReview,
+    /// Verification approved
     Approved,
+    /// Verification rejected
     Rejected,
+    /// Verification has expired
     Expired,
 }
 
 /// Identity document type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DocumentType {
+    /// International travel passport
     Passport,
+    /// Government-issued driver's licence
     DriversLicense,
+    /// National identity card
     NationalId,
+    /// Residence permit
     ResidencePermit,
+    /// Utility bill for address verification
     UtilityBill,
+    /// Bank statement for address verification
     BankStatement,
 }
 
 /// Identity verification request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IdentityVerification {
+    /// Unique identifier of this verification request
     pub id: Uuid,
+    /// User being verified
     pub user_id: Uuid,
+    /// Requested KYC level
     pub level: KycLevel,
+    /// Current status of the verification
     pub status: KycStatus,
+    /// Documents attached to this verification
     pub documents: Vec<VerificationDocument>,
+    /// Timestamp when the verification was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp of the most recent status change
     pub updated_at: DateTime<Utc>,
+    /// Timestamp when verification was approved
     pub verified_at: Option<DateTime<Utc>>,
+    /// Reason if verification was rejected
     pub rejection_reason: Option<String>,
 }
 
 /// Verification document
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerificationDocument {
+    /// Unique identifier of this document
     pub id: Uuid,
+    /// Type of the document
     pub document_type: DocumentType,
+    /// Document reference number (e.g. passport number)
     pub document_number: Option<String>,
+    /// Country that issued the document
     pub issued_country: String,
+    /// Expiry date of the document
     pub expiry_date: Option<DateTime<Utc>>,
+    /// Whether this document has been verified
     pub verified: bool,
 }
 
 impl IdentityVerification {
+    /// Create a new identity verification request for the given user and level
     pub fn new(user_id: Uuid, level: KycLevel) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -89,23 +117,27 @@ impl IdentityVerification {
         }
     }
 
+    /// Attach a verification document to this request
     pub fn add_document(&mut self, document: VerificationDocument) {
         self.documents.push(document);
         self.status = KycStatus::InProgress;
         self.updated_at = Utc::now();
     }
 
+    /// Submit the completed verification for review
     pub fn submit_for_review(&mut self) {
         self.status = KycStatus::PendingReview;
         self.updated_at = Utc::now();
     }
 
+    /// Mark the verification as approved
     pub fn approve(&mut self) {
         self.status = KycStatus::Approved;
         self.verified_at = Some(Utc::now());
         self.updated_at = Utc::now();
     }
 
+    /// Reject the verification with a reason
     pub fn reject(&mut self, reason: String) {
         self.status = KycStatus::Rejected;
         self.rejection_reason = Some(reason);
@@ -113,26 +145,36 @@ impl IdentityVerification {
     }
 }
 
-/// AML risk score
+/// AML risk score for a user
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskScore {
+    /// User being scored
     pub user_id: Uuid,
-    pub score: u8, // 0-100
+    /// Numeric score from 0 (no risk) to 100 (maximum risk)
+    pub score: u8,
+    /// Derived risk level category
     pub risk_level: RiskLevel,
+    /// Individual risk factors that contributed to this score
     pub factors: Vec<RiskFactor>,
+    /// Timestamp when this score was calculated
     pub calculated_at: DateTime<Utc>,
 }
 
 /// Risk level classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RiskLevel {
-    Low,      // 0-30
-    Medium,   // 31-60
-    High,     // 61-80
-    Critical, // 81-100
+    /// Low risk — score 0–30
+    Low,
+    /// Medium risk — score 31–60
+    Medium,
+    /// High risk — score 61–80
+    High,
+    /// Critical risk — score 81–100
+    Critical,
 }
 
 impl RiskLevel {
+    /// Derive the risk level classification from a numeric score (0–100)
     pub fn from_score(score: u8) -> Self {
         match score {
             0..=30 => RiskLevel::Low,
@@ -146,21 +188,32 @@ impl RiskLevel {
 /// Risk factor
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RiskFactor {
+    /// Category of this risk factor
     pub factor_type: RiskFactorType,
+    /// Human-readable description
     pub description: String,
+    /// Contribution of this factor to the overall risk score
     pub weight: f64,
 }
 
 /// Risk factor type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RiskFactorType {
+    /// Transaction values exceeded reporting threshold
     HighValueTransactions,
+    /// Unusually high number of transactions in a period
     FrequentTransactions,
+    /// Account created recently
     NewAccount,
+    /// User is based in a high-risk jurisdiction
     HighRiskCountry,
+    /// Detected unusual behavioural pattern
     UnusualPattern,
+    /// User operates multiple linked accounts
     MultipleAccounts,
-    PEP, // Politically Exposed Person
+    /// Politically Exposed Person classification
+    PEP,
+    /// User appears on a sanctions list
     Sanctions,
 }
 
@@ -171,6 +224,7 @@ pub struct RiskScoringEngine {
 }
 
 impl RiskScoringEngine {
+    /// Create a new risk scoring engine with default factor weights
     pub fn new() -> Self {
         let mut weights = HashMap::new();
         weights.insert(RiskFactorType::HighValueTransactions, 15.0);
@@ -297,92 +351,133 @@ impl Default for RiskScoringEngine {
 /// Enhanced Due Diligence (EDD) trigger
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EDDTrigger {
+    /// Unique identifier of this trigger
     pub id: Uuid,
+    /// User for whom EDD was triggered
     pub user_id: Uuid,
+    /// What caused the EDD to be triggered
     pub trigger_type: EDDTriggerType,
+    /// Human-readable description of the trigger
     pub description: String,
+    /// Timestamp when the trigger fired
     pub triggered_at: DateTime<Utc>,
+    /// Current status of this EDD case
     pub status: EDDStatus,
 }
 
 /// EDD trigger type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EDDTriggerType {
+    /// Risk score crossed the EDD threshold
     HighRiskScore,
+    /// Transaction value exceeded the large-transaction threshold
     LargeTransaction,
+    /// User identified as a Politically Exposed Person
     PEPIdentified,
+    /// Sanctions list match detected
     SanctionsMatch,
+    /// Unusual activity pattern detected
     UnusualActivity,
+    /// Customer requested enhanced due diligence
     CustomerRequest,
 }
 
 /// EDD status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EDDStatus {
+    /// EDD case is open and awaiting review
     Pending,
+    /// EDD review is currently in progress
     InProgress,
+    /// EDD review has been completed
     Completed,
+    /// EDD case has been escalated to compliance
     Escalated,
 }
 
 /// Ongoing monitoring system
 pub struct OngoingMonitoring {
-    /// Monitored users
+    /// Monitored users indexed by user ID
     monitored_users: HashMap<Uuid, MonitoringProfile>,
-    /// Alerts generated
+    /// Alerts generated by the monitoring system
     alerts: Vec<MonitoringAlert>,
 }
 
 /// Monitoring profile
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MonitoringProfile {
+    /// User being monitored
     pub user_id: Uuid,
+    /// Current risk classification
     pub risk_level: RiskLevel,
+    /// How often this user is reviewed
     pub monitoring_frequency: MonitoringFrequency,
+    /// Timestamp of the last completed review
     pub last_review: DateTime<Utc>,
+    /// Scheduled time for the next review
     pub next_review: DateTime<Utc>,
 }
 
 /// Monitoring frequency
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MonitoringFrequency {
+    /// Reviewed every day
     Daily,
+    /// Reviewed every week
     Weekly,
+    /// Reviewed every month
     Monthly,
+    /// Reviewed every quarter
     Quarterly,
 }
 
 /// Monitoring alert
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MonitoringAlert {
+    /// Unique identifier of this alert
     pub id: Uuid,
+    /// User this alert concerns
     pub user_id: Uuid,
+    /// What kind of alert was raised
     pub alert_type: MonitoringAlertType,
+    /// How serious this alert is
     pub severity: AlertSeverity,
+    /// Human-readable description of the alert
     pub description: String,
+    /// When this alert was generated
     pub created_at: DateTime<Utc>,
+    /// Whether this alert has been resolved
     pub resolved: bool,
 }
 
 /// Monitoring alert type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MonitoringAlertType {
+    /// Observed transaction behaviour has changed significantly
     TransactionPatternChange,
+    /// Transaction volume has increased beyond expected levels
     VolumeIncrease,
+    /// A new risk factor was identified
     NewRiskFactor,
+    /// A verification document is about to expire
     DocumentExpiring,
+    /// Risk score has increased above a threshold
     RiskScoreIncrease,
 }
 
 /// Alert severity
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AlertSeverity {
+    /// Informational — no immediate action required
     Info,
+    /// Warrants attention and possible action
     Warning,
+    /// Requires immediate action
     Critical,
 }
 
 impl OngoingMonitoring {
+    /// Create a new ongoing monitoring system
     pub fn new() -> Self {
         Self {
             monitored_users: HashMap::new(),

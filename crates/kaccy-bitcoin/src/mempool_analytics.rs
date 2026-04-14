@@ -199,6 +199,7 @@ pub struct ClusteringDetector {
 }
 
 impl ClusteringDetector {
+    /// Create a new clustering detector with default max cluster size of 100
     pub fn new() -> Self {
         Self {
             max_cluster_size: 100,
@@ -302,6 +303,7 @@ pub struct FeeSpikePredictor {
 }
 
 impl FeeSpikePredictor {
+    /// Create a new fee spike predictor retaining the given number of hours of history
     pub fn new(max_history_hours: usize) -> Self {
         Self {
             history: VecDeque::new(),
@@ -484,6 +486,7 @@ pub struct ReplacementCycleDetector {
 }
 
 impl ReplacementCycleDetector {
+    /// Create a new replacement cycle detector with a max chain length of 50
     pub fn new() -> Self {
         Self {
             replacement_chains: HashMap::new(),

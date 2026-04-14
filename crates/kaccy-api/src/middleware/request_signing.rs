@@ -101,7 +101,7 @@ impl RequestSigner {
         nonce: &str,
         body: &[u8],
     ) -> String {
-        use hmac::{Hmac, Mac};
+        use hmac::{Hmac, KeyInit, Mac};
         type HmacSha256 = Hmac<Sha256>;
 
         // Create the message to sign: METHOD\nPATH\nTIMESTAMP\nNONCE\nBODY_HASH
@@ -116,7 +116,7 @@ impl RequestSigner {
             HmacSha256::new_from_slice(&self.secret).expect("HMAC can take key of any size");
         mac.update(message.as_bytes());
 
-        hex::encode(mac.finalize().into_bytes())
+        hex::encode(mac.finalize().into_bytes().as_slice())
     }
 
     /// Verify a request signature
@@ -210,14 +210,19 @@ impl SigningVerifier {
 /// Signing error types
 #[derive(Debug, thiserror::Error)]
 pub enum SigningError {
+    /// The provided signature does not match the expected value
     #[error("Invalid signature")]
     InvalidSignature,
+    /// The timestamp header could not be parsed as a valid timestamp
     #[error("Invalid timestamp format")]
     InvalidTimestamp,
+    /// The request timestamp is outside the acceptable time window
     #[error("Request is too old")]
     RequestTooOld,
+    /// The nonce in the request has already been seen (replay attack prevention)
     #[error("Nonce has already been used (possible replay attack)")]
     NonceReused,
+    /// A required signing header is absent from the request
     #[error("Missing required header: {0}")]
     MissingHeader(String),
 }

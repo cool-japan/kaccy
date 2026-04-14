@@ -286,10 +286,15 @@ impl MultiTierCache {
 /// Cache statistics
 #[derive(Debug, Clone)]
 pub struct CacheStats {
+    /// Current number of entries in the L1 (hot) cache tier.
     pub l1_size: usize,
+    /// Current number of entries in the L2 (warm) cache tier.
     pub l2_size: usize,
+    /// Maximum capacity of the L1 cache tier.
     pub l1_max_size: usize,
+    /// Maximum capacity of the L2 cache tier.
     pub l2_max_size: usize,
+    /// Total entries across all tiers.
     pub total_entries: usize,
 }
 

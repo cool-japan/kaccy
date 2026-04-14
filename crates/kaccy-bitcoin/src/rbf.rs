@@ -68,9 +68,19 @@ pub enum RbfEvent {
     /// A transaction was replaced
     TransactionReplaced(RbfReplacement),
     /// A tracked transaction was confirmed
-    TransactionConfirmed { txid: String, confirmations: u32 },
+    TransactionConfirmed {
+        /// Transaction ID that was confirmed
+        txid: String,
+        /// Number of confirmations
+        confirmations: u32,
+    },
     /// A tracked transaction was dropped from mempool (not replaced)
-    TransactionDropped { txid: String, reason: String },
+    TransactionDropped {
+        /// Transaction ID that was dropped
+        txid: String,
+        /// Reason for the drop
+        reason: String,
+    },
 }
 
 /// RBF tracker for monitoring transaction replacements

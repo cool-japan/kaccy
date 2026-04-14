@@ -4,173 +4,263 @@ use rust_decimal::Decimal;
 use thiserror::Error;
 use uuid::Uuid;
 
+/// Core error type for all kaccy-core operations
 #[derive(Error, Debug)]
 pub enum CoreError {
+    /// A database operation failed
     #[error("Database error: {0}")]
     Database(String),
 
+    /// Input validation failed
     #[error("Validation error: {0}")]
     Validation(String),
 
+    /// Requested resource was not found
     #[error("Not found: {0}")]
     NotFound(String),
 
+    /// Account balance is insufficient for the operation
     #[error("Insufficient balance: required {required}, available {available}")]
     InsufficientBalance {
+        /// Required amount
         required: Decimal,
+        /// Currently available amount
         available: Decimal,
     },
 
+    /// A token with this identifier already exists
     #[error("Token already exists: {0}")]
     TokenExists(String),
 
+    /// Bonding curve parameters are invalid
     #[error("Invalid bonding curve parameters")]
     InvalidCurveParams,
 
+    /// A circuit breaker has been triggered for the token
     #[error("Circuit breaker triggered")]
     CircuitBreakerTriggered,
 
+    /// Trade slippage exceeded the configured tolerance
     #[error("Slippage exceeded: expected {expected}, actual {actual}")]
-    SlippageExceeded { expected: Decimal, actual: Decimal },
+    SlippageExceeded {
+        /// Expected slippage
+        expected: Decimal,
+        /// Actual slippage
+        actual: Decimal,
+    },
 
+    /// Order has expired and can no longer be filled
     #[error("Order expired")]
     OrderExpired,
 
+    /// Token trading is currently paused
     #[error("Token paused")]
     TokenPaused,
 
+    /// User reputation is below the required threshold
     #[error("Reputation too low: required {required}, current {current}")]
-    ReputationTooLow { required: Decimal, current: Decimal },
+    ReputationTooLow {
+        /// Required reputation score
+        required: Decimal,
+        /// Current reputation score
+        current: Decimal,
+    },
 
+    /// Token maximum supply has been reached
     #[error("Max supply reached")]
     MaxSupplyReached,
 
+    /// Caller is not authorised to perform this action
     #[error("Unauthorized")]
     Unauthorized,
 
+    /// Serialization or deserialization failed
     #[error("Serialization error: {0}")]
     Serialization(String),
 
+    /// A numeric calculation failed
     #[error("Calculation error: {0}")]
     Calculation(String),
 
     // Trading-specific errors
+    /// The specified order was not found
     #[error("Order not found: {0}")]
     OrderNotFound(Uuid),
 
+    /// Order quantity is invalid
     #[error("Invalid order quantity: {0}")]
     InvalidOrderQuantity(String),
 
+    /// Order price is invalid
     #[error("Invalid price: {0}")]
     InvalidPrice(String),
 
+    /// Order has already been filled
     #[error("Order already filled")]
     OrderAlreadyFilled,
 
+    /// Order has already been cancelled
     #[error("Order already cancelled")]
     OrderAlreadyCancelled,
 
+    /// Insufficient market liquidity for the trade
     #[error("Insufficient liquidity: {0}")]
     InsufficientLiquidity(String),
 
+    /// Trade price impact exceeds the configured maximum
     #[error("Price impact too high: {impact}% exceeds maximum {max_impact}%")]
     PriceImpactTooHigh {
+        /// Actual price impact
         impact: Decimal,
+        /// Configured maximum allowed impact
         max_impact: Decimal,
     },
 
+    /// Market is outside of its trading hours
     #[error("Market is closed")]
     MarketClosed,
 
+    /// Trading for this token has been halted
     #[error("Trading halted for token {0}")]
     TradingHalted(Uuid),
 
     // Risk management errors
+    /// Position size exceeds the configured limit
     #[error("Position limit exceeded: current {current}, maximum {maximum}")]
-    PositionLimitExceeded { current: Decimal, maximum: Decimal },
+    PositionLimitExceeded {
+        /// Current position size
+        current: Decimal,
+        /// Configured maximum
+        maximum: Decimal,
+    },
 
+    /// Daily trading volume limit exceeded
     #[error("Daily trading limit exceeded: traded {traded}, limit {limit}")]
-    DailyTradingLimitExceeded { traded: Decimal, limit: Decimal },
+    DailyTradingLimitExceeded {
+        /// Volume traded today
+        traded: Decimal,
+        /// Configured daily limit
+        limit: Decimal,
+    },
 
+    /// Leverage ratio is too high
     #[error("Leverage ratio too high: {ratio} exceeds maximum {max_ratio}")]
-    ExcessiveLeverage { ratio: Decimal, max_ratio: Decimal },
+    ExcessiveLeverage {
+        /// Current leverage ratio
+        ratio: Decimal,
+        /// Configured maximum ratio
+        max_ratio: Decimal,
+    },
 
+    /// Margin call: equity has fallen below maintenance margin
     #[error("Margin call: equity {equity} below maintenance margin {maintenance}")]
     MarginCall {
+        /// Current equity
         equity: Decimal,
+        /// Required maintenance margin
         maintenance: Decimal,
     },
 
     // Payment-specific errors
+    /// The specified payment was not found
     #[error("Payment not found: {0}")]
     PaymentNotFound(Uuid),
 
+    /// Payment has already been confirmed and cannot be reprocessed
     #[error("Payment already confirmed")]
     PaymentAlreadyConfirmed,
 
+    /// Payment has expired
     #[error("Payment expired")]
     PaymentExpired,
 
+    /// Not enough blockchain confirmations yet
     #[error("Insufficient confirmations: required {required}, current {current}")]
-    InsufficientConfirmations { required: u32, current: u32 },
+    InsufficientConfirmations {
+        /// Required confirmation count
+        required: u32,
+        /// Current confirmation count
+        current: u32,
+    },
 
     // Reputation/KYC errors
+    /// KYC verification is required before this action
     #[error("KYC verification required")]
     KycRequired,
 
+    /// KYC verification is in progress
     #[error("KYC verification pending")]
     KycPending,
 
+    /// KYC verification was rejected
     #[error("KYC verification rejected: {0}")]
     KycRejected(String),
 
+    /// The specified commitment was not found
     #[error("Commitment not found: {0}")]
     CommitmentNotFound(Uuid),
 
+    /// Commitment has already been verified
     #[error("Commitment already verified")]
     CommitmentAlreadyVerified,
 
+    /// Commitment deadline has passed
     #[error("Commitment deadline passed")]
     CommitmentDeadlinePassed,
 
     // Rate limiting errors
+    /// Rate limit exceeded; retry after the given number of seconds
     #[error("Rate limit exceeded: retry after {retry_after} seconds")]
-    RateLimitExceeded { retry_after: u64 },
+    RateLimitExceeded {
+        /// Seconds to wait before retrying
+        retry_after: u64,
+    },
 
+    /// Too many requests from this user
     #[error("Too many requests from user {0}")]
     TooManyRequests(Uuid),
 
     // Concurrency errors
+    /// A resource is currently locked by another operation
     #[error("Resource locked: {0}")]
     ResourceLocked(String),
 
+    /// Optimistic locking failed because the resource was concurrently modified
     #[error("Optimistic lock failed: resource was modified")]
     OptimisticLockFailed,
 
+    /// A database deadlock was detected
     #[error("Deadlock detected")]
     DeadlockDetected,
 
     // Configuration errors
+    /// System configuration is invalid
     #[error("Configuration error: {0}")]
     Configuration(String),
 
+    /// A feature flag is not enabled
     #[error("Feature not enabled: {0}")]
     FeatureNotEnabled(String),
 
     // State errors
+    /// Entity is in an invalid state for this operation
     #[error("Invalid state: {0}")]
     InvalidState(String),
 
+    /// Entity already exists
     #[error("Already exists: {0}")]
     AlreadyExists(String),
 
     // Bridge-specific errors
+    /// Provided amount is invalid
     #[error("Invalid amount")]
     InvalidAmount,
 
+    /// Specified bridge route is invalid
     #[error("Invalid bridge route")]
     InvalidBridgeRoute,
 
+    /// Bridge protocol is not supported
     #[error("Bridge not supported")]
     BridgeNotSupported,
 }
@@ -372,6 +462,7 @@ impl CoreError {
     }
 }
 
+/// Convenience type alias for results that may produce a [`CoreError`].
 pub type Result<T> = std::result::Result<T, CoreError>;
 
 #[cfg(test)]

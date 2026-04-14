@@ -177,13 +177,33 @@ impl Attribute {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PolicyCondition {
     /// Attribute equals value
-    AttributeEquals { key: String, value: String },
+    AttributeEquals {
+        /// Attribute name to check.
+        key: String,
+        /// Expected attribute value.
+        value: String,
+    },
     /// Attribute contains value
-    AttributeContains { key: String, value: String },
+    AttributeContains {
+        /// Attribute name to check.
+        key: String,
+        /// Substring or element the attribute must contain.
+        value: String,
+    },
     /// Attribute greater than value (numeric)
-    AttributeGreaterThan { key: String, value: String },
+    AttributeGreaterThan {
+        /// Attribute name to check.
+        key: String,
+        /// Threshold value the attribute must exceed.
+        value: String,
+    },
     /// Time-based condition
-    TimeWindow { start_hour: u8, end_hour: u8 },
+    TimeWindow {
+        /// Hour-of-day (0-23) when the window begins.
+        start_hour: u8,
+        /// Hour-of-day (0-23) when the window ends.
+        end_hour: u8,
+    },
     /// Combination of conditions (AND)
     And(Vec<PolicyCondition>),
     /// Combination of conditions (OR)

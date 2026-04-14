@@ -313,9 +313,13 @@ pub enum RecommendationReason {
 /// Urgency level for RBF
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RecommendationUrgency {
+    /// Low urgency, no immediate action required
     Low,
+    /// Moderate urgency, consider bumping fee soon
     Medium,
+    /// High urgency, fee bump recommended promptly
     High,
+    /// Critical urgency, immediate fee bump required
     Critical,
 }
 

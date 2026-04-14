@@ -241,8 +241,11 @@ impl EMACalculator {
 /// Simple linear regression calculator
 #[derive(Debug, Clone)]
 pub struct LinearRegression {
+    /// Slope coefficient of the fitted line.
     pub slope: Decimal,
+    /// Y-intercept of the fitted line.
     pub intercept: Decimal,
+    /// Coefficient of determination (R²).
     pub r_squared: Decimal,
 }
 

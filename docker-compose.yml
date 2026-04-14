@@ -1,0 +1,116 @@
+name: kaccy
+
+networks:
+  kaccy_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  bitcoin_data:
+
+services:
+  # --------------------------------------------------------------------------
+  # Kaccy application
+  # --------------------------------------------------------------------------
+  kaccy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: kaccy:local
+    container_name: kaccy_app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://kaccy:kaccy@postgres:5432/kaccy
+      REDIS_URL: redis://redis:6379
+      BITCOIN_RPC_URL: http://kaccy:kaccy@bitcoin:18443
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      RUST_LOG: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    networks:
+      - kaccy_network
+
+  # --------------------------------------------------------------------------
+  # PostgreSQL 15
+  # --------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: kaccy_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: kaccy
+      POSTGRES_USER: kaccy
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kaccy}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kaccy -d kaccy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - kaccy_network
+
+  # --------------------------------------------------------------------------
+  # Redis 7
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: kaccy_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - kaccy_network
+
+  # --------------------------------------------------------------------------
+  # Bitcoin Core (optional — activate with: docker compose --profile bitcoin up)
+  # Runs in regtest mode for local development / integration testing.
+  # --------------------------------------------------------------------------
+  bitcoin:
+    image: bitcoin/bitcoin:26.0
+    container_name: kaccy_bitcoin
+    profiles:
+      - bitcoin
+    restart: unless-stopped
+    ports:
+      - "18443:18443"   # regtest RPC
+      - "18444:18444"   # regtest P2P
+    command: >
+      bitcoind
+        -regtest
+        -server
+        -rpcbind=0.0.0.0
+        -rpcallowip=0.0.0.0/0
+        -rpcuser=kaccy
+        -rpcpassword=kaccy
+        -fallbackfee=0.0002
+        -txindex=1
+    volumes:
+      - bitcoin_data:/home/bitcoin/.bitcoin
+    networks:
+      - kaccy_network

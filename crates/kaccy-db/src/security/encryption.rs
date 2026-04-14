@@ -292,39 +292,61 @@ impl PasswordHashingService {
 /// Errors that can occur during encryption operations
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum EncryptionError {
+    /// The provided key has the wrong byte length.
     #[error("Invalid key size: expected {expected}, got {actual}")]
-    InvalidKeySize { expected: usize, actual: usize },
+    InvalidKeySize {
+        /// Expected key length in bytes.
+        expected: usize,
+        /// Actual key length provided.
+        actual: usize,
+    },
 
+    /// The nonce provided for decryption has the wrong length.
     #[error("Invalid nonce size: expected {expected}, got {actual}")]
-    InvalidNonceSize { expected: usize, actual: usize },
+    InvalidNonceSize {
+        /// Expected nonce length in bytes.
+        expected: usize,
+        /// Actual nonce length found.
+        actual: usize,
+    },
 
+    /// The requested key ID does not exist in the key store.
     #[error("Key not found: {0}")]
     KeyNotFound(String),
 
+    /// The AEAD encryption operation failed.
     #[error("Encryption failed: {0}")]
     EncryptionFailed(String),
 
+    /// The AEAD decryption operation failed (e.g., authentication tag mismatch).
     #[error("Decryption failed: {0}")]
     DecryptionFailed(String),
 
+    /// Decrypted bytes are not valid UTF-8.
     #[error("Invalid UTF-8: {0}")]
     InvalidUtf8(String),
 
+    /// The serialized encrypted-data string has an invalid format.
     #[error("Invalid format")]
     InvalidFormat,
 
+    /// Base64 decoding failed.
     #[error("Base64 error: {0}")]
     Base64Error(String),
 
+    /// A read/write lock was poisoned.
     #[error("Lock error")]
     LockError,
 
+    /// Argon2 password hashing failed.
     #[error("Hashing failed: {0}")]
     HashingFailed(String),
 
+    /// The stored password hash string is malformed.
     #[error("Invalid hash: {0}")]
     InvalidHash(String),
 
+    /// Password verification encountered an unexpected error.
     #[error("Verification failed: {0}")]
     VerificationFailed(String),
 }

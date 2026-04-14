@@ -13,8 +13,11 @@ use super::user::ValidationError;
 /// Record of a token burn event
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct TokenBurn {
+    /// Unique identifier for this burn event
     pub burn_id: Uuid,
+    /// Token that was burned
     pub token_id: Uuid,
+    /// User who executed the burn
     pub burner_user_id: Uuid,
     /// Amount of tokens burned
     pub amount: Decimal,
@@ -24,9 +27,11 @@ pub struct TokenBurn {
     pub notes: Option<String>,
     /// Transaction hash if applicable
     pub tx_hash: Option<String>,
+    /// Timestamp when the burn occurred
     pub burned_at: DateTime<Utc>,
 }
 
+/// Classification of why tokens were burned
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "snake_case")]
 #[derive(Default)]
@@ -69,15 +74,21 @@ impl fmt::Display for TokenBurn {
     }
 }
 
+/// Request to burn tokens for a given token
 #[derive(Debug, Deserialize)]
 pub struct BurnTokensRequest {
+    /// Token to burn
     pub token_id: Uuid,
+    /// Number of tokens to burn
     pub amount: Decimal,
+    /// Reason category for the burn
     pub burn_type: BurnType,
+    /// Optional free-text notes describing the burn
     pub notes: Option<String>,
 }
 
 impl BurnTokensRequest {
+    /// Validate that the request contains sensible values
     pub fn validate(&self) -> Result<(), ValidationError> {
         if self.amount <= dec!(0) {
             return Err(ValidationError("Burn amount must be positive".to_string()));
@@ -96,6 +107,7 @@ impl BurnTokensRequest {
 /// Token burn statistics for a token
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BurnStats {
+    /// Token these statistics apply to
     pub token_id: Uuid,
     /// Total tokens burned
     pub total_burned: Decimal,
@@ -109,13 +121,20 @@ pub struct BurnStats {
     pub last_burn_at: Option<DateTime<Utc>>,
 }
 
+/// Cumulative burn totals broken down by burn type
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BurnsByType {
+    /// Tokens burned voluntarily by holders
     pub voluntary: Decimal,
+    /// Tokens burned by protocol rules (e.g., fee burns)
     pub protocol: Decimal,
+    /// Tokens burned via deflationary mechanisms
     pub deflationary: Decimal,
+    /// Tokens burned through buyback programs
     pub buyback: Decimal,
+    /// Tokens burned as a penalty or slash
     pub penalty: Decimal,
+    /// Tokens burned for any other reason
     pub other: Decimal,
 }
 
@@ -159,6 +178,7 @@ impl BurnsByType {
 /// Burn mechanism configuration for a token
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct BurnMechanism {
+    /// Token this mechanism applies to
     pub token_id: Uuid,
     /// Whether automatic deflationary burns are enabled
     pub deflationary_enabled: bool,
@@ -172,7 +192,9 @@ pub struct BurnMechanism {
     pub burn_period_seconds: Option<i64>,
     /// Maximum supply after burns (soft cap)
     pub max_supply_after_burns: Option<Decimal>,
+    /// Timestamp when this configuration was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp when this configuration was last updated
     pub updated_at: DateTime<Utc>,
 }
 
@@ -250,17 +272,24 @@ impl fmt::Display for BurnMechanism {
     }
 }
 
+/// Request to update an existing burn mechanism configuration
 #[derive(Debug, Deserialize)]
 pub struct UpdateBurnMechanismRequest {
+    /// Enable or disable deflationary burns
     pub deflationary_enabled: Option<bool>,
+    /// New burn rate per trade (0–1)
     pub burn_rate_per_trade: Option<Decimal>,
+    /// Enable or disable buyback-and-burn
     pub buyback_enabled: Option<bool>,
+    /// New target burn amount per period
     pub target_burn_per_period: Option<Decimal>,
+    /// New burn period duration in seconds
     pub burn_period_seconds: Option<i64>,
+    /// New soft supply cap after burns
     pub max_supply_after_burns: Option<Decimal>,
 }
 
-/// Burn executor for processing burns
+/// Utility for creating burn records and calculating burn impact
 pub struct BurnExecutor;
 
 impl BurnExecutor {

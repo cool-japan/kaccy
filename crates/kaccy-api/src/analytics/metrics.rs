@@ -148,7 +148,9 @@ impl Default for BusinessMetrics {
 /// Metrics summary
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MetricsSummary {
+    /// Snapshot of all counter values
     pub counters: std::collections::HashMap<String, i64>,
+    /// Snapshot of all gauge values
     pub gauges: std::collections::HashMap<String, f64>,
 }
 

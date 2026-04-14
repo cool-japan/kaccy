@@ -49,7 +49,8 @@ pub mod replica_failover;
 pub mod repositories;
 pub mod retry_policy;
 pub mod schema_validator;
-// Security module disabled - needs sqlx offline mode and Rust 1.85 string literal fixes
+// Security module: encryption and audit_logging enabled; sanitization disabled (Rust 1.90 E0762 lexer bug)
+/// Database security utilities: encryption, sanitization, and audit logging.
 pub mod security;
 pub mod sharding;
 pub mod statement_cache;

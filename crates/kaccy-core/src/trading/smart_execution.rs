@@ -402,9 +402,17 @@ pub enum ReplenishmentStrategy {
     /// Immediate replenishment after fill
     Immediate,
     /// Random delay (min, max seconds)
-    RandomDelay { min_seconds: u64, max_seconds: u64 },
+    RandomDelay {
+        /// Minimum delay in seconds before replenishment.
+        min_seconds: u64,
+        /// Maximum delay in seconds before replenishment.
+        max_seconds: u64,
+    },
     /// Volume-based (wait for certain volume)
-    VolumeBased { threshold_volume: u64 },
+    VolumeBased {
+        /// Cumulative volume threshold that triggers replenishment.
+        threshold_volume: u64,
+    },
 }
 
 impl IcebergOrder {

@@ -12,43 +12,71 @@ use uuid::Uuid;
 /// API Key record
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct ApiKey {
+    /// Unique identifier for the API key.
     pub id: Uuid,
+    /// Owner of the API key.
     pub user_id: Uuid,
+    /// Bcrypt or Argon2 hash of the full API key value.
     pub key_hash: String,
+    /// Short public prefix shown to the user for identification.
     pub key_prefix: String,
+    /// Human-readable label for this key.
     pub name: String,
+    /// JSON array of permission scopes.
     pub scopes: JsonValue,
+    /// Maximum requests allowed per hour, or unlimited if None.
     pub rate_limit_per_hour: Option<i32>,
+    /// Timestamp of the most recent use.
     pub last_used_at: Option<DateTime<Utc>>,
+    /// Timestamp when the key expires, or None if it never expires.
     pub expires_at: Option<DateTime<Utc>>,
+    /// Timestamp when the key was revoked, or None if active.
     pub revoked_at: Option<DateTime<Utc>>,
+    /// Record creation timestamp.
     pub created_at: DateTime<Utc>,
+    /// Record last-updated timestamp.
     pub updated_at: DateTime<Utc>,
 }
 
 /// API Key creation parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateApiKey {
+    /// Owner of the new API key.
     pub user_id: Uuid,
+    /// Hash of the API key value.
     pub key_hash: String,
+    /// Short prefix shown to the user.
     pub key_prefix: String,
+    /// Label for the key.
     pub name: String,
+    /// List of permission scope strings.
     pub scopes: Vec<String>,
+    /// Optional hourly rate limit.
     pub rate_limit_per_hour: Option<i32>,
+    /// Optional expiry timestamp.
     pub expires_at: Option<DateTime<Utc>>,
 }
 
 /// API Key summary (without sensitive data)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiKeySummary {
+    /// Unique identifier for the key.
     pub id: Uuid,
+    /// Short public prefix.
     pub key_prefix: String,
+    /// Label for the key.
     pub name: String,
+    /// Granted permission scopes.
     pub scopes: Vec<String>,
+    /// Optional hourly rate limit.
     pub rate_limit_per_hour: Option<i32>,
+    /// Timestamp of the most recent use.
     pub last_used_at: Option<DateTime<Utc>>,
+    /// Optional expiry timestamp.
     pub expires_at: Option<DateTime<Utc>>,
+    /// Whether the key is currently active (not revoked and not expired).
     pub is_active: bool,
+    /// Creation timestamp.
     pub created_at: DateTime<Utc>,
 }
 

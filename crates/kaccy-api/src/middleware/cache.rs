@@ -151,6 +151,7 @@ pub struct CacheInvalidator {
 }
 
 impl CacheInvalidator {
+    /// Create a new cache invalidator with the given app state
     pub fn new(state: AppState) -> Self {
         Self { state }
     }

@@ -168,6 +168,7 @@ pub struct EventBusBuilder {
 }
 
 impl EventBusBuilder {
+    /// Creates a new `EventBusBuilder` with no subscribers registered.
     pub fn new() -> Self {
         Self {
             subscribers: Vec::new(),

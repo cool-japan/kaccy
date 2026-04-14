@@ -14,6 +14,7 @@ use uuid::Uuid;
 /// Vote delegation record
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct VoteDelegation {
+    /// Unique identifier for this delegation
     pub delegation_id: Uuid,
     /// User who is delegating their voting power
     pub delegator_user_id: Uuid,
@@ -27,11 +28,14 @@ pub struct VoteDelegation {
     pub end_time: Option<DateTime<Utc>>,
     /// Whether the delegation is currently active
     pub is_active: bool,
+    /// Timestamp when the delegation was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp when the delegation was revoked, if applicable
     pub revoked_at: Option<DateTime<Utc>>,
 }
 
 impl VoteDelegation {
+    /// Create a new vote delegation
     pub fn new(
         delegator_user_id: Uuid,
         delegate_user_id: Uuid,
@@ -84,7 +88,9 @@ impl VoteDelegation {
 /// Users lock tokens for a duration to receive boosted voting power
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct VoteEscrowLock {
+    /// Unique identifier for this lock
     pub lock_id: Uuid,
+    /// User who created the lock
     pub user_id: Uuid,
     /// Amount of tokens locked
     pub amount: Decimal,
@@ -96,7 +102,9 @@ pub struct VoteEscrowLock {
     pub voting_power: Decimal,
     /// Whether the lock is still active
     pub is_active: bool,
+    /// Timestamp when this lock was created
     pub created_at: DateTime<Utc>,
+    /// Timestamp when tokens were unlocked, if applicable
     pub unlocked_at: Option<DateTime<Utc>>,
 }
 
@@ -195,8 +203,11 @@ impl VoteEscrowLock {
 /// Votes gain strength over time, encouraging long-term commitment
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ConvictionVote {
+    /// Unique identifier for this conviction vote
     pub vote_id: Uuid,
+    /// Proposal being voted on
     pub proposal_id: Uuid,
+    /// User who cast the vote
     pub user_id: Uuid,
     /// Base voting power (from tokens)
     pub base_voting_power: Decimal,
@@ -211,6 +222,7 @@ pub struct ConvictionVote {
 }
 
 impl ConvictionVote {
+    /// Create a new conviction vote
     pub fn new(
         proposal_id: Uuid,
         user_id: Uuid,
@@ -292,6 +304,7 @@ pub struct DelegationManager {
 }
 
 impl DelegationManager {
+    /// Create a new delegation manager
     pub fn new() -> Self {
         Self {
             delegations: HashMap::new(),
@@ -395,13 +408,16 @@ impl Default for DelegationManager {
 
 /// Vote escrow manager
 pub struct VoteEscrowManager {
+    /// All escrow locks by ID
     locks: HashMap<Uuid, VoteEscrowLock>,
+    /// User ID to list of lock IDs
     user_locks: HashMap<Uuid, Vec<Uuid>>,
     /// Early unlock penalty (e.g., 0.5 = 50% penalty)
     early_unlock_penalty: Decimal,
 }
 
 impl VoteEscrowManager {
+    /// Create a new vote escrow manager with the given early-unlock penalty fraction
     pub fn new(early_unlock_penalty: Decimal) -> Result<Self> {
         if early_unlock_penalty < Decimal::ZERO || early_unlock_penalty > Decimal::ONE {
             return Err(CoreError::Validation(
@@ -472,6 +488,7 @@ impl VoteEscrowManager {
 
 /// Conviction voting manager
 pub struct ConvictionVotingManager {
+    /// All conviction votes by ID
     votes: HashMap<Uuid, ConvictionVote>,
     /// Proposal ID -> List of vote IDs
     proposal_votes: HashMap<Uuid, Vec<Uuid>>,
@@ -480,6 +497,7 @@ pub struct ConvictionVotingManager {
 }
 
 impl ConvictionVotingManager {
+    /// Create a new conviction voting manager
     pub fn new() -> Self {
         Self {
             votes: HashMap::new(),
@@ -571,8 +589,11 @@ impl Default for ConvictionVotingManager {
 /// is n^2, making it expensive to concentrate votes on a single option.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuadraticVote {
+    /// Unique identifier of this vote record.
     pub vote_id: Uuid,
+    /// Proposal this vote was cast on.
     pub proposal_id: Uuid,
+    /// User who cast this vote.
     pub user_id: Uuid,
     /// Number of votes cast (actual voting power)
     pub vote_count: u32,
@@ -580,6 +601,7 @@ pub struct QuadraticVote {
     pub credit_cost: Decimal,
     /// Whether this is a vote for or against
     pub in_favor: bool,
+    /// Timestamp when the vote was recorded.
     pub created_at: DateTime<Utc>,
 }
 
@@ -622,6 +644,7 @@ impl QuadraticVote {
 /// User's quadratic voting credits
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuadraticVotingCredits {
+    /// User who owns these voting credits.
     pub user_id: Uuid,
     /// Total credits allocated to the user
     pub total_credits: Decimal,
@@ -676,7 +699,9 @@ impl QuadraticVotingCredits {
 /// Quadratic voting manager
 #[derive(Debug, Clone, Default)]
 pub struct QuadraticVotingManager {
+    /// Votes grouped by proposal ID
     votes: HashMap<Uuid, Vec<QuadraticVote>>,
+    /// Credit balances keyed by user ID
     user_credits: HashMap<Uuid, QuadraticVotingCredits>,
     /// Tracks total votes per proposal (for/against)
     proposal_votes: HashMap<Uuid, (u32, u32)>, // (votes_for, votes_against)

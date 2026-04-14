@@ -158,6 +158,7 @@ pub mod load_testing;
 pub mod market_sentiment;
 pub mod math;
 pub mod memory_optimization;
+pub mod memory_profiler;
 pub mod metrics;
 pub mod mev_redistribution;
 pub mod multi_tenancy;
@@ -296,6 +297,7 @@ pub use math::{
 pub use memory_optimization::{
     Arena, MemoryProfiler, MemoryStats, ObjectPool, PooledObject, SlabAllocator,
 };
+pub use memory_profiler::{MemoryDelta, MemoryGuard, TrackingAllocator};
 pub use metrics::{
     BucketCount, Counter, Gauge, Histogram, HistogramStats, MetricType, MetricsRegistry, Summary,
     SummaryStats,

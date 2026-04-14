@@ -71,6 +71,7 @@ pub struct OnlineLinearRegression {
 }
 
 impl OnlineLinearRegression {
+    /// Create a new online linear regression model
     pub fn new(num_features: usize, config: OnlineLearningConfig) -> Self {
         Self {
             weights: vec![0.0; num_features],
@@ -81,6 +82,7 @@ impl OnlineLinearRegression {
         }
     }
 
+    /// Predict the output for the given feature vector
     pub fn predict(&self, features: &[f64]) -> anyhow::Result<f64> {
         if features.len() != self.weights.len() {
             anyhow::bail!("Feature dimension mismatch");
@@ -157,6 +159,7 @@ pub struct DriftDetector {
 }
 
 impl DriftDetector {
+    /// Create a new drift detector with the given window size and threshold
     pub fn new(window_size: usize, threshold: f64) -> Self {
         Self {
             error_window: VecDeque::with_capacity(window_size),
@@ -220,6 +223,7 @@ impl DriftDetector {
         self.baseline_std = self.calculate_std().max(1e-6); // Avoid division by zero
     }
 
+    /// Reset the detector, clearing the error history and baseline
     pub fn reset(&mut self) {
         self.error_window.clear();
         self.baseline_mean = 0.0;
@@ -243,6 +247,7 @@ pub struct AdaptiveOnlineModel<L: OnlineLearner> {
 }
 
 impl<L: OnlineLearner> AdaptiveOnlineModel<L> {
+    /// Create a new adaptive model wrapping the given learner with drift detection
     pub fn new(learner: L, drift_detector: DriftDetector, max_buffer_size: usize) -> Self {
         Self {
             learner,
@@ -289,22 +294,31 @@ impl<L: OnlineLearner> AdaptiveOnlineModel<L> {
 /// Drift status result
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DriftStatus {
+    /// No concept drift was detected
     NoDrift,
+    /// Concept drift was detected but retraining was not triggered
     DriftDetected,
+    /// Concept drift was detected and the model was retrained
     DriftDetectedAndRetrained,
 }
 
 /// Incremental learning statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IncrementalStats {
+    /// Total number of model updates processed
     pub total_updates: usize,
+    /// Number of concept drift events detected
     pub drift_events: usize,
+    /// Current learning rate of the underlying model
     pub current_learning_rate: f64,
+    /// Timestamp of the most recent update
     pub last_update: DateTime<Utc>,
+    /// Exponential moving average of prediction error
     pub average_error: f64,
 }
 
 impl IncrementalStats {
+    /// Create a new zeroed incremental stats tracker
     pub fn new() -> Self {
         Self {
             total_updates: 0,
@@ -315,6 +329,7 @@ impl IncrementalStats {
         }
     }
 
+    /// Record a model update step
     pub fn update(&mut self, learning_rate: f64, error: f64, drift_detected: bool) {
         self.total_updates += 1;
         if drift_detected {
@@ -338,12 +353,16 @@ impl Default for IncrementalStats {
 /// Online moving average for streaming data
 #[derive(Debug, Clone)]
 pub struct OnlineMovingAverage {
+    /// Circular buffer holding the current window of values
     window: VecDeque<Decimal>,
+    /// Maximum number of values to keep in the window
     window_size: usize,
+    /// Running sum of all values in the window
     sum: Decimal,
 }
 
 impl OnlineMovingAverage {
+    /// Create a new online moving average with the given window size
     pub fn new(window_size: usize) -> Self {
         Self {
             window: VecDeque::with_capacity(window_size),
@@ -352,6 +371,7 @@ impl OnlineMovingAverage {
         }
     }
 
+    /// Add a new value to the window and return the updated moving average
     pub fn add(&mut self, value: Decimal) -> Decimal {
         if self.window.len() == self.window_size {
             if let Some(old) = self.window.pop_front() {
@@ -365,6 +385,7 @@ impl OnlineMovingAverage {
         self.average()
     }
 
+    /// Return the current moving average
     pub fn average(&self) -> Decimal {
         if self.window.is_empty() {
             Decimal::ZERO
@@ -373,6 +394,7 @@ impl OnlineMovingAverage {
         }
     }
 
+    /// Reset the moving average, clearing all accumulated values
     pub fn reset(&mut self) {
         self.window.clear();
         self.sum = Decimal::ZERO;

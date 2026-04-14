@@ -11,7 +11,9 @@ use crate::error::CoreError;
 /// Prepared statement cache
 #[derive(Clone)]
 pub struct PreparedStatementCache {
+    /// Cached statements indexed by key
     statements: Arc<RwLock<HashMap<String, CachedStatement>>>,
+    /// Maximum number of statements to keep in cache
     max_cache_size: usize,
 }
 
@@ -109,17 +111,21 @@ impl PreparedStatementCache {
 /// Prepared statement cache statistics
 #[derive(Debug, Clone)]
 pub struct PreparedStatementStats {
+    /// Number of statements currently in cache
     pub cached_statements: usize,
+    /// Maximum allowed cache size
     pub max_cache_size: usize,
+    /// Total number of cache hits across all statements
     pub total_uses: usize,
+    /// Estimated cache hit percentage (0–100)
     pub cache_hit_potential: f64,
 }
 
 /// Batch query executor for efficient bulk operations
 pub struct BatchQueryExecutor {
-    /// Maximum batch size
+    /// Maximum number of rows per batch
     max_batch_size: usize,
-    /// Batch timeout
+    /// Maximum time to wait before flushing a batch
     #[allow(dead_code)]
     batch_timeout: Duration,
 }
@@ -176,13 +182,13 @@ impl BatchQueryExecutor {
 
 /// Connection pool optimizer
 pub struct ConnectionPoolOptimizer {
-    /// Minimum pool size
+    /// Minimum number of pooled connections
     min_connections: usize,
-    /// Maximum pool size
+    /// Maximum number of pooled connections
     max_connections: usize,
-    /// Connection timeout
+    /// Timeout when acquiring a connection from the pool
     connection_timeout: Duration,
-    /// Idle timeout
+    /// Time after which idle connections are closed
     #[allow(dead_code)]
     idle_timeout: Duration,
 }
@@ -288,31 +294,42 @@ impl ConnectionPoolOptimizer {
 /// Pool size recommendation
 #[derive(Debug, Clone)]
 pub struct PoolSizeRecommendation {
+    /// Recommended pool size for the current workload
     pub recommended_size: usize,
+    /// Configured minimum pool size
     pub min_size: usize,
+    /// Configured maximum pool size
     pub max_size: usize,
+    /// Current number of concurrent requests
     pub current_load: usize,
+    /// Estimated pool utilization as a percentage
     pub utilization: f64,
 }
 
 /// Connection pool metrics
 #[derive(Debug, Clone)]
 pub struct PoolMetrics {
+    /// Total connections in the pool
     pub total_connections: usize,
+    /// Connections currently executing queries
     pub active_connections: usize,
+    /// Connections waiting for work
     pub idle_connections: usize,
+    /// Average fraction of pool in use (0.0–1.0)
     pub avg_utilization: f64,
+    /// Fraction of requests that timed out (0.0–1.0)
     pub timeout_rate: f64,
+    /// Average milliseconds spent waiting for a connection
     pub avg_wait_time_ms: f64,
 }
 
 /// Query performance analyzer
 pub struct QueryPerformanceAnalyzer {
-    /// Slow query threshold
+    /// Queries slower than this threshold (ms) are flagged as slow
     slow_query_threshold_ms: u64,
-    /// Query execution history
+    /// Ring-buffer of recent query execution records
     query_history: Arc<RwLock<Vec<QueryExecution>>>,
-    /// Maximum history size
+    /// Maximum number of records to retain in history
     max_history_size: usize,
 }
 
@@ -420,24 +437,32 @@ impl QueryPerformanceAnalyzer {
 /// Slow query information
 #[derive(Debug, Clone)]
 pub struct SlowQuery {
+    /// MD5 hash identifying the query template
     pub query_hash: String,
+    /// Number of times this slow query was seen
     pub occurrences: usize,
+    /// Average execution time in milliseconds
     pub avg_execution_time_ms: u64,
+    /// Worst-case execution time in milliseconds
     pub max_execution_time_ms: u64,
 }
 
 /// Query performance statistics
 #[derive(Debug, Clone)]
 pub struct QueryPerformanceStats {
+    /// Total number of queries recorded
     pub total_queries: usize,
+    /// Mean execution time across all queries (ms)
     pub avg_execution_time_ms: f64,
+    /// Number of queries that exceeded the slow threshold
     pub slow_query_count: usize,
+    /// Percentage of queries classified as slow
     pub slow_query_percentage: f64,
 }
 
 /// Materialized view manager for analytics
 pub struct MaterializedViewManager {
-    /// Views and their refresh schedules
+    /// Registered materialized views indexed by name
     views: Arc<RwLock<HashMap<String, MaterializedView>>>,
 }
 
@@ -585,14 +610,17 @@ impl Default for MaterializedViewManager {
 /// Materialized view statistics
 #[derive(Debug, Clone)]
 pub struct MaterializedViewStats {
+    /// Total number of registered views
     pub total_views: usize,
+    /// Number of views that are past their refresh interval
     pub stale_views: usize,
+    /// Sum of estimated row counts across all views
     pub total_estimated_rows: usize,
 }
 
 /// Partial index optimizer for hot queries
 pub struct PartialIndexOptimizer {
-    /// Index recommendations
+    /// Accumulated index recommendations
     recommendations: Arc<RwLock<Vec<IndexRecommendation>>>,
 }
 
@@ -718,20 +746,20 @@ impl Default for PartialIndexOptimizer {
 
 /// Index-only scan analyzer
 pub struct IndexOnlyScanAnalyzer {
-    /// Scan statistics
+    /// Per-table scan statistics
     stats: Arc<RwLock<HashMap<String, ScanStats>>>,
 }
 
 /// Scan statistics for a table
 #[derive(Debug, Clone)]
 pub struct ScanStats {
-    /// Total scans
+    /// Total number of scans recorded
     pub total_scans: usize,
-    /// Index-only scans
+    /// Number of scans that were index-only (no heap access)
     pub index_only_scans: usize,
-    /// Heap fetches (visibility check)
+    /// Total heap page fetches for visibility checks
     pub heap_fetches: usize,
-    /// Average rows per scan
+    /// Average number of rows returned per scan
     pub avg_rows_per_scan: f64,
 }
 
@@ -810,21 +838,21 @@ impl Default for IndexOnlyScanAnalyzer {
 /// Scan efficiency metrics
 #[derive(Debug, Clone)]
 pub struct ScanEfficiency {
-    /// Ratio of index-only scans to total scans
+    /// Fraction of scans that were index-only (0.0–1.0)
     pub index_only_ratio: f64,
-    /// Ratio of heap fetches to index-only scans
+    /// Heap fetches per index-only scan (lower is better)
     pub heap_fetch_ratio: f64,
-    /// Optimization recommendation
+    /// Human-readable optimization recommendation
     pub recommendation: String,
 }
 
 /// Query result cache with TTL
 pub struct QueryResultCache {
-    /// Cached results
+    /// Cached results indexed by query key
     cache: Arc<RwLock<HashMap<String, CachedResult>>>,
-    /// Default TTL
+    /// Default time-to-live for cache entries
     default_ttl: Duration,
-    /// Max cache size (number of entries)
+    /// Maximum number of entries the cache may hold
     max_size: usize,
 }
 
@@ -960,22 +988,27 @@ impl QueryResultCache {
 /// Query cache statistics
 #[derive(Debug, Clone)]
 pub struct QueryCacheStats {
+    /// Total number of entries currently in cache
     pub total_entries: usize,
+    /// Number of entries that have expired but not yet evicted
     pub expired_entries: usize,
+    /// Approximate total size of all cached results in bytes
     pub total_size_bytes: usize,
+    /// Total number of times cached results were accessed
     pub total_accesses: usize,
+    /// Cache hit rate as a percentage
     pub hit_rate: f64,
 }
 
 /// Transaction batcher for efficient bulk operations
 pub struct TransactionBatcher {
-    /// Pending transactions
+    /// Transactions queued for the next batch
     pending: Arc<RwLock<Vec<PendingTransaction>>>,
-    /// Maximum batch size
+    /// Maximum transactions per batch
     max_batch_size: usize,
-    /// Batch timeout
+    /// Maximum time between batch flushes
     batch_timeout: Duration,
-    /// Last flush time
+    /// Timestamp of the most recent batch flush
     last_flush: Arc<RwLock<Instant>>,
 }
 
@@ -1080,8 +1113,11 @@ impl TransactionBatcher {
 /// Transaction batch statistics
 #[derive(Debug, Clone)]
 pub struct TransactionBatchStats {
+    /// Number of transactions waiting to be flushed
     pub pending_count: usize,
+    /// Age in milliseconds of the oldest pending transaction
     pub oldest_transaction_age_ms: u64,
+    /// Milliseconds elapsed since the last batch was flushed
     pub time_since_last_flush_ms: u64,
 }
 

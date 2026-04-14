@@ -19,11 +19,16 @@ pub const MIN_SCORE: Decimal = dec!(0);
 /// Maximum score
 pub const MAX_SCORE: Decimal = dec!(1000);
 
+/// A user's complete reputation score including tier and component breakdown.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReputationScore {
+    /// User this score belongs to.
     pub user_id: Uuid,
+    /// Weighted overall score in the range 0–1000.
     pub overall_score: Decimal,
+    /// Reputation tier derived from `overall_score`.
     pub tier: ReputationTier,
+    /// Individual component scores used to compute the overall score.
     pub components: ScoreComponents,
 }
 
@@ -232,13 +237,19 @@ impl ReputationScore {
     }
 }
 
+/// Breakdown of the individual components that make up a reputation score.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ScoreComponents {
+    /// Commitment fulfillment sub-score (35% weight).
     pub commitment_fulfillment: Decimal, // 35% weight
-    pub response_time: Decimal,          // 15% weight
-    pub quality_rating: Decimal,         // 30% weight
-    pub community_trust: Decimal,        // 15% weight
-    pub longevity: Decimal,              // 5% weight
+    /// Response-time sub-score (15% weight).
+    pub response_time: Decimal, // 15% weight
+    /// Quality-rating sub-score (30% weight).
+    pub quality_rating: Decimal, // 30% weight
+    /// Community-trust sub-score (15% weight).
+    pub community_trust: Decimal, // 15% weight
+    /// Longevity sub-score (5% weight).
+    pub longevity: Decimal, // 5% weight
 }
 
 impl std::fmt::Display for ScoreComponents {
@@ -265,12 +276,18 @@ pub const COMPONENT_WEIGHTS: ComponentWeights = ComponentWeights {
     longevity: dec!(0.05),
 };
 
+/// Configurable weights for each score component (must sum to 1.0).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComponentWeights {
+    /// Weight for the commitment-fulfillment component.
     pub commitment_fulfillment: Decimal,
+    /// Weight for the response-time component.
     pub response_time: Decimal,
+    /// Weight for the quality-rating component.
     pub quality_rating: Decimal,
+    /// Weight for the community-trust component.
     pub community_trust: Decimal,
+    /// Weight for the longevity component.
     pub longevity: Decimal,
 }
 
@@ -310,6 +327,7 @@ impl ComponentWeights {
 }
 
 impl ScoreComponents {
+    /// Calculate the weighted overall score from all components.
     pub fn calculate_overall(&self) -> Decimal {
         self.commitment_fulfillment * COMPONENT_WEIGHTS.commitment_fulfillment
             + self.response_time * COMPONENT_WEIGHTS.response_time
@@ -537,13 +555,21 @@ impl ScoreComponents {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "varchar", rename_all = "snake_case")]
 pub enum ReputationEventType {
+    /// A commitment was successfully fulfilled.
     CommitmentFulfilled,
+    /// A commitment was not fulfilled and is marked as failed.
     CommitmentFailed,
+    /// A commitment passed its deadline without being fulfilled.
     CommitmentExpired,
+    /// A quality score was received for a delivered commitment.
     QualityScore,
+    /// A token holder submitted a rating for the issuer.
     HolderRating,
+    /// An administrator manually adjusted the reputation score.
     AdminAdjustment,
+    /// The user's account was created for the first time.
     AccountCreated,
+    /// The user issued their first token on the platform.
     FirstTokenIssued,
 }
 
@@ -611,11 +637,13 @@ struct EventStats {
     account_age_days: i64,
 }
 
+/// Engine for computing and updating reputation scores.
 pub struct ReputationEngine {
     pool: PgPool,
 }
 
 impl ReputationEngine {
+    /// Create a new [`ReputationEngine`] backed by the given database pool.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }

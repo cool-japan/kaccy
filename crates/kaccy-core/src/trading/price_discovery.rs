@@ -250,9 +250,13 @@ impl QuoteStability {
 /// Quote update record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuoteUpdate {
+    /// Best bid price.
     pub bid: Decimal,
+    /// Best ask price.
     pub ask: Decimal,
+    /// Mid-point price between bid and ask.
     pub mid: Decimal,
+    /// Time of the quote update.
     pub timestamp: DateTime<Utc>,
 }
 

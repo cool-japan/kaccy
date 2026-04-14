@@ -34,27 +34,41 @@ pub enum SecurityEventType {
 /// Severity level of a security event
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum SecuritySeverity {
+    /// Informational; monitor but no action required
     Low,
+    /// Elevated concern; investigate when convenient
     Medium,
+    /// Likely attack; prompt response needed
     High,
+    /// Active exploit; immediate response required
     Critical,
 }
 
 /// Security event record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityEvent {
+    /// Unique identifier for this security event
     pub event_id: Uuid,
+    /// Category of the security event
     pub event_type: SecurityEventType,
+    /// How severe this event is considered
     pub severity: SecuritySeverity,
+    /// Human-readable description of the event
     pub description: String,
+    /// Users affected by this event
     pub affected_users: Vec<Uuid>,
+    /// Tokens affected by this event
     pub affected_tokens: Vec<Uuid>,
+    /// When this event was detected
     pub detected_at: DateTime<Utc>,
+    /// When this event was resolved, if applicable
     pub resolved_at: Option<DateTime<Utc>>,
+    /// Whether this event has been resolved
     pub is_resolved: bool,
 }
 
 impl SecurityEvent {
+    /// Create a new unresolved security event
     pub fn new(
         event_type: SecurityEventType,
         severity: SecuritySeverity,
@@ -93,37 +107,55 @@ pub enum PauseState {
     FullPause,
 }
 
-/// Recovery action to be taken
+/// Recovery action to be taken after a security event
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RecoveryAction {
-    /// Pause protocol operations
+    /// Pause all protocol operations
     PauseProtocol,
-    /// Pause specific token
+    /// Pause trading for a specific token
     PauseToken(Uuid),
-    /// Revert recent transactions
-    RevertTransactions { transaction_ids: Vec<Uuid> },
-    /// Compensate affected users
+    /// Revert a set of recent transactions
+    RevertTransactions {
+        /// IDs of the transactions to revert
+        transaction_ids: Vec<Uuid>,
+    },
+    /// Send compensation payments to affected users
     CompensateUsers {
+        /// Map from user ID to compensation amount in BTC
         user_amounts: HashMap<Uuid, Decimal>,
     },
-    /// Emergency withdrawal of funds
-    EmergencyWithdrawal { token_id: Uuid, amount: Decimal },
+    /// Withdraw funds to safety in an emergency
+    EmergencyWithdrawal {
+        /// Token to withdraw
+        token_id: Uuid,
+        /// Amount to withdraw
+        amount: Decimal,
+    },
 }
 
 /// Compensation claim for affected users
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompensationClaim {
+    /// Unique identifier for this compensation claim
     pub claim_id: Uuid,
+    /// User who filed this claim
     pub user_id: Uuid,
+    /// Security event that caused the loss
     pub security_event_id: Uuid,
+    /// Amount of compensation claimed
     pub amount: Decimal,
+    /// Description of the loss and basis for the claim
     pub description: String,
+    /// Whether the compensation has been paid out
     pub is_paid: bool,
+    /// When this claim was created
     pub created_at: DateTime<Utc>,
+    /// When the compensation was paid out
     pub paid_at: Option<DateTime<Utc>>,
 }
 
 impl CompensationClaim {
+    /// Create a new unpaid compensation claim
     pub fn new(
         user_id: Uuid,
         security_event_id: Uuid,
@@ -187,10 +219,15 @@ impl Default for ProtectionConfig {
 
 /// Protocol protection manager
 pub struct ProtocolProtection {
+    /// Protection configuration (thresholds, auto-pause settings)
     config: ProtectionConfig,
+    /// Current operational state of the protocol
     pause_state: PauseState,
+    /// Active and historical security events indexed by event ID
     security_events: HashMap<Uuid, SecurityEvent>,
+    /// Compensation claims indexed by claim ID
     compensation_claims: HashMap<Uuid, CompensationClaim>,
+    /// BTC balance reserved for paying compensation claims
     compensation_pool_balance: Decimal,
     /// Token ID -> Price history (timestamp, price)
     price_history: HashMap<Uuid, Vec<(DateTime<Utc>, Decimal)>>,
@@ -199,6 +236,7 @@ pub struct ProtocolProtection {
 }
 
 impl ProtocolProtection {
+    /// Create a new protocol protection manager with the given configuration
     pub fn new(config: ProtectionConfig) -> Self {
         Self {
             config,
@@ -522,12 +560,19 @@ impl ProtocolProtection {
 /// Protocol protection statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProtectionStatistics {
+    /// Total number of security events recorded
     pub total_security_events: usize,
+    /// Number of security events that have been resolved
     pub resolved_events: usize,
+    /// Number of security events with Critical severity
     pub critical_events: usize,
+    /// Total number of compensation claims filed
     pub total_compensation_claims: usize,
+    /// Total BTC paid out in compensation
     pub total_compensation_paid: Decimal,
+    /// Current BTC balance in the compensation pool
     pub compensation_pool_balance: Decimal,
+    /// Current operational state of the protocol
     pub pause_state: PauseState,
 }
 

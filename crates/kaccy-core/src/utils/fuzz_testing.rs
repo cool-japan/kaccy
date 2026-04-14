@@ -6,7 +6,7 @@
 //! - Input mutation and generation
 //! - Crash detection and error classification
 
-use rand::Rng;
+use rand::RngExt;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use serde::{Deserialize, Serialize};
@@ -16,15 +16,26 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PropertyTestResult {
     /// All test cases passed
-    Success { cases_tested: usize },
+    Success {
+        /// Number of random inputs tested.
+        cases_tested: usize,
+    },
     /// A test case failed
     Failure {
+        /// String representation of the input that caused the failure.
         failing_input: String,
+        /// Error message from the failing case.
         error: String,
+        /// Index of the failing test case.
         case_number: usize,
     },
     /// Test crashed unexpectedly
-    Crash { case_number: usize, error: String },
+    Crash {
+        /// Index of the case that triggered the crash.
+        case_number: usize,
+        /// Error message from the crash.
+        error: String,
+    },
 }
 
 /// Random input generator for fuzzing

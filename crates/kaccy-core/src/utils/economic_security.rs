@@ -27,6 +27,7 @@ pub struct AttackVector {
     pub penalty: Decimal,
 }
 
+/// Category of economic attack against the protocol
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AttackType {
     /// 51% attack (consensus)
@@ -202,6 +203,7 @@ impl EconomicSecurityAnalyzer {
     }
 }
 
+/// Security posture classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SecurityLevel {
     /// Critical security issues
@@ -214,6 +216,7 @@ pub enum SecurityLevel {
     High,
 }
 
+/// Execution priority for security recommendations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Priority {
     /// Low priority
@@ -226,6 +229,7 @@ pub enum Priority {
     Critical,
 }
 
+/// Actionable security recommendation with cost-benefit analysis
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityRecommendation {
     /// Priority level
@@ -248,6 +252,7 @@ pub struct GameTheoreticModel {
     strategies: Vec<Strategy>,
 }
 
+/// A participant in the game-theoretic model
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Player {
     /// Player ID
@@ -260,6 +265,7 @@ pub struct Player {
     pub current_strategy: Option<usize>,
 }
 
+/// Role a player takes in the game-theoretic model
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PlayerType {
     /// Validator
@@ -272,6 +278,7 @@ pub enum PlayerType {
     Attacker,
 }
 
+/// A strategy available to players in the game-theoretic model
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Strategy {
     /// Strategy name
@@ -453,6 +460,7 @@ impl Default for IncentiveAlignmentVerifier {
     }
 }
 
+/// Recommendation to adjust a protocol incentive parameter
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IncentiveAdjustment {
     /// Action to adjust
@@ -467,6 +475,7 @@ pub struct IncentiveAdjustment {
     pub reason: String,
 }
 
+/// Direction of an incentive adjustment
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AdjustmentType {
     /// Increase reward

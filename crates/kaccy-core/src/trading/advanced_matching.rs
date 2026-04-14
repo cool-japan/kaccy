@@ -49,6 +49,7 @@ pub struct ProRataMatcher {
 }
 
 impl ProRataMatcher {
+    /// Creates a new `ProRataMatcher` with the given configuration.
     pub fn new(config: ProRataConfig) -> Self {
         Self { config }
     }
@@ -139,6 +140,7 @@ pub struct HybridMatcher {
 }
 
 impl HybridMatcher {
+    /// Creates a new `HybridMatcher` with the given price-time percentage and pro-rata config.
     pub fn new(price_time_pct: u8, pro_rata_config: ProRataConfig) -> Self {
         assert!(price_time_pct <= 100, "Percentage must be 0-100");
         Self {
@@ -217,6 +219,7 @@ pub struct DarkPool {
 }
 
 impl DarkPool {
+    /// Creates a new `DarkPool` for the given token with the specified minimum execution quantity.
     pub fn new(token_id: Uuid, minimum_execution_qty: Decimal) -> Self {
         Self {
             token_id,
@@ -368,6 +371,7 @@ pub struct DarkPoolManager {
 }
 
 impl DarkPoolManager {
+    /// Creates a new `DarkPoolManager` with the given default minimum execution quantity.
     pub fn new(default_meq: Decimal) -> Self {
         Self {
             pools: HashMap::new(),
