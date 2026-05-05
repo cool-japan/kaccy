@@ -740,18 +740,55 @@ mod tests {
     #[async_trait]
     impl LightningProvider for MockProvider {
         async fn get_info(&self) -> Result<NodeInfo> {
-            unimplemented!()
+            Ok(NodeInfo {
+                pubkey: "mock_node_pubkey".into(),
+                alias: "MockNode".into(),
+                num_active_channels: 0,
+                num_pending_channels: 0,
+                num_peers: 0,
+                block_height: 800_000,
+                synced_to_chain: true,
+                version: "mock-1.0".into(),
+                network: "mainnet".into(),
+            })
         }
 
         async fn create_invoice(
             &self,
-            _request: crate::lightning::InvoiceRequest,
+            request: crate::lightning::InvoiceRequest,
         ) -> Result<crate::lightning::Invoice> {
-            unimplemented!()
+            Ok(crate::lightning::Invoice {
+                payment_hash: "mock_payment_hash".into(),
+                payment_preimage: None,
+                bolt11: "lnbc1mock".into(),
+                amount_msat: request.amount_msat,
+                description: request.description,
+                created_at: 0,
+                expires_at: 3600,
+                status: crate::lightning::InvoiceStatus::Open,
+                amount_received_msat: None,
+                settled_at: None,
+                metadata: std::collections::HashMap::new(),
+            })
         }
 
-        async fn get_invoice(&self, _payment_hash: &str) -> Result<crate::lightning::Invoice> {
-            unimplemented!()
+        async fn get_invoice(
+            &self,
+            payment_hash: &str,
+        ) -> Result<crate::lightning::Invoice> {
+            Ok(crate::lightning::Invoice {
+                payment_hash: payment_hash.to_string(),
+                payment_preimage: None,
+                bolt11: "lnbc1mock".into(),
+                amount_msat: 0,
+                description: String::new(),
+                created_at: 0,
+                expires_at: 3600,
+                status: crate::lightning::InvoiceStatus::Open,
+                amount_received_msat: None,
+                settled_at: None,
+                metadata: std::collections::HashMap::new(),
+            })
         }
 
         async fn pay_invoice(
@@ -759,22 +796,41 @@ mod tests {
             _bolt11: &str,
             _max_fee_msat: Option<u64>,
         ) -> Result<crate::lightning::Payment> {
-            unimplemented!()
+            Ok(crate::lightning::Payment {
+                payment_hash: "mock_payment_hash".into(),
+                payment_preimage: "mock_preimage".into(),
+                amount_msat: 1_000_000,
+                fee_msat: 1_000,
+                status: PaymentStatus::Succeeded,
+                created_at: 0,
+                num_hops: 3,
+                route: None,
+            })
         }
 
         async fn get_balance(&self) -> Result<crate::lightning::ChannelBalance> {
-            unimplemented!()
+            Ok(crate::lightning::ChannelBalance {
+                local_balance_msat: 0,
+                remote_balance_msat: 0,
+                pending_local_msat: 0,
+                pending_remote_msat: 0,
+                unsettled_local_msat: 0,
+                unsettled_remote_msat: 0,
+            })
         }
 
         async fn list_channels(&self) -> Result<Vec<crate::lightning::Channel>> {
-            unimplemented!()
+            Ok(vec![])
         }
 
         async fn open_channel(
             &self,
             _request: crate::lightning::OpenChannelRequest,
         ) -> Result<ChannelPoint> {
-            unimplemented!()
+            Ok(ChannelPoint {
+                txid: "mock_funding_txid".into(),
+                output_index: 0,
+            })
         }
 
         async fn close_channel(
@@ -782,11 +838,13 @@ mod tests {
             _channel_point: &ChannelPoint,
             _force: bool,
         ) -> Result<String> {
-            unimplemented!()
+            Ok("mock_closing_txid".into())
         }
 
         async fn subscribe_invoices(&self) -> Result<crate::lightning::InvoiceSubscription> {
-            unimplemented!()
+            let (tx, rx) = tokio::sync::mpsc::channel(1);
+            drop(tx);
+            Ok(crate::lightning::InvoiceSubscription::new(rx))
         }
     }
 
@@ -796,34 +854,67 @@ mod tests {
             &self,
             _request: DualFundedChannelRequest,
         ) -> Result<ChannelPoint> {
-            unimplemented!()
+            Ok(ChannelPoint {
+                txid: "mock_dual_funded_txid".into(),
+                output_index: 0,
+            })
         }
 
         async fn splice_channel(&self, _request: SpliceRequest) -> Result<SpliceResult> {
-            unimplemented!()
+            Ok(SpliceResult {
+                new_channel_point: ChannelPoint {
+                    txid: "mock_splice_txid".into(),
+                    output_index: 0,
+                },
+                splice_txid: "mock_splice_txid".into(),
+                new_capacity_sats: 0,
+                splice_type: SpliceType::SpliceIn,
+            })
         }
 
         async fn accept_zero_conf_channel(&self, _channel_point: &ChannelPoint) -> Result<()> {
-            unimplemented!()
+            Ok(())
         }
 
         async fn pay_multipath(
             &self,
             _request: MultiPathPaymentRequest,
         ) -> Result<MultiPathPayment> {
-            unimplemented!()
+            Ok(MultiPathPayment {
+                payment_hash: "mock_mpay_hash".into(),
+                payment_preimage: "mock_mpay_preimage".into(),
+                amount_msat: 1_000_000,
+                fee_msat: 1_000,
+                paths: vec![],
+                status: PaymentStatus::Succeeded,
+                duration_ms: 0,
+            })
         }
 
-        async fn create_offer(&self, _request: OfferRequest) -> Result<Offer> {
-            unimplemented!()
+        async fn create_offer(&self, request: OfferRequest) -> Result<Offer> {
+            Ok(Offer {
+                offer_id: "mock_offer_id".into(),
+                offer_string: "lno1mock".into(),
+                description: request.description,
+                amount_msat: None,
+                issuer: None,
+                absolute_expiry: None,
+                active: true,
+            })
         }
 
         async fn pay_offer(
             &self,
             _offer_string: &str,
-            _amount_msat: Option<u64>,
+            amount_msat: Option<u64>,
         ) -> Result<OfferPayment> {
-            unimplemented!()
+            Ok(OfferPayment {
+                payment_hash: "mock_offer_pay_hash".into(),
+                payment_preimage: Some("mock_offer_preimage".into()),
+                amount_msat: amount_msat.unwrap_or(0),
+                fee_msat: 0,
+                status: PaymentStatus::Succeeded,
+            })
         }
 
         async fn get_route_suggestions(
@@ -831,11 +922,58 @@ mod tests {
             _destination: &str,
             _amount_msat: u64,
         ) -> Result<Vec<RouteSuggestion>> {
-            unimplemented!()
+            Ok(vec![])
         }
 
         async fn optimize_liquidity(&self) -> Result<LiquidityOptimization> {
-            unimplemented!()
+            Ok(LiquidityOptimization {
+                rebalance_operations: vec![],
+                needs_inbound: vec![],
+                needs_outbound: vec![],
+                liquidity_score: 100,
+            })
         }
+    }
+
+    #[tokio::test]
+    async fn test_mock_provider_basic_queries() {
+        let provider = MockProvider;
+        provider.get_info().await.expect("get_info should succeed");
+        let balance = provider.get_balance().await.expect("get_balance should succeed");
+        assert_eq!(balance.local_balance_msat, 0);
+        let channels = provider.list_channels().await.expect("list_channels should succeed");
+        assert!(channels.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_mock_provider_invoice_lifecycle() {
+        let provider = MockProvider;
+        let inv = provider
+            .create_invoice(crate::lightning::InvoiceRequest::new(1_000, "test"))
+            .await
+            .expect("create_invoice should succeed");
+        assert!(!inv.payment_hash.is_empty());
+
+        let pay = provider
+            .pay_invoice(&inv.bolt11, None)
+            .await
+            .expect("pay_invoice should succeed");
+        assert_eq!(pay.status, PaymentStatus::Succeeded);
+    }
+
+    #[tokio::test]
+    async fn test_mock_provider_v2_operations() {
+        let provider = MockProvider;
+        let offer = provider
+            .create_offer(OfferRequest::new("test offer"))
+            .await
+            .expect("create_offer should succeed");
+        assert!(offer.active);
+
+        let liquidity = provider
+            .optimize_liquidity()
+            .await
+            .expect("optimize_liquidity should succeed");
+        assert_eq!(liquidity.liquidity_score, 100);
     }
 }
