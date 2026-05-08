@@ -35,7 +35,7 @@ impl<T> ObjectPool<T> {
         let obj = self
             .pool
             .lock()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .pop_front()
             .unwrap_or_else(|| (self.factory)());
 
@@ -48,12 +48,12 @@ impl<T> ObjectPool<T> {
 
     /// Get current pool size
     pub fn size(&self) -> usize {
-        self.pool.lock().unwrap().len()
+        self.pool.lock().unwrap_or_else(|e| e.into_inner()).len()
     }
 
     /// Pre-warm the pool with objects
     pub fn warm(&self, count: usize) {
-        let mut pool = self.pool.lock().unwrap();
+        let mut pool = self.pool.lock().unwrap_or_else(|e| e.into_inner());
         for _ in 0..count.min(self.max_size - pool.len()) {
             pool.push_back((self.factory)());
         }
@@ -83,7 +83,7 @@ impl<T> PooledObject<T> {
 impl<T> Drop for PooledObject<T> {
     fn drop(&mut self) {
         if let Some(obj) = self.object.take() {
-            let mut pool = self.pool.lock().unwrap();
+            let mut pool = self.pool.lock().unwrap_or_else(|e| e.into_inner());
             if pool.len() < self.max_size {
                 pool.push_back(obj);
             }
@@ -209,7 +209,7 @@ impl MemoryProfiler {
             timestamp: chrono::Utc::now().timestamp(),
         };
 
-        self.allocations.lock().unwrap().push(record);
+        self.allocations.lock().unwrap_or_else(|e| e.into_inner()).push(record);
         id
     }
 
@@ -219,20 +219,20 @@ impl MemoryProfiler {
             return;
         }
 
-        let mut allocations = self.allocations.lock().unwrap();
+        let mut allocations = self.allocations.lock().unwrap_or_else(|e| e.into_inner());
         allocations.retain(|a| a.id != id);
     }
 
     /// Get current allocation count
     pub fn allocation_count(&self) -> usize {
-        self.allocations.lock().unwrap().len()
+        self.allocations.lock().unwrap_or_else(|e| e.into_inner()).len()
     }
 
     /// Get total allocated bytes
     pub fn total_allocated(&self) -> usize {
         self.allocations
             .lock()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .iter()
             .map(|a| a.size)
             .sum()
@@ -241,7 +241,7 @@ impl MemoryProfiler {
     /// Check for potential memory leaks
     pub fn detect_leaks(&self, threshold_seconds: i64) -> Vec<String> {
         let now = chrono::Utc::now().timestamp();
-        let allocations = self.allocations.lock().unwrap();
+        let allocations = self.allocations.lock().unwrap_or_else(|e| e.into_inner());
 
         allocations
             .iter()
@@ -259,7 +259,7 @@ impl MemoryProfiler {
 
     /// Get allocation statistics
     pub fn stats(&self) -> MemoryStats {
-        let allocations = self.allocations.lock().unwrap();
+        let allocations = self.allocations.lock().unwrap_or_else(|e| e.into_inner());
         let total_size: usize = allocations.iter().map(|a| a.size).sum();
         let count = allocations.len();
 

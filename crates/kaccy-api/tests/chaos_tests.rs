@@ -389,7 +389,7 @@ mod chaos_tests {
         for _ in 0..50 {
             let data = data.clone();
             let handle = tokio::spawn(async move {
-                let _guard = data.read().unwrap();
+                let _guard = data.read().unwrap_or_else(|e| e.into_inner());
                 drop(_guard);
             });
             handles.push(handle);
@@ -399,7 +399,7 @@ mod chaos_tests {
         for i in 0..50 {
             let data = data.clone();
             let handle = tokio::spawn(async move {
-                data.write().unwrap().push(i);
+                data.write().unwrap_or_else(|e| e.into_inner()).push(i);
             });
             handles.push(handle);
         }

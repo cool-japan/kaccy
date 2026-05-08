@@ -182,7 +182,7 @@ impl AtomicSwapManager {
         };
 
         // Store in active swaps
-        let mut swaps = self.active_swaps.write().unwrap();
+        let mut swaps = self.active_swaps.write().unwrap_or_else(|e| e.into_inner());
         swaps.insert(swap_id, swap.clone());
 
         Ok(swap)
@@ -222,7 +222,7 @@ impl AtomicSwapManager {
         };
 
         // Store in active swaps
-        let mut swaps = self.active_swaps.write().unwrap();
+        let mut swaps = self.active_swaps.write().unwrap_or_else(|e| e.into_inner());
         swaps.insert(swap_id, swap.clone());
 
         Ok(swap)
@@ -230,7 +230,7 @@ impl AtomicSwapManager {
 
     /// Mark swap as funded
     pub fn mark_funded(&self, swap_id: &str, funding_txid: String) -> Result<()> {
-        let mut swaps = self.active_swaps.write().unwrap();
+        let mut swaps = self.active_swaps.write().unwrap_or_else(|e| e.into_inner());
         let swap = swaps
             .get_mut(swap_id)
             .ok_or_else(|| BitcoinError::Validation(format!("Swap {} not found", swap_id)))?;
@@ -244,7 +244,7 @@ impl AtomicSwapManager {
 
     /// Claim funds from the swap (revealing the preimage)
     pub fn claim_swap(&self, swap_id: &str, preimage: Vec<u8>) -> Result<Vec<u8>> {
-        let mut swaps = self.active_swaps.write().unwrap();
+        let mut swaps = self.active_swaps.write().unwrap_or_else(|e| e.into_inner());
         let swap = swaps
             .get_mut(swap_id)
             .ok_or_else(|| BitcoinError::Validation(format!("Swap {} not found", swap_id)))?;
@@ -264,7 +264,7 @@ impl AtomicSwapManager {
 
     /// Refund swap after timeout
     pub fn refund_swap(&self, swap_id: &str) -> Result<()> {
-        let mut swaps = self.active_swaps.write().unwrap();
+        let mut swaps = self.active_swaps.write().unwrap_or_else(|e| e.into_inner());
         let swap = swaps
             .get_mut(swap_id)
             .ok_or_else(|| BitcoinError::Validation(format!("Swap {} not found", swap_id)))?;
@@ -278,13 +278,13 @@ impl AtomicSwapManager {
 
     /// Get swap details
     pub fn get_swap(&self, swap_id: &str) -> Option<AtomicSwap> {
-        let swaps = self.active_swaps.read().unwrap();
+        let swaps = self.active_swaps.read().unwrap_or_else(|e| e.into_inner());
         swaps.get(swap_id).cloned()
     }
 
     /// List all active swaps
     pub fn list_swaps(&self) -> Vec<AtomicSwap> {
-        let swaps = self.active_swaps.read().unwrap();
+        let swaps = self.active_swaps.read().unwrap_or_else(|e| e.into_inner());
         swaps.values().cloned().collect()
     }
 
@@ -300,7 +300,7 @@ impl AtomicSwapManager {
 
     /// Cancel a swap
     pub fn cancel_swap(&self, swap_id: &str) -> Result<()> {
-        let mut swaps = self.active_swaps.write().unwrap();
+        let mut swaps = self.active_swaps.write().unwrap_or_else(|e| e.into_inner());
         let swap = swaps
             .get_mut(swap_id)
             .ok_or_else(|| BitcoinError::Validation(format!("Swap {} not found", swap_id)))?;

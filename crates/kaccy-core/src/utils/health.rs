@@ -254,12 +254,12 @@ impl HealthCheckManager {
 
     /// Register a health checker
     pub fn register(&self, checker: Arc<dyn HealthChecker>) {
-        self.checkers.write().unwrap().push(checker);
+        self.checkers.write().unwrap_or_else(|e| e.into_inner()).push(checker);
     }
 
     /// Check all components
     pub fn check_all(&self) -> HealthReport {
-        let checkers = self.checkers.read().unwrap();
+        let checkers = self.checkers.read().unwrap_or_else(|e| e.into_inner());
         let mut results = HashMap::new();
         let mut overall_status = HealthStatus::Healthy;
 
@@ -268,7 +268,7 @@ impl HealthCheckManager {
 
             // Check cache first
             let result = {
-                let cache = self.cache.read().unwrap();
+                let cache = self.cache.read().unwrap_or_else(|e| e.into_inner());
                 if let Some((cached_result, cached_at)) = cache.get(&name) {
                     if cached_at.elapsed() < self.cache_ttl {
                         Some(cached_result.clone())
@@ -284,7 +284,7 @@ impl HealthCheckManager {
                 let fresh_result = checker.check();
                 self.cache
                     .write()
-                    .unwrap()
+                    .unwrap_or_else(|e| e.into_inner())
                     .insert(name.clone(), (fresh_result.clone(), Instant::now()));
                 fresh_result
             });
@@ -325,7 +325,7 @@ impl HealthCheckManager {
 
     /// Clear the cache
     pub fn clear_cache(&self) {
-        self.cache.write().unwrap().clear();
+        self.cache.write().unwrap_or_else(|e| e.into_inner()).clear();
     }
 }
 

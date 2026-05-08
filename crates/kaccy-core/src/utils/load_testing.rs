@@ -270,7 +270,7 @@ impl LoadTester {
                 }
 
                 // Store results
-                let mut all_results = results_clone.write().unwrap();
+                let mut all_results = results_clone.write().unwrap_or_else(|e| e.into_inner());
                 all_results.extend(user.results);
             });
 
@@ -285,7 +285,7 @@ impl LoadTester {
         let elapsed = start_time.elapsed();
 
         // Collect and analyze results
-        let results = self.results.read().unwrap().clone();
+        let results = self.results.read().unwrap_or_else(|e| e.into_inner()).clone();
         LoadTestResults::from_results(results, elapsed)
     }
 
@@ -312,7 +312,7 @@ impl LoadTester {
 
                 while task_start.elapsed() < test_duration {
                     if request_fn_clone().await.is_ok() {
-                        let mut count = count_clone.write().unwrap();
+                        let mut count = count_clone.write().unwrap_or_else(|e| e.into_inner());
                         *count += 1;
                     }
                 }
@@ -327,7 +327,7 @@ impl LoadTester {
         }
 
         let elapsed = start_time.elapsed().as_secs_f64();
-        let total_requests = *request_count.read().unwrap();
+        let total_requests = *request_count.read().unwrap_or_else(|e| e.into_inner());
 
         if elapsed > 0.0 {
             total_requests as f64 / elapsed

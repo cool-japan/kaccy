@@ -173,15 +173,15 @@ impl TenantManager {
             api_key_prefix: format!("tenant_{}_", &id.to_string()[..8]),
         };
 
-        self.tenants.write().unwrap().insert(id, tenant);
-        self.configs.write().unwrap().insert(id, config);
+        self.tenants.write().unwrap_or_else(|e| e.into_inner()).insert(id, tenant);
+        self.configs.write().unwrap_or_else(|e| e.into_inner()).insert(id, config);
 
         Ok(id)
     }
 
     /// Get tenant by ID
     pub fn get_tenant(&self, tenant_id: &TenantId) -> Option<Tenant> {
-        self.tenants.read().unwrap().get(tenant_id).cloned()
+        self.tenants.read().unwrap_or_else(|e| e.into_inner()).get(tenant_id).cloned()
     }
 
     /// Update tenant status
@@ -190,7 +190,7 @@ impl TenantManager {
         tenant_id: &TenantId,
         status: TenantStatus,
     ) -> Result<(), CoreError> {
-        let mut tenants = self.tenants.write().unwrap();
+        let mut tenants = self.tenants.write().unwrap_or_else(|e| e.into_inner());
         if let Some(tenant) = tenants.get_mut(tenant_id) {
             tenant.status = status;
             Ok(())
@@ -206,7 +206,7 @@ impl TenantManager {
         resource: ResourceType,
         amount: usize,
     ) -> Result<bool, CoreError> {
-        let tenants = self.tenants.read().unwrap();
+        let tenants = self.tenants.read().unwrap_or_else(|e| e.into_inner());
         if let Some(tenant) = tenants.get(tenant_id) {
             if tenant.status != TenantStatus::Active {
                 return Ok(false);
@@ -245,7 +245,7 @@ impl TenantManager {
         resource: ResourceType,
         amount: usize,
     ) -> Result<(), CoreError> {
-        let mut tenants = self.tenants.write().unwrap();
+        let mut tenants = self.tenants.write().unwrap_or_else(|e| e.into_inner());
         if let Some(tenant) = tenants.get_mut(tenant_id) {
             match resource {
                 ResourceType::Users => tenant.usage.current_users += amount,
@@ -267,7 +267,7 @@ impl TenantManager {
         resource: ResourceType,
         amount: usize,
     ) -> Result<(), CoreError> {
-        let mut tenants = self.tenants.write().unwrap();
+        let mut tenants = self.tenants.write().unwrap_or_else(|e| e.into_inner());
         if let Some(tenant) = tenants.get_mut(tenant_id) {
             match resource {
                 ResourceType::Users => {
@@ -297,7 +297,7 @@ impl TenantManager {
 
     /// Reset periodic usage counters (e.g., API calls per minute)
     pub fn reset_periodic_usage(&self, tenant_id: &TenantId) -> Result<(), CoreError> {
-        let mut tenants = self.tenants.write().unwrap();
+        let mut tenants = self.tenants.write().unwrap_or_else(|e| e.into_inner());
         if let Some(tenant) = tenants.get_mut(tenant_id) {
             tenant.usage.api_calls_current_minute = 0;
             tenant.usage.last_reset = Instant::now();
@@ -309,7 +309,7 @@ impl TenantManager {
 
     /// Get tenant configuration
     pub fn get_config(&self, tenant_id: &TenantId) -> Option<TenantConfig> {
-        self.configs.read().unwrap().get(tenant_id).cloned()
+        self.configs.read().unwrap_or_else(|e| e.into_inner()).get(tenant_id).cloned()
     }
 
     /// Update tenant configuration
@@ -318,8 +318,8 @@ impl TenantManager {
         tenant_id: &TenantId,
         config: TenantConfig,
     ) -> Result<(), CoreError> {
-        let mut configs = self.configs.write().unwrap();
-        if self.tenants.read().unwrap().contains_key(tenant_id) {
+        let mut configs = self.configs.write().unwrap_or_else(|e| e.into_inner());
+        if self.tenants.read().unwrap_or_else(|e| e.into_inner()).contains_key(tenant_id) {
             configs.insert(*tenant_id, config);
             Ok(())
         } else {
@@ -329,7 +329,7 @@ impl TenantManager {
 
     /// Get resource utilization percentage
     pub fn get_utilization(&self, tenant_id: &TenantId) -> Option<ResourceUtilization> {
-        let tenants = self.tenants.read().unwrap();
+        let tenants = self.tenants.read().unwrap_or_else(|e| e.into_inner());
         tenants.get(tenant_id).map(|tenant| {
             let users_pct =
                 (tenant.usage.current_users as f64 / tenant.quotas.max_users as f64) * 100.0;
@@ -357,12 +357,12 @@ impl TenantManager {
 
     /// List all tenants
     pub fn list_tenants(&self) -> Vec<TenantId> {
-        self.tenants.read().unwrap().keys().copied().collect()
+        self.tenants.read().unwrap_or_else(|e| e.into_inner()).keys().copied().collect()
     }
 
     /// Get tenant count
     pub fn tenant_count(&self) -> usize {
-        self.tenants.read().unwrap().len()
+        self.tenants.read().unwrap_or_else(|e| e.into_inner()).len()
     }
 }
 
@@ -460,7 +460,7 @@ impl TenantRateLimiter {
 
     /// Configure rate limit for a tenant
     pub fn configure(&self, tenant_id: TenantId, max_requests: usize, window_duration: Duration) {
-        let mut limits = self.limits.write().unwrap();
+        let mut limits = self.limits.write().unwrap_or_else(|e| e.into_inner());
         limits.insert(
             tenant_id,
             RateLimit {
@@ -474,7 +474,7 @@ impl TenantRateLimiter {
 
     /// Check if request is allowed
     pub fn check_rate_limit(&self, tenant_id: &TenantId) -> Result<bool, CoreError> {
-        let mut limits = self.limits.write().unwrap();
+        let mut limits = self.limits.write().unwrap_or_else(|e| e.into_inner());
         if let Some(limit) = limits.get_mut(tenant_id) {
             let now = Instant::now();
 
@@ -498,7 +498,7 @@ impl TenantRateLimiter {
 
     /// Get remaining requests in current window
     pub fn remaining_requests(&self, tenant_id: &TenantId) -> Option<usize> {
-        let limits = self.limits.read().unwrap();
+        let limits = self.limits.read().unwrap_or_else(|e| e.into_inner());
         limits
             .get(tenant_id)
             .map(|limit| limit.max_requests.saturating_sub(limit.requests))

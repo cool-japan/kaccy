@@ -113,7 +113,7 @@ impl RateLimiter {
 
     /// Cleanup old entries
     fn maybe_cleanup(&self) {
-        let mut last_cleanup = self.last_cleanup.lock().unwrap();
+        let mut last_cleanup = self.last_cleanup.lock().unwrap_or_else(|e| e.into_inner());
         if last_cleanup.elapsed() >= self.config.cleanup_interval {
             let threshold = Instant::now() - self.config.window * 2;
             self.entries
@@ -164,11 +164,18 @@ pub async fn rate_limit_middleware(
             let headers = response.headers_mut();
             headers.insert(
                 "X-RateLimit-Remaining",
-                remaining.to_string().parse().unwrap(),
+                remaining
+                    .to_string()
+                    .parse()
+                    .expect("integer to_string must be valid HeaderValue"),
             );
             headers.insert(
                 "X-RateLimit-Reset",
-                reset_in.as_secs().to_string().parse().unwrap(),
+                reset_in
+                    .as_secs()
+                    .to_string()
+                    .parse()
+                    .expect("integer to_string must be valid HeaderValue"),
             );
             response
         }
@@ -306,7 +313,7 @@ impl UserRateLimiter {
 
     /// Cleanup old entries
     fn maybe_cleanup(&self) {
-        let mut last_cleanup = self.last_cleanup.lock().unwrap();
+        let mut last_cleanup = self.last_cleanup.lock().unwrap_or_else(|e| e.into_inner());
         if last_cleanup.elapsed() >= self.config.cleanup_interval {
             let threshold = Instant::now() - self.config.window * 2;
             self.entries
@@ -384,7 +391,7 @@ impl EndpointRateLimiter {
 
     /// Cleanup old entries
     fn maybe_cleanup(&self) {
-        let mut last_cleanup = self.last_cleanup.lock().unwrap();
+        let mut last_cleanup = self.last_cleanup.lock().unwrap_or_else(|e| e.into_inner());
         if last_cleanup.elapsed() >= self.default_config.cleanup_interval {
             let threshold = Instant::now() - self.default_config.window * 2;
             self.entries
@@ -515,7 +522,7 @@ impl DynamicRateLimiter {
     pub fn check(&self, ip: IpAddr) -> RateLimitResult {
         self.maybe_adjust();
 
-        let limiter = self.limiter.read().unwrap();
+        let limiter = self.limiter.read().unwrap_or_else(|e| e.into_inner());
         let result = limiter.check(ip);
 
         // Record analytics
@@ -528,7 +535,7 @@ impl DynamicRateLimiter {
     /// Manually adjust the rate limit multiplier
     pub fn set_multiplier(&self, multiplier: f64) {
         let multiplier = multiplier.clamp(0.1, 10.0); // Limit between 10% and 1000%
-        *self.multiplier.write().unwrap() = multiplier;
+        *self.multiplier.write().unwrap_or_else(|e| e.into_inner()) = multiplier;
         self.apply_multiplier();
         tracing::info!(
             multiplier = multiplier,
@@ -538,12 +545,12 @@ impl DynamicRateLimiter {
 
     /// Get current multiplier
     pub fn get_multiplier(&self) -> f64 {
-        *self.multiplier.read().unwrap()
+        *self.multiplier.read().unwrap_or_else(|e| e.into_inner())
     }
 
     /// Automatically adjust based on system metrics
     fn maybe_adjust(&self) {
-        let last_adjustment = self.last_adjustment.lock().unwrap();
+        let last_adjustment = self.last_adjustment.lock().unwrap_or_else(|e| e.into_inner());
         if last_adjustment.elapsed() >= self.adjustment_interval {
             drop(last_adjustment); // Release lock before adjustment
 
@@ -552,19 +559,19 @@ impl DynamicRateLimiter {
 
             let new_multiplier = if rate_limit_percentage > 50.0 {
                 // Too many requests being rate limited - decrease limits
-                let current = *self.multiplier.read().unwrap();
+                let current = *self.multiplier.read().unwrap_or_else(|e| e.into_inner());
                 (current * 0.8).max(0.1)
             } else if rate_limit_percentage < 5.0 {
                 // Very few rate limits - can increase limits
-                let current = *self.multiplier.read().unwrap();
+                let current = *self.multiplier.read().unwrap_or_else(|e| e.into_inner());
                 (current * 1.1).min(2.0)
             } else {
                 // Stable - no adjustment needed
-                *self.multiplier.read().unwrap()
+                *self.multiplier.read().unwrap_or_else(|e| e.into_inner())
             };
 
-            if (*self.multiplier.read().unwrap() - new_multiplier).abs() > 0.01 {
-                *self.multiplier.write().unwrap() = new_multiplier;
+            if (*self.multiplier.read().unwrap_or_else(|e| e.into_inner()) - new_multiplier).abs() > 0.01 {
+                *self.multiplier.write().unwrap_or_else(|e| e.into_inner()) = new_multiplier;
                 self.apply_multiplier();
                 tracing::info!(
                     multiplier = new_multiplier,
@@ -573,13 +580,13 @@ impl DynamicRateLimiter {
                 );
             }
 
-            *self.last_adjustment.lock().unwrap() = Instant::now();
+            *self.last_adjustment.lock().unwrap_or_else(|e| e.into_inner()) = Instant::now();
         }
     }
 
     /// Apply the current multiplier to the base configuration
     fn apply_multiplier(&self) {
-        let multiplier = *self.multiplier.read().unwrap();
+        let multiplier = *self.multiplier.read().unwrap_or_else(|e| e.into_inner());
         let adjusted_max_requests =
             (self.base_config.max_requests as f64 * multiplier).max(1.0) as u32;
 
@@ -589,7 +596,7 @@ impl DynamicRateLimiter {
             cleanup_interval: self.base_config.cleanup_interval,
         };
 
-        *self.limiter.write().unwrap() = RateLimiter::with_config(new_config);
+        *self.limiter.write().unwrap_or_else(|e| e.into_inner()) = RateLimiter::with_config(new_config);
     }
 
     /// Get analytics
@@ -599,7 +606,7 @@ impl DynamicRateLimiter {
 
     /// Reset to base configuration
     pub fn reset(&self) {
-        *self.multiplier.write().unwrap() = 1.0;
+        *self.multiplier.write().unwrap_or_else(|e| e.into_inner()) = 1.0;
         self.apply_multiplier();
         tracing::info!("Rate limit reset to base configuration");
     }

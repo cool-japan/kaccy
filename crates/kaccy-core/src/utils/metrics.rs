@@ -100,32 +100,32 @@ impl Gauge {
 
     /// Set gauge to specific value
     pub fn set(&self, val: f64) {
-        *self.value.write().unwrap() = val;
+        *self.value.write().unwrap_or_else(|e| e.into_inner()) = val;
     }
 
     /// Increment gauge
     pub fn inc(&self) {
-        *self.value.write().unwrap() += 1.0;
+        *self.value.write().unwrap_or_else(|e| e.into_inner()) += 1.0;
     }
 
     /// Decrement gauge
     pub fn dec(&self) {
-        *self.value.write().unwrap() -= 1.0;
+        *self.value.write().unwrap_or_else(|e| e.into_inner()) -= 1.0;
     }
 
     /// Add to gauge
     pub fn add(&self, val: f64) {
-        *self.value.write().unwrap() += val;
+        *self.value.write().unwrap_or_else(|e| e.into_inner()) += val;
     }
 
     /// Subtract from gauge
     pub fn sub(&self, val: f64) {
-        *self.value.write().unwrap() -= val;
+        *self.value.write().unwrap_or_else(|e| e.into_inner()) -= val;
     }
 
     /// Get current value
     pub fn get(&self) -> f64 {
-        *self.value.read().unwrap()
+        *self.value.read().unwrap_or_else(|e| e.into_inner())
     }
 }
 
@@ -180,7 +180,7 @@ impl Histogram {
     /// Observe a value
     pub fn observe(&self, val: f64) {
         // Update sum and count
-        *self.sum.write().unwrap() += val;
+        *self.sum.write().unwrap_or_else(|e| e.into_inner()) += val;
         self.count.fetch_add(1, Ordering::Relaxed);
 
         // Update bucket counts
@@ -193,7 +193,7 @@ impl Histogram {
 
     /// Get histogram statistics
     pub fn stats(&self) -> HistogramStats {
-        let sum = *self.sum.read().unwrap();
+        let sum = *self.sum.read().unwrap_or_else(|e| e.into_inner());
         let count = self.count.load(Ordering::Relaxed);
 
         let buckets: Vec<_> = self
@@ -272,7 +272,7 @@ impl Summary {
 
     /// Observe a value
     pub fn observe(&self, val: f64) {
-        let mut obs = self.observations.write().unwrap();
+        let mut obs = self.observations.write().unwrap_or_else(|e| e.into_inner());
 
         // Add observation
         obs.push(val);
@@ -288,7 +288,7 @@ impl Summary {
 
     /// Get percentile value
     pub fn percentile(&self, p: f64) -> Option<f64> {
-        let mut obs = self.observations.read().unwrap().clone();
+        let mut obs = self.observations.read().unwrap_or_else(|e| e.into_inner()).clone();
 
         if obs.is_empty() {
             return None;
@@ -304,7 +304,7 @@ impl Summary {
 
     /// Get summary statistics
     pub fn stats(&self) -> SummaryStats {
-        let obs = self.observations.read().unwrap();
+        let obs = self.observations.read().unwrap_or_else(|e| e.into_inner());
 
         let count = obs.len() as u64;
         let sum: f64 = obs.iter().sum();
@@ -321,11 +321,11 @@ impl Summary {
     }
 
     fn cleanup_if_needed(&self) {
-        let last = *self.last_cleanup.read().unwrap();
+        let last = *self.last_cleanup.read().unwrap_or_else(|e| e.into_inner());
 
         if last.elapsed() > self.max_age {
-            self.observations.write().unwrap().clear();
-            *self.last_cleanup.write().unwrap() = Instant::now();
+            self.observations.write().unwrap_or_else(|e| e.into_inner()).clear();
+            *self.last_cleanup.write().unwrap_or_else(|e| e.into_inner()) = Instant::now();
         }
     }
 }
@@ -366,7 +366,7 @@ impl MetricsRegistry {
 
     /// Register or get counter
     pub fn counter(&self, name: &str, help: &str) -> Arc<Counter> {
-        let mut counters = self.counters.write().unwrap();
+        let mut counters = self.counters.write().unwrap_or_else(|e| e.into_inner());
         counters
             .entry(name.to_string())
             .or_insert_with(|| Arc::new(Counter::new(help)))
@@ -375,7 +375,7 @@ impl MetricsRegistry {
 
     /// Register or get gauge
     pub fn gauge(&self, name: &str, help: &str) -> Arc<Gauge> {
-        let mut gauges = self.gauges.write().unwrap();
+        let mut gauges = self.gauges.write().unwrap_or_else(|e| e.into_inner());
         gauges
             .entry(name.to_string())
             .or_insert_with(|| Arc::new(Gauge::new(help)))
@@ -384,7 +384,7 @@ impl MetricsRegistry {
 
     /// Register or get histogram
     pub fn histogram(&self, name: &str, help: &str) -> Arc<Histogram> {
-        let mut histograms = self.histograms.write().unwrap();
+        let mut histograms = self.histograms.write().unwrap_or_else(|e| e.into_inner());
         histograms
             .entry(name.to_string())
             .or_insert_with(|| Arc::new(Histogram::new(help)))
@@ -393,7 +393,7 @@ impl MetricsRegistry {
 
     /// Register or get summary
     pub fn summary(&self, name: &str, help: &str) -> Arc<Summary> {
-        let mut summaries = self.summaries.write().unwrap();
+        let mut summaries = self.summaries.write().unwrap_or_else(|e| e.into_inner());
         summaries
             .entry(name.to_string())
             .or_insert_with(|| Arc::new(Summary::new(help)))
@@ -405,21 +405,21 @@ impl MetricsRegistry {
         let mut output = String::new();
 
         // Export counters
-        for (name, counter) in self.counters.read().unwrap().iter() {
+        for (name, counter) in self.counters.read().unwrap_or_else(|e| e.into_inner()).iter() {
             output.push_str(&format!("# HELP {} {}\n", name, counter.help));
             output.push_str(&format!("# TYPE {} counter\n", name));
             output.push_str(&format!("{} {}\n", name, counter.get()));
         }
 
         // Export gauges
-        for (name, gauge) in self.gauges.read().unwrap().iter() {
+        for (name, gauge) in self.gauges.read().unwrap_or_else(|e| e.into_inner()).iter() {
             output.push_str(&format!("# HELP {} {}\n", name, gauge.help));
             output.push_str(&format!("# TYPE {} gauge\n", name));
             output.push_str(&format!("{} {}\n", name, gauge.get()));
         }
 
         // Export histograms
-        for (name, histogram) in self.histograms.read().unwrap().iter() {
+        for (name, histogram) in self.histograms.read().unwrap_or_else(|e| e.into_inner()).iter() {
             output.push_str(&format!("# HELP {} {}\n", name, histogram.help));
             output.push_str(&format!("# TYPE {} histogram\n", name));
 
@@ -435,7 +435,7 @@ impl MetricsRegistry {
         }
 
         // Export summaries
-        for (name, summary) in self.summaries.read().unwrap().iter() {
+        for (name, summary) in self.summaries.read().unwrap_or_else(|e| e.into_inner()).iter() {
             output.push_str(&format!("# HELP {} {}\n", name, summary.help));
             output.push_str(&format!("# TYPE {} summary\n", name));
 
@@ -453,16 +453,16 @@ impl MetricsRegistry {
     /// Get all metrics as JSON
     pub fn export_json(&self) -> serde_json::Value {
         serde_json::json!({
-            "counters": self.counters.read().unwrap().iter()
+            "counters": self.counters.read().unwrap_or_else(|e| e.into_inner()).iter()
                 .map(|(k, v)| (k.clone(), v.get()))
                 .collect::<HashMap<_, _>>(),
-            "gauges": self.gauges.read().unwrap().iter()
+            "gauges": self.gauges.read().unwrap_or_else(|e| e.into_inner()).iter()
                 .map(|(k, v)| (k.clone(), v.get()))
                 .collect::<HashMap<_, _>>(),
-            "histograms": self.histograms.read().unwrap().iter()
+            "histograms": self.histograms.read().unwrap_or_else(|e| e.into_inner()).iter()
                 .map(|(k, v)| (k.clone(), v.stats()))
                 .collect::<HashMap<_, _>>(),
-            "summaries": self.summaries.read().unwrap().iter()
+            "summaries": self.summaries.read().unwrap_or_else(|e| e.into_inner()).iter()
                 .map(|(k, v)| (k.clone(), v.stats()))
                 .collect::<HashMap<_, _>>(),
         })

@@ -97,7 +97,7 @@ impl StampedeProtection {
 
     /// Get or create a lock for a key
     fn get_lock(&self, key: &str) -> Arc<Mutex<()>> {
-        let mut locks = self.loading_locks.write().unwrap();
+        let mut locks = self.loading_locks.write().unwrap_or_else(|e| e.into_inner());
         locks
             .entry(key.to_string())
             .or_insert_with(|| Arc::new(Mutex::new(())))
@@ -127,7 +127,7 @@ impl StampedeProtection {
 
     /// Clean up old locks
     pub fn cleanup(&self) {
-        let mut locks = self.loading_locks.write().unwrap();
+        let mut locks = self.loading_locks.write().unwrap_or_else(|e| e.into_inner());
         locks.retain(|_, lock| Arc::strong_count(lock) > 1);
     }
 }
@@ -151,20 +151,20 @@ impl<T: Clone> WriteBackBuffer<T> {
 
     /// Add to buffer, returns true if flush needed
     pub fn add(&self, key: String, value: T) -> bool {
-        let mut buffer = self.buffer.write().unwrap();
+        let mut buffer = self.buffer.write().unwrap_or_else(|e| e.into_inner());
         buffer.insert(key, value);
         buffer.len() >= self.max_size
     }
 
     /// Flush all buffered writes
     pub fn flush(&self) -> HashMap<String, T> {
-        let mut buffer = self.buffer.write().unwrap();
+        let mut buffer = self.buffer.write().unwrap_or_else(|e| e.into_inner());
         std::mem::take(&mut *buffer)
     }
 
     /// Get buffered write count
     pub fn len(&self) -> usize {
-        let buffer = self.buffer.read().unwrap();
+        let buffer = self.buffer.read().unwrap_or_else(|e| e.into_inner());
         buffer.len()
     }
 
@@ -288,7 +288,7 @@ impl<C: Cache> DistributedCache<C> {
 
         // Update MESI state
         if self.coherency_protocol != CoherencyProtocol::None {
-            let mut states = self.entry_states.write().unwrap();
+            let mut states = self.entry_states.write().unwrap_or_else(|e| e.into_inner());
             states.insert(key.to_string(), state);
         }
 
@@ -352,7 +352,7 @@ impl<C: Cache> DistributedCache<C> {
             }
             CoherencyProtocol::MESI => {
                 // MESI protocol: transition states
-                let mut states = self.entry_states.write().unwrap();
+                let mut states = self.entry_states.write().unwrap_or_else(|e| e.into_inner());
                 states.insert(key.to_string(), CacheEntryState::Modified);
             }
         }
@@ -367,7 +367,7 @@ impl<C: Cache> DistributedCache<C> {
 
         // For MESI, mark as invalid
         if self.coherency_protocol == CoherencyProtocol::MESI {
-            let mut states = self.entry_states.write().unwrap();
+            let mut states = self.entry_states.write().unwrap_or_else(|e| e.into_inner());
             states.insert(key.to_string(), CacheEntryState::Invalid);
         }
 
@@ -376,7 +376,7 @@ impl<C: Cache> DistributedCache<C> {
 
     /// Check if entry is valid according to MESI state
     fn is_entry_valid(&self, key: &str) -> bool {
-        let states = self.entry_states.read().unwrap();
+        let states = self.entry_states.read().unwrap_or_else(|e| e.into_inner());
         if let Some(state) = states.get(key) {
             *state != CacheEntryState::Invalid
         } else {
@@ -391,7 +391,7 @@ impl<C: Cache> DistributedCache<C> {
 
         // Update state
         if self.coherency_protocol == CoherencyProtocol::MESI {
-            let mut states = self.entry_states.write().unwrap();
+            let mut states = self.entry_states.write().unwrap_or_else(|e| e.into_inner());
             states.insert(key.to_string(), CacheEntryState::Invalid);
         }
 
@@ -429,7 +429,7 @@ impl<C: Cache> DistributedCache<C> {
             .unwrap_or(0);
 
         let state_counts = if self.coherency_protocol == CoherencyProtocol::MESI {
-            let states = self.entry_states.read().unwrap();
+            let states = self.entry_states.read().unwrap_or_else(|e| e.into_inner());
             let mut counts = HashMap::new();
             for state in states.values() {
                 *counts.entry(*state).or_insert(0) += 1;
@@ -513,24 +513,24 @@ impl MockRedisCache {
 #[async_trait::async_trait]
 impl RedisCache for MockRedisCache {
     async fn redis_get(&self, key: &str) -> Result<Option<Vec<u8>>> {
-        let data = self.data.read().unwrap();
+        let data = self.data.read().unwrap_or_else(|e| e.into_inner());
         Ok(data.get(key).cloned())
     }
 
     async fn redis_set(&self, key: &str, value: &[u8], _ttl: Option<Duration>) -> Result<()> {
-        let mut data = self.data.write().unwrap();
+        let mut data = self.data.write().unwrap_or_else(|e| e.into_inner());
         data.insert(key.to_string(), value.to_vec());
         Ok(())
     }
 
     async fn redis_delete(&self, key: &str) -> Result<()> {
-        let mut data = self.data.write().unwrap();
+        let mut data = self.data.write().unwrap_or_else(|e| e.into_inner());
         data.remove(key);
         Ok(())
     }
 
     async fn redis_exists(&self, key: &str) -> Result<bool> {
-        let data = self.data.read().unwrap();
+        let data = self.data.read().unwrap_or_else(|e| e.into_inner());
         Ok(data.contains_key(key))
     }
 
@@ -564,7 +564,7 @@ mod tests {
                 p.protected_load("key1", async {
                     // Simulate slow load
                     tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-                    let mut count = c.write().unwrap();
+                    let mut count = c.write().unwrap_or_else(|e| e.into_inner());
                     *count += 1;
                     Ok::<i32, CoreError>(*count)
                 })
@@ -580,7 +580,7 @@ mod tests {
 
         // Due to concurrent access, count may be higher than 1
         // but should be less than 10 (stampede protection reduces concurrent loads)
-        let final_count = *counter.read().unwrap();
+        let final_count = *counter.read().unwrap_or_else(|e| e.into_inner());
         assert!((1..=10).contains(&final_count));
         // The protection ensures serialization per key, so all requests get processed
     }
@@ -688,7 +688,7 @@ mod tests {
                 move || {
                     let lc = load_count_clone.clone();
                     async move {
-                        *lc.write().unwrap() += 1;
+                        *lc.write().unwrap_or_else(|e| e.into_inner()) += 1;
                         Ok::<String, CoreError>("loaded_value".to_string())
                     }
                 },
@@ -698,7 +698,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(value, "loaded_value");
-        assert_eq!(*load_count.read().unwrap(), 1);
+        assert_eq!(*load_count.read().unwrap_or_else(|e| e.into_inner()), 1);
 
         // Second get should use cache, not load again
         let value2 = cache
@@ -711,7 +711,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(value2, "loaded_value");
-        assert_eq!(*load_count.read().unwrap(), 1); // Still 1, not loaded again
+        assert_eq!(*load_count.read().unwrap_or_else(|e| e.into_inner()), 1); // Still 1, not loaded again
     }
 
     #[test]

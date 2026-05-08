@@ -158,7 +158,7 @@ impl PeerManager {
 
     /// Add a peer
     pub fn add_peer(&self, address: SocketAddr, inbound: bool) -> bool {
-        let mut peers = self.peers.write().unwrap();
+        let mut peers = self.peers.write().unwrap_or_else(|e| e.into_inner());
         if peers.len() >= self.config.max_peers {
             return false;
         }
@@ -172,7 +172,7 @@ impl PeerManager {
 
     /// Remove a peer
     pub fn remove_peer(&self, address: &SocketAddr) {
-        let mut peers = self.peers.write().unwrap();
+        let mut peers = self.peers.write().unwrap_or_else(|e| e.into_inner());
         if peers.remove(address).is_some() {
             let _ = self.event_tx.send(P2pEvent::PeerDisconnected(*address));
         }
@@ -180,7 +180,7 @@ impl PeerManager {
 
     /// Update peer version
     pub fn update_peer_version(&self, address: &SocketAddr, version: VersionMessage) {
-        let mut peers = self.peers.write().unwrap();
+        let mut peers = self.peers.write().unwrap_or_else(|e| e.into_inner());
         if let Some(peer) = peers.get_mut(address) {
             peer.services = version.services;
             peer.version = Some(version.clone());
@@ -193,17 +193,17 @@ impl PeerManager {
 
     /// Get peer count
     pub fn peer_count(&self) -> usize {
-        self.peers.read().unwrap().len()
+        self.peers.read().unwrap_or_else(|e| e.into_inner()).len()
     }
 
     /// Get all peer addresses
     pub fn get_peers(&self) -> Vec<SocketAddr> {
-        self.peers.read().unwrap().keys().copied().collect()
+        self.peers.read().unwrap_or_else(|e| e.into_inner()).keys().copied().collect()
     }
 
     /// Get peer info
     pub fn get_peer_info(&self, address: &SocketAddr) -> Option<PeerInfo> {
-        self.peers.read().unwrap().get(address).cloned()
+        self.peers.read().unwrap_or_else(|e| e.into_inner()).get(address).cloned()
     }
 
     /// Remove stale peers
@@ -211,7 +211,7 @@ impl PeerManager {
         let stale_peers: Vec<SocketAddr> = self
             .peers
             .read()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .iter()
             .filter(|(_, info)| info.is_stale(timeout))
             .map(|(addr, _)| *addr)
@@ -307,7 +307,7 @@ impl P2pClient {
         info!(?txid, "Broadcasting transaction");
 
         // Mark as known
-        self.known_txs.write().unwrap().insert(txid);
+        self.known_txs.write().unwrap_or_else(|e| e.into_inner()).insert(txid);
 
         // Create inventory message
         let inv = Inventory::Transaction(txid);

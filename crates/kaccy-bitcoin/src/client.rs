@@ -153,7 +153,7 @@ impl BitcoinClient {
             Auth::UserPass(params.user.clone(), params.password.clone()),
         )?;
 
-        let mut client = self.client.write().unwrap();
+        let mut client = self.client.write().unwrap_or_else(|e| e.into_inner());
         *client = new_client;
 
         tracing::info!("Bitcoin RPC client reconnected");
@@ -169,7 +169,7 @@ impl BitcoinClient {
         let mut delay = self.reconnect_config.initial_delay;
 
         for attempt in 0..=self.reconnect_config.max_retries {
-            let client = self.client.read().unwrap();
+            let client = self.client.read().unwrap_or_else(|e| e.into_inner());
             match operation(&client) {
                 Ok(result) => return Ok(result),
                 Err(e) => {

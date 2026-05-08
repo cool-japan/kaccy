@@ -228,7 +228,7 @@ impl MetricsSubscriber {
     pub fn get_count(&self, event_type: &str) -> u64 {
         self.event_counts
             .lock()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .get(event_type)
             .copied()
             .unwrap_or(0)
@@ -236,12 +236,12 @@ impl MetricsSubscriber {
 
     /// Get all event counts
     pub fn get_all_counts(&self) -> std::collections::HashMap<String, u64> {
-        self.event_counts.lock().unwrap().clone()
+        self.event_counts.lock().unwrap_or_else(|e| e.into_inner()).clone()
     }
 
     /// Reset all counts
     pub fn reset(&self) {
-        self.event_counts.lock().unwrap().clear();
+        self.event_counts.lock().unwrap_or_else(|e| e.into_inner()).clear();
     }
 }
 
@@ -262,7 +262,7 @@ impl EventSubscriber for MetricsSubscriber {
 
         // Increment counter for this event type
         {
-            let mut counts = self.event_counts.lock().unwrap();
+            let mut counts = self.event_counts.lock().unwrap_or_else(|e| e.into_inner());
             *counts.entry(event_type.clone()).or_insert(0) += 1;
         }
 

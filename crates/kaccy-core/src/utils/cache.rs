@@ -87,19 +87,19 @@ impl MemoryCache {
 
     /// Clean up expired entries
     pub fn cleanup_expired(&self) {
-        let mut data = self.data.write().unwrap();
+        let mut data = self.data.write().unwrap_or_else(|e| e.into_inner());
         data.retain(|_, entry| !entry.is_expired());
     }
 
     /// Get the number of entries in cache
     pub fn len(&self) -> usize {
-        let data = self.data.read().unwrap();
+        let data = self.data.read().unwrap_or_else(|e| e.into_inner());
         data.len()
     }
 
     /// Check if the cache is empty
     pub fn is_empty(&self) -> bool {
-        let data = self.data.read().unwrap();
+        let data = self.data.read().unwrap_or_else(|e| e.into_inner());
         data.is_empty()
     }
 }
@@ -114,7 +114,7 @@ impl Default for MemoryCache {
 impl Cache for MemoryCache {
     async fn get<T: DeserializeOwned + Send>(&self, key: &str) -> Result<Option<T>> {
         let (bytes, is_expired) = {
-            let data = self.data.read().unwrap();
+            let data = self.data.read().unwrap_or_else(|e| e.into_inner());
             if let Some(entry) = data.get(key) {
                 (Some(entry.value.clone()), entry.is_expired())
             } else {
@@ -145,21 +145,21 @@ impl Cache for MemoryCache {
         let bytes =
             serde_json::to_vec(value).map_err(|e| CoreError::Serialization(e.to_string()))?;
 
-        let mut data = self.data.write().unwrap();
+        let mut data = self.data.write().unwrap_or_else(|e| e.into_inner());
         data.insert(key.to_string(), CacheEntry::new(bytes, ttl));
 
         Ok(())
     }
 
     async fn delete(&self, key: &str) -> Result<()> {
-        let mut data = self.data.write().unwrap();
+        let mut data = self.data.write().unwrap_or_else(|e| e.into_inner());
         data.remove(key);
         Ok(())
     }
 
     async fn exists(&self, key: &str) -> Result<bool> {
         let (exists, is_expired) = {
-            let data = self.data.read().unwrap();
+            let data = self.data.read().unwrap_or_else(|e| e.into_inner());
             if let Some(entry) = data.get(key) {
                 (true, entry.is_expired())
             } else {
@@ -176,7 +176,7 @@ impl Cache for MemoryCache {
     }
 
     async fn clear(&self) -> Result<()> {
-        let mut data = self.data.write().unwrap();
+        let mut data = self.data.write().unwrap_or_else(|e| e.into_inner());
         data.clear();
         Ok(())
     }
@@ -209,7 +209,7 @@ impl Cache for MemoryCache {
     }
 
     async fn delete_many(&self, keys: &[String]) -> Result<()> {
-        let mut data = self.data.write().unwrap();
+        let mut data = self.data.write().unwrap_or_else(|e| e.into_inner());
         for key in keys {
             data.remove(key);
         }

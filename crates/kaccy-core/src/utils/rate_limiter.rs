@@ -284,7 +284,7 @@ impl DistributedRateLimiter {
 
     /// Try to acquire for a specific key (e.g., user ID, IP address)
     pub fn try_acquire(&self, key: &str) -> bool {
-        let mut state = self.inner.lock().unwrap();
+        let mut state = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         let max_requests = state.max_requests;
         let window_size = state.window_size;
 
@@ -298,7 +298,7 @@ impl DistributedRateLimiter {
 
     /// Get current count for a key
     pub fn current_count(&self, key: &str) -> usize {
-        let mut state = self.inner.lock().unwrap();
+        let mut state = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         state
             .counters
             .get_mut(key)
@@ -308,7 +308,7 @@ impl DistributedRateLimiter {
 
     /// Get remaining capacity for a key
     pub fn remaining(&self, key: &str) -> u64 {
-        let mut state = self.inner.lock().unwrap();
+        let mut state = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         state
             .counters
             .get_mut(key)
@@ -318,13 +318,13 @@ impl DistributedRateLimiter {
 
     /// Reset a specific key
     pub fn reset_key(&self, key: &str) {
-        let mut state = self.inner.lock().unwrap();
+        let mut state = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         state.counters.remove(key);
     }
 
     /// Clean up inactive keys (removes keys with no recent requests)
     pub fn cleanup(&self) {
-        let mut state = self.inner.lock().unwrap();
+        let mut state = self.inner.lock().unwrap_or_else(|e| e.into_inner());
         state.counters.retain(|_, limiter| {
             limiter.cleanup();
             limiter.current_count() > 0

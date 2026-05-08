@@ -731,7 +731,7 @@ mod tests {
         );
 
         // Lock HTLCs
-        swap.lock().unwrap();
+        swap.lock().expect("test setup");
         assert_eq!(swap.state, SwapState::Locked);
 
         // Step 1: Initiator claims HTLC B

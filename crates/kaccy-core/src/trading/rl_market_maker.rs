@@ -23,10 +23,13 @@
 ///
 /// # Reward Function
 /// Reward = PnL - inventory_penalty - adverse_selection_penalty
-use crate::error::Result;
+use crate::error::{CoreError, Result};
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
+use std::fs;
+use std::path::Path;
 
 /// Market making state representation for RL
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,10 +111,10 @@ impl MarketAction {
         let bid_offset_raw = values.first().copied().unwrap_or(0.0);
         let ask_offset_raw = values.get(1).copied().unwrap_or(0.0);
         let bid_offset = Decimal::from_f64_retain((1.0 / (1.0 + (-bid_offset_raw).exp())) * 0.02)
-            .unwrap_or(Decimal::from_f64_retain(0.005).unwrap());
+            .unwrap_or(dec!(0.005));
 
         let ask_offset = Decimal::from_f64_retain((1.0 / (1.0 + (-ask_offset_raw).exp())) * 0.02)
-            .unwrap_or(Decimal::from_f64_retain(0.005).unwrap());
+            .unwrap_or(dec!(0.005));
 
         // Apply sigmoid to quantities and scale to [50, 200] range
         let bid_qty_raw = values.get(2).copied().unwrap_or(0.0);
@@ -139,7 +142,7 @@ impl MarketAction {
 }
 
 /// Experience for replay buffer
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Experience {
     /// Market state at the time of the action.
     pub state: RLMarketState,
@@ -154,6 +157,7 @@ pub struct Experience {
 }
 
 /// Replay buffer for experience replay
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReplayBuffer {
     buffer: VecDeque<Experience>,
     capacity: usize,
@@ -211,7 +215,7 @@ impl ReplayBuffer {
 }
 
 /// RL Market Maker configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RLMarketMakerConfig {
     /// Learning rate
     pub learning_rate: f64,
@@ -246,15 +250,15 @@ impl Default for RLMarketMakerConfig {
             target_update_freq: 100,
             batch_size: 32,
             replay_buffer_capacity: 10000,
-            inventory_penalty: Decimal::from_f64_retain(0.01).unwrap(),
-            adverse_selection_penalty: Decimal::from_f64_retain(0.005).unwrap(),
+            inventory_penalty: dec!(0.01),
+            adverse_selection_penalty: dec!(0.005),
         }
     }
 }
 
 /// Simplified Q-Network for demonstration
 /// In production, this would be a proper neural network
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QNetwork {
     /// Network weights (simplified as a matrix)
     weights: Vec<Vec<f64>>,
@@ -324,6 +328,25 @@ impl QNetwork {
     }
 }
 
+/// Serializable snapshot of an RLMarketMaker's state for persistence
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RLModelSnapshot {
+    /// Model configuration
+    pub config: RLMarketMakerConfig,
+    /// Online Q-network weights
+    pub q_network: QNetwork,
+    /// Target Q-network weights
+    pub target_network: QNetwork,
+    /// Replay buffer contents
+    pub replay_buffer: ReplayBuffer,
+    /// Number of training steps completed
+    pub step_count: usize,
+    /// Maximum inventory bound used for state normalisation
+    pub max_inventory: Decimal,
+    /// Maximum price bound used for state normalisation
+    pub max_price: Decimal,
+}
+
 /// RL-based Market Maker
 pub struct RLMarketMaker {
     config: RLMarketMakerConfig,
@@ -365,8 +388,10 @@ impl RLMarketMaker {
         if rng.random_range(0.0..1.0) < epsilon {
             // Explore: random action
             MarketAction {
-                bid_offset: Decimal::from_f64_retain(rng.random_range(0.0..0.01)).unwrap(),
-                ask_offset: Decimal::from_f64_retain(rng.random_range(0.0..0.01)).unwrap(),
+                bid_offset: Decimal::from_f64_retain(rng.random_range(0.0..0.01))
+                    .unwrap_or(dec!(0.005)),
+                ask_offset: Decimal::from_f64_retain(rng.random_range(0.0..0.01))
+                    .unwrap_or(dec!(0.005)),
                 bid_quantity: Decimal::from(rng.random_range(50..200)),
                 ask_quantity: Decimal::from(rng.random_range(50..200)),
             }
@@ -472,15 +497,77 @@ impl RLMarketMaker {
         }
     }
 
-    /// Save model (placeholder)
-    pub fn save_model(&self, _path: &str) -> Result<()> {
-        // In production, serialize and save network weights
+    /// Serialize the full model state (weights, config, replay buffer) to a JSON file.
+    ///
+    /// The file is written atomically: JSON is first serialised into memory, then
+    /// written to `path` in a single `write_all` call so partial writes do not
+    /// produce a corrupted snapshot.
+    pub fn save_model(&self, path: &str) -> Result<()> {
+        let snapshot = RLModelSnapshot {
+            config: self.config.clone(),
+            q_network: self.q_network.clone(),
+            target_network: self.target_network.clone(),
+            replay_buffer: self.replay_buffer.clone(),
+            step_count: self.step_count,
+            max_inventory: self.max_inventory,
+            max_price: self.max_price,
+        };
+
+        let json = serde_json::to_string_pretty(&snapshot).map_err(|e| {
+            CoreError::Serialization(format!("Failed to serialise model snapshot: {}", e))
+        })?;
+
+        // Create parent directory if it does not exist
+        if let Some(parent) = Path::new(path).parent() {
+            if !parent.as_os_str().is_empty() {
+                fs::create_dir_all(parent).map_err(|e| {
+                    CoreError::Serialization(format!(
+                        "Failed to create model directory '{}': {}",
+                        parent.display(),
+                        e
+                    ))
+                })?;
+            }
+        }
+
+        fs::write(path, json).map_err(|e| {
+            CoreError::Serialization(format!("Failed to write model to '{}': {}", path, e))
+        })?;
+
+        tracing::info!("RLMarketMaker model saved to '{}'", path);
         Ok(())
     }
 
-    /// Load model (placeholder)
-    pub fn load_model(&mut self, _path: &str) -> Result<()> {
-        // In production, load and deserialize network weights
+    /// Load model state from a JSON file previously written by [`save_model`].
+    ///
+    /// All fields (weights, config, replay buffer, step count, normalisation
+    /// bounds) are restored so training can resume exactly where it left off.
+    pub fn load_model(&mut self, path: &str) -> Result<()> {
+        let json = fs::read_to_string(path).map_err(|e| {
+            CoreError::Serialization(format!("Failed to read model from '{}': {}", path, e))
+        })?;
+
+        let snapshot: RLModelSnapshot =
+            serde_json::from_str(&json).map_err(|e| {
+                CoreError::Serialization(format!(
+                    "Failed to deserialise model snapshot from '{}': {}",
+                    path, e
+                ))
+            })?;
+
+        self.config = snapshot.config;
+        self.q_network = snapshot.q_network;
+        self.target_network = snapshot.target_network;
+        self.replay_buffer = snapshot.replay_buffer;
+        self.step_count = snapshot.step_count;
+        self.max_inventory = snapshot.max_inventory;
+        self.max_price = snapshot.max_price;
+
+        tracing::info!(
+            "RLMarketMaker model loaded from '{}' (step {})",
+            path,
+            self.step_count
+        );
         Ok(())
     }
 }
@@ -566,7 +653,6 @@ impl OnlineLearningMarketMaker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rust_decimal_macros::dec;
 
     #[test]
     fn test_market_state_normalize() {
@@ -743,5 +829,39 @@ mod tests {
         assert_eq!(stats.step_count, 0);
         assert_eq!(stats.replay_buffer_size, 0);
         assert!(stats.epsilon > 0.0);
+    }
+
+    #[test]
+    fn test_save_and_load_model() {
+        let config = RLMarketMakerConfig {
+            epsilon: 0.42,
+            ..RLMarketMakerConfig::default()
+        };
+        let mut maker = RLMarketMaker::new(config, dec!(500), dec!(80000));
+
+        // Train for a couple of steps to move step_count forward
+        maker.step_count = 7;
+        maker.config.learning_rate = 0.0075;
+
+        let tmp_path = std::env::temp_dir().join("rl_model_test_snapshot.json");
+        let path_str = tmp_path.to_str().expect("valid UTF-8 temp path");
+
+        // Save
+        maker.save_model(path_str).expect("save_model should succeed");
+        assert!(tmp_path.exists(), "snapshot file should exist after save");
+
+        // Load into a fresh instance
+        let config2 = RLMarketMakerConfig::default();
+        let mut loaded = RLMarketMaker::new(config2, dec!(1), dec!(1));
+        loaded.load_model(path_str).expect("load_model should succeed");
+
+        // Verify key fields were round-tripped
+        assert_eq!(loaded.step_count, 7);
+        assert!((loaded.config.learning_rate - 0.0075).abs() < 1e-10);
+        assert_eq!(loaded.max_inventory, dec!(500));
+        assert_eq!(loaded.max_price, dec!(80000));
+
+        // Clean up
+        let _ = std::fs::remove_file(tmp_path);
     }
 }

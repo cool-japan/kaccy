@@ -170,7 +170,7 @@ impl DescriptorWallet {
             output_desc.validate_checksum()?;
         }
 
-        let mut descriptors = self.descriptors.write().unwrap();
+        let mut descriptors = self.descriptors.write().unwrap_or_else(|e| e.into_inner());
         descriptors.insert(name, output_desc);
 
         Ok(())
@@ -178,13 +178,13 @@ impl DescriptorWallet {
 
     /// Get a descriptor by name
     pub fn get_descriptor(&self, name: &str) -> Option<OutputDescriptor> {
-        let descriptors = self.descriptors.read().unwrap();
+        let descriptors = self.descriptors.read().unwrap_or_else(|e| e.into_inner());
         descriptors.get(name).cloned()
     }
 
     /// List all descriptors
     pub fn list_descriptors(&self) -> Vec<(String, OutputDescriptor)> {
-        let descriptors = self.descriptors.read().unwrap();
+        let descriptors = self.descriptors.read().unwrap_or_else(|e| e.into_inner());
         descriptors
             .iter()
             .map(|(k, v)| (k.clone(), v.clone()))
@@ -193,7 +193,7 @@ impl DescriptorWallet {
 
     /// Remove a descriptor
     pub fn remove_descriptor(&self, name: &str) -> Result<()> {
-        let mut descriptors = self.descriptors.write().unwrap();
+        let mut descriptors = self.descriptors.write().unwrap_or_else(|e| e.into_inner());
         descriptors
             .remove(name)
             .ok_or_else(|| BitcoinError::Validation(format!("Descriptor {} not found", name)))?;

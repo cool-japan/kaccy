@@ -267,7 +267,13 @@ impl MigrationRunner {
             let path = entry.path();
 
             if path.extension().and_then(|s| s.to_str()) == Some("sql") {
-                let migration = Migration::from_file(path.to_str().unwrap())?;
+                let path_str = path.to_str().ok_or_else(|| {
+                    DbError::Validation(format!(
+                        "Migration path is not valid UTF-8: {}",
+                        path.display()
+                    ))
+                })?;
+                let migration = Migration::from_file(path_str)?;
                 migrations.push(migration);
             }
         }

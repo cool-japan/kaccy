@@ -42,7 +42,7 @@ impl PreparedStatementCache {
 
     /// Get or cache a prepared statement
     pub fn get_or_insert(&self, key: String, sql: String) -> Result<String, CoreError> {
-        let mut statements = self.statements.write().unwrap();
+        let mut statements = self.statements.write().unwrap_or_else(|e| e.into_inner());
 
         if let Some(stmt) = statements.get_mut(&key) {
             stmt.use_count += 1;
@@ -75,7 +75,7 @@ impl PreparedStatementCache {
 
     /// Get cache statistics
     pub fn stats(&self) -> PreparedStatementStats {
-        let statements = self.statements.read().unwrap();
+        let statements = self.statements.read().unwrap_or_else(|e| e.into_inner());
         let total_uses: usize = statements.values().map(|s| s.use_count).sum();
 
         PreparedStatementStats {
@@ -92,12 +92,12 @@ impl PreparedStatementCache {
 
     /// Clear the cache
     pub fn clear(&self) {
-        self.statements.write().unwrap().clear();
+        self.statements.write().unwrap_or_else(|e| e.into_inner()).clear();
     }
 
     /// Get most frequently used statements
     pub fn get_top_statements(&self, limit: usize) -> Vec<(String, usize)> {
-        let statements = self.statements.read().unwrap();
+        let statements = self.statements.read().unwrap_or_else(|e| e.into_inner());
         let mut entries: Vec<_> = statements
             .iter()
             .map(|(k, v)| (k.clone(), v.use_count))
@@ -365,7 +365,7 @@ impl QueryPerformanceAnalyzer {
             rows_affected,
         };
 
-        let mut history = self.query_history.write().unwrap();
+        let mut history = self.query_history.write().unwrap_or_else(|e| e.into_inner());
         history.push(execution);
 
         // Trim history if needed
@@ -377,7 +377,7 @@ impl QueryPerformanceAnalyzer {
 
     /// Get slow queries
     pub fn get_slow_queries(&self) -> Vec<SlowQuery> {
-        let history = self.query_history.read().unwrap();
+        let history = self.query_history.read().unwrap_or_else(|e| e.into_inner());
 
         let mut slow_queries: HashMap<String, Vec<u64>> = HashMap::new();
 
@@ -407,7 +407,7 @@ impl QueryPerformanceAnalyzer {
 
     /// Get query performance statistics
     pub fn get_stats(&self) -> QueryPerformanceStats {
-        let history = self.query_history.read().unwrap();
+        let history = self.query_history.read().unwrap_or_else(|e| e.into_inner());
 
         if history.is_empty() {
             return QueryPerformanceStats {
@@ -519,12 +519,12 @@ impl MaterializedViewManager {
             estimated_rows: 0,
         };
 
-        self.views.write().unwrap().insert(name, view);
+        self.views.write().unwrap_or_else(|e| e.into_inner()).insert(name, view);
     }
 
     /// Check if a view needs refresh
     pub fn needs_refresh(&self, view_name: &str) -> bool {
-        let views = self.views.read().unwrap();
+        let views = self.views.read().unwrap_or_else(|e| e.into_inner());
         if let Some(view) = views.get(view_name) {
             match view.refresh_strategy {
                 RefreshStrategy::OnDemand => true,
@@ -541,7 +541,7 @@ impl MaterializedViewManager {
 
     /// Mark view as refreshed
     pub fn mark_refreshed(&self, view_name: &str, row_count: usize) {
-        let mut views = self.views.write().unwrap();
+        let mut views = self.views.write().unwrap_or_else(|e| e.into_inner());
         if let Some(view) = views.get_mut(view_name) {
             view.last_refresh = Instant::now();
             view.estimated_rows = row_count;
@@ -550,7 +550,7 @@ impl MaterializedViewManager {
 
     /// Get views that need refresh
     pub fn get_stale_views(&self) -> Vec<String> {
-        let views = self.views.read().unwrap();
+        let views = self.views.read().unwrap_or_else(|e| e.into_inner());
         views
             .iter()
             .filter(|(_name, view)| {
@@ -563,7 +563,7 @@ impl MaterializedViewManager {
 
     /// Generate SQL for creating materialized view (PostgreSQL syntax)
     pub fn generate_create_sql(&self, view_name: &str) -> Option<String> {
-        let views = self.views.read().unwrap();
+        let views = self.views.read().unwrap_or_else(|e| e.into_inner());
         views.get(view_name).map(|view| {
             format!(
                 "CREATE MATERIALIZED VIEW {} AS {}",
@@ -583,7 +583,7 @@ impl MaterializedViewManager {
 
     /// Get view statistics
     pub fn get_view_stats(&self) -> MaterializedViewStats {
-        let views = self.views.read().unwrap();
+        let views = self.views.read().unwrap_or_else(|e| e.into_inner());
         let total = views.len();
         let stale = views
             .values()
@@ -701,12 +701,12 @@ impl PartialIndexOptimizer {
             reason,
         };
 
-        self.recommendations.write().unwrap().push(rec);
+        self.recommendations.write().unwrap_or_else(|e| e.into_inner()).push(rec);
     }
 
     /// Get all recommendations
     pub fn get_recommendations(&self) -> Vec<IndexRecommendation> {
-        self.recommendations.read().unwrap().clone()
+        self.recommendations.read().unwrap_or_else(|e| e.into_inner()).clone()
     }
 
     /// Generate CREATE INDEX SQL
@@ -734,7 +734,7 @@ impl PartialIndexOptimizer {
 
     /// Clear recommendations
     pub fn clear(&self) {
-        self.recommendations.write().unwrap().clear();
+        self.recommendations.write().unwrap_or_else(|e| e.into_inner()).clear();
     }
 }
 
@@ -773,7 +773,7 @@ impl IndexOnlyScanAnalyzer {
 
     /// Record a scan operation
     pub fn record_scan(&self, table: String, index_only: bool, heap_fetches: usize, rows: usize) {
-        let mut stats = self.stats.write().unwrap();
+        let mut stats = self.stats.write().unwrap_or_else(|e| e.into_inner());
         let entry = stats.entry(table).or_insert(ScanStats {
             total_scans: 0,
             index_only_scans: 0,
@@ -794,7 +794,7 @@ impl IndexOnlyScanAnalyzer {
 
     /// Get scan efficiency for a table
     pub fn get_efficiency(&self, table: &str) -> Option<ScanEfficiency> {
-        let stats = self.stats.read().unwrap();
+        let stats = self.stats.read().unwrap_or_else(|e| e.into_inner());
         stats.get(table).map(|s| {
             let index_only_ratio = if s.total_scans > 0 {
                 s.index_only_scans as f64 / s.total_scans as f64
@@ -824,7 +824,7 @@ impl IndexOnlyScanAnalyzer {
 
     /// Get all table stats
     pub fn get_all_stats(&self) -> Vec<(String, ScanStats)> {
-        let stats = self.stats.read().unwrap();
+        let stats = self.stats.read().unwrap_or_else(|e| e.into_inner());
         stats.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
     }
 }
@@ -889,7 +889,7 @@ impl QueryResultCache {
 
     /// Check if result is cached and valid
     pub fn is_cached(&self, key: &str) -> bool {
-        let cache = self.cache.read().unwrap();
+        let cache = self.cache.read().unwrap_or_else(|e| e.into_inner());
         if let Some(result) = cache.get(key) {
             result.cached_at.elapsed() < result.ttl
         } else {
@@ -904,7 +904,7 @@ impl QueryResultCache {
         size_bytes: usize,
         ttl: Option<Duration>,
     ) -> Result<(), CoreError> {
-        let mut cache = self.cache.write().unwrap();
+        let mut cache = self.cache.write().unwrap_or_else(|e| e.into_inner());
 
         // Evict if cache is full
         if cache.len() >= self.max_size {
@@ -932,7 +932,7 @@ impl QueryResultCache {
 
     /// Increment access count for a cached result
     pub fn record_access(&self, key: &str) {
-        let mut cache = self.cache.write().unwrap();
+        let mut cache = self.cache.write().unwrap_or_else(|e| e.into_inner());
         if let Some(result) = cache.get_mut(key) {
             result.access_count += 1;
         }
@@ -940,24 +940,24 @@ impl QueryResultCache {
 
     /// Invalidate a specific cache entry
     pub fn invalidate(&self, key: &str) {
-        self.cache.write().unwrap().remove(key);
+        self.cache.write().unwrap_or_else(|e| e.into_inner()).remove(key);
     }
 
     /// Invalidate all cache entries matching a pattern
     pub fn invalidate_pattern(&self, pattern: &str) {
-        let mut cache = self.cache.write().unwrap();
+        let mut cache = self.cache.write().unwrap_or_else(|e| e.into_inner());
         cache.retain(|k, _| !k.contains(pattern));
     }
 
     /// Clear expired entries
     pub fn cleanup_expired(&self) {
-        let mut cache = self.cache.write().unwrap();
+        let mut cache = self.cache.write().unwrap_or_else(|e| e.into_inner());
         cache.retain(|_, v| v.cached_at.elapsed() < v.ttl);
     }
 
     /// Get cache statistics
     pub fn get_stats(&self) -> QueryCacheStats {
-        let cache = self.cache.read().unwrap();
+        let cache = self.cache.read().unwrap_or_else(|e| e.into_inner());
         let total_entries = cache.len();
         let total_size: usize = cache.values().map(|v| v.size_bytes).sum();
         let total_accesses: usize = cache.values().map(|v| v.access_count).sum();
@@ -981,7 +981,7 @@ impl QueryResultCache {
 
     /// Clear all cache
     pub fn clear(&self) {
-        self.cache.write().unwrap().clear();
+        self.cache.write().unwrap_or_else(|e| e.into_inner()).clear();
     }
 }
 
@@ -1043,7 +1043,7 @@ impl TransactionBatcher {
         statements: Vec<String>,
         priority: u8,
     ) -> Result<(), CoreError> {
-        let mut pending = self.pending.write().unwrap();
+        let mut pending = self.pending.write().unwrap_or_else(|e| e.into_inner());
 
         let tx = PendingTransaction {
             id,
@@ -1062,26 +1062,26 @@ impl TransactionBatcher {
 
     /// Check if batch should be flushed
     pub fn should_flush(&self) -> bool {
-        let pending = self.pending.read().unwrap();
-        let last_flush = self.last_flush.read().unwrap();
+        let pending = self.pending.read().unwrap_or_else(|e| e.into_inner());
+        let last_flush = self.last_flush.read().unwrap_or_else(|e| e.into_inner());
 
         pending.len() >= self.max_batch_size || last_flush.elapsed() >= self.batch_timeout
     }
 
     /// Get batch for execution
     pub fn get_batch(&self) -> Vec<PendingTransaction> {
-        let mut pending = self.pending.write().unwrap();
+        let mut pending = self.pending.write().unwrap_or_else(|e| e.into_inner());
         let batch_size = self.max_batch_size.min(pending.len());
 
         let batch = pending.drain(0..batch_size).collect();
-        *self.last_flush.write().unwrap() = Instant::now();
+        *self.last_flush.write().unwrap_or_else(|e| e.into_inner()) = Instant::now();
 
         batch
     }
 
     /// Get batch statistics
     pub fn get_stats(&self) -> TransactionBatchStats {
-        let pending = self.pending.read().unwrap();
+        let pending = self.pending.read().unwrap_or_else(|e| e.into_inner());
         let oldest_age = pending
             .first()
             .map(|tx| tx.queued_at.elapsed().as_millis() as u64)
@@ -1090,7 +1090,7 @@ impl TransactionBatcher {
         TransactionBatchStats {
             pending_count: pending.len(),
             oldest_transaction_age_ms: oldest_age,
-            time_since_last_flush_ms: self.last_flush.read().unwrap().elapsed().as_millis() as u64,
+            time_since_last_flush_ms: self.last_flush.read().unwrap_or_else(|e| e.into_inner()).elapsed().as_millis() as u64,
         }
     }
 

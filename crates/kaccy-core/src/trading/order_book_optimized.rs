@@ -283,10 +283,10 @@ impl LockFreeOrderBook {
         // Update atomic statistics
         match order.side {
             OrderSide::Buy => {
-                let stats_map = self.bid_stats.read().unwrap();
+                let stats_map = self.bid_stats.read().unwrap_or_else(|e| e.into_inner());
                 let stats = stats_map.get(&price_key).cloned().unwrap_or_else(|| {
                     drop(stats_map);
-                    let mut write_map = self.bid_stats.write().unwrap();
+                    let mut write_map = self.bid_stats.write().unwrap_or_else(|e| e.into_inner());
                     let new_stats = Arc::new(AtomicPriceStats::new());
                     write_map.insert(price_key, new_stats.clone());
                     new_stats
@@ -297,10 +297,10 @@ impl LockFreeOrderBook {
                     .fetch_add(decimal_to_cents(remaining), AtomicOrdering::SeqCst);
             }
             OrderSide::Sell => {
-                let stats_map = self.ask_stats.read().unwrap();
+                let stats_map = self.ask_stats.read().unwrap_or_else(|e| e.into_inner());
                 let stats = stats_map.get(&price_key).cloned().unwrap_or_else(|| {
                     drop(stats_map);
-                    let mut write_map = self.ask_stats.write().unwrap();
+                    let mut write_map = self.ask_stats.write().unwrap_or_else(|e| e.into_inner());
                     let new_stats = Arc::new(AtomicPriceStats::new());
                     write_map.insert(price_key, new_stats.clone());
                     new_stats
@@ -313,7 +313,7 @@ impl LockFreeOrderBook {
         }
 
         // Allocate in pool
-        let mut pool = self.order_pool.write().unwrap();
+        let mut pool = self.order_pool.write().unwrap_or_else(|e| e.into_inner());
         pool.allocate(order).ok_or("Pool exhausted")?;
 
         Ok(())
@@ -331,7 +331,7 @@ impl LockFreeOrderBook {
 
     /// Get pool statistics
     pub fn pool_stats(&self) -> PoolStats {
-        let pool = self.order_pool.read().unwrap();
+        let pool = self.order_pool.read().unwrap_or_else(|e| e.into_inner());
         PoolStats {
             capacity: pool.capacity(),
             allocated: pool.allocated_count(),
@@ -341,7 +341,7 @@ impl LockFreeOrderBook {
 
     /// Get best bid price (lock-free read)
     pub fn best_bid(&self) -> Option<Decimal> {
-        let stats = self.bid_stats.read().unwrap();
+        let stats = self.bid_stats.read().unwrap_or_else(|e| e.into_inner());
         stats
             .iter()
             .next_back()
@@ -350,7 +350,7 @@ impl LockFreeOrderBook {
 
     /// Get best ask price (lock-free read)
     pub fn best_ask(&self) -> Option<Decimal> {
-        let stats = self.ask_stats.read().unwrap();
+        let stats = self.ask_stats.read().unwrap_or_else(|e| e.into_inner());
         stats
             .iter()
             .next()

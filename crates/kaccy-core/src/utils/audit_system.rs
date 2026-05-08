@@ -114,7 +114,7 @@ impl AuditLogManager {
 
         // Get previous hash from chain
         let previous_hash = {
-            let chain = self.hash_chain.read().unwrap();
+            let chain = self.hash_chain.read().unwrap_or_else(|e| e.into_inner());
             chain.last().unwrap().clone()
         };
 
@@ -143,15 +143,15 @@ impl AuditLogManager {
         entry.hash = hash.clone();
 
         // Add to logs
-        self.logs.write().unwrap().push(entry.clone());
+        self.logs.write().unwrap_or_else(|e| e.into_inner()).push(entry.clone());
 
         // Add to hash chain
-        self.hash_chain.write().unwrap().push(hash);
+        self.hash_chain.write().unwrap_or_else(|e| e.into_inner()).push(hash);
 
         // Update analytics
         self.analytics
             .write()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .record_event(&actor, &action, &resource_type);
 
         Ok(id)
@@ -184,8 +184,8 @@ impl AuditLogManager {
 
     /// Verify integrity of audit log
     pub fn verify_integrity(&self) -> Result<bool, CoreError> {
-        let logs = self.logs.read().unwrap();
-        let chain = self.hash_chain.read().unwrap();
+        let logs = self.logs.read().unwrap_or_else(|e| e.into_inner());
+        let chain = self.hash_chain.read().unwrap_or_else(|e| e.into_inner());
 
         if logs.is_empty() {
             return Ok(true);
@@ -217,7 +217,7 @@ impl AuditLogManager {
 
     /// Get audit logs with filtering
     pub fn get_logs(&self, filter: AuditLogFilter) -> Vec<AuditLogEntry> {
-        let logs = self.logs.read().unwrap();
+        let logs = self.logs.read().unwrap_or_else(|e| e.into_inner());
 
         logs.iter()
             .filter(|entry| {
@@ -269,12 +269,12 @@ impl AuditLogManager {
 
     /// Get audit analytics
     pub fn get_analytics(&self) -> AuditAnalytics {
-        self.analytics.read().unwrap().clone()
+        self.analytics.read().unwrap_or_else(|e| e.into_inner()).clone()
     }
 
     /// Detect anomalies in audit logs
     pub fn detect_anomalies(&self) -> Vec<AuditAnomaly> {
-        let logs = self.logs.read().unwrap();
+        let logs = self.logs.read().unwrap_or_else(|e| e.into_inner());
         let mut anomalies = Vec::new();
 
         // Detect unusual activity patterns
@@ -391,7 +391,7 @@ impl AuditLogManager {
 
     /// Export audit logs for forensic analysis
     pub fn export_logs(&self, format: ExportFormat) -> Result<String, CoreError> {
-        let logs = self.logs.read().unwrap();
+        let logs = self.logs.read().unwrap_or_else(|e| e.into_inner());
 
         match format {
             ExportFormat::Json => serde_json::to_string_pretty(&*logs)
@@ -418,7 +418,7 @@ impl AuditLogManager {
 
     /// Get total log count
     pub fn log_count(&self) -> usize {
-        self.logs.read().unwrap().len()
+        self.logs.read().unwrap_or_else(|e| e.into_inner()).len()
     }
 }
 
