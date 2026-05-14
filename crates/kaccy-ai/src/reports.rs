@@ -118,7 +118,7 @@ impl CostAnalysisReport {
             report.push_str("|----------|------|------------|\n");
 
             let mut providers: Vec<_> = self.by_provider.iter().collect();
-            providers.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
+            providers.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(std::cmp::Ordering::Equal));
 
             for (provider, cost) in providers {
                 let percentage = (cost / self.total_cost) * 100.0;
@@ -133,7 +133,7 @@ impl CostAnalysisReport {
             report.push_str("|-----------|------|------------|\n");
 
             let mut operations: Vec<_> = self.by_operation.iter().collect();
-            operations.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
+            operations.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(std::cmp::Ordering::Equal));
 
             for (operation, cost) in operations {
                 let percentage = (cost / self.total_cost) * 100.0;
@@ -291,10 +291,10 @@ impl PerformanceBenchmarkReport {
         let mut fastest: Option<(&String, &OperationBenchmark)> = None;
 
         for (name, bench) in &self.operations {
-            if slowest.is_none() || bench.avg_latency_ms > slowest.unwrap().1.avg_latency_ms {
+            if slowest.is_none() || bench.avg_latency_ms > slowest.expect("slowest is Some per is_none check").1.avg_latency_ms {
                 slowest = Some((name, bench));
             }
-            if fastest.is_none() || bench.avg_latency_ms < fastest.unwrap().1.avg_latency_ms {
+            if fastest.is_none() || bench.avg_latency_ms < fastest.expect("fastest is Some per is_none check").1.avg_latency_ms {
                 fastest = Some((name, bench));
             }
         }
@@ -346,7 +346,7 @@ impl PerformanceBenchmarkReport {
             );
 
             let mut ops: Vec<_> = self.operations.iter().collect();
-            ops.sort_by(|a, b| b.1.avg_latency_ms.partial_cmp(&a.1.avg_latency_ms).unwrap());
+            ops.sort_by(|a, b| b.1.avg_latency_ms.partial_cmp(&a.1.avg_latency_ms).unwrap_or(std::cmp::Ordering::Equal));
 
             for (name, bench) in ops {
                 let _ = writeln!(

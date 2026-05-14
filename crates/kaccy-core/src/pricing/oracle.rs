@@ -86,7 +86,7 @@ impl AggregatedPrice {
             ));
         }
 
-        sources.sort_by(|a, b| a.price.cmp(&b.price));
+        sources.sort_by_key(|a| a.price);
         let prices: Vec<Decimal> = sources.iter().map(|s| s.price).collect();
 
         let median_price = if prices.len() % 2 == 0 {
@@ -99,8 +99,8 @@ impl AggregatedPrice {
         let sum: Decimal = prices.iter().sum();
         let mean_price = sum / Decimal::from(prices.len());
 
-        let min_price = *prices.first().unwrap();
-        let max_price = *prices.last().unwrap();
+        let min_price = *prices.first().expect("prices is non-empty per sources.is_empty check above");
+        let max_price = *prices.last().expect("prices is non-empty per sources.is_empty check above");
 
         // Calculate standard deviation
         let variance: Decimal = prices

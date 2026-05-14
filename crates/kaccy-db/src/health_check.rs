@@ -185,7 +185,7 @@ async fn check_pool_health(pool: &PgPool, config: &HealthCheckConfig) -> Result<
         category: HealthCategory::ConnectionPool,
         status,
         message,
-        details: Some(serde_json::to_value(&diagnostics).unwrap()),
+        details: Some(serde_json::to_value(&diagnostics).expect("diagnostics serialization to Value is infallible")),
         checked_at: chrono::Utc::now(),
     })
 }

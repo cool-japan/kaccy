@@ -361,7 +361,7 @@ impl BackupManager {
     /// List all backups
     pub fn list_backups(&self) -> Vec<BackupMetadata> {
         let mut backups: Vec<_> = self.backups.values().cloned().collect();
-        backups.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        backups.sort_by_key(|b| std::cmp::Reverse(b.created_at));
         backups
     }
 

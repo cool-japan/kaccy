@@ -339,7 +339,7 @@ impl ModelRegistry {
     pub fn get_best_version(&self, model_name: &str) -> Option<&ModelVersion> {
         self.get_model_versions(model_name)
             .into_iter()
-            .max_by(|a, b| a.metrics.accuracy.partial_cmp(&b.metrics.accuracy).unwrap())
+            .max_by(|a, b| a.metrics.accuracy.partial_cmp(&b.metrics.accuracy).unwrap_or(std::cmp::Ordering::Equal))
     }
 
     /// Get most cost-effective version for a model
@@ -351,7 +351,7 @@ impl ModelRegistry {
                 a.metrics
                     .cost_effectiveness()
                     .partial_cmp(&b.metrics.cost_effectiveness())
-                    .unwrap()
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
     }
 

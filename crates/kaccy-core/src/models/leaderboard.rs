@@ -30,7 +30,7 @@ impl LeaderboardPeriod {
             Self::Daily => now - chrono::Duration::days(1),
             Self::Weekly => now - chrono::Duration::weeks(1),
             Self::Monthly => now - chrono::Duration::days(30),
-            Self::AllTime => DateTime::<Utc>::from_timestamp(0, 0).unwrap(),
+            Self::AllTime => DateTime::<Utc>::from_timestamp(0, 0).expect("Unix epoch timestamp 0 is valid"),
         }
     }
 }
@@ -222,7 +222,7 @@ impl LeaderboardManager {
         }
 
         // Sort by value descending
-        user_data.sort_by(|a, b| b.2.cmp(&a.2));
+        user_data.sort_by_key(|b| std::cmp::Reverse(b.2));
 
         // Create ranked entries
         let entries: Vec<LeaderboardEntry> = user_data

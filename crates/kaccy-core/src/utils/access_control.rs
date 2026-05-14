@@ -403,7 +403,7 @@ impl AccessControlManager {
     pub fn add_policy(&mut self, policy: AbacPolicy) {
         self.policies.push(policy);
         // Sort by priority (higher first)
-        self.policies.sort_by(|a, b| b.priority.cmp(&a.priority));
+        self.policies.sort_by_key(|b| std::cmp::Reverse(b.priority));
     }
 
     /// Check if user has permission (RBAC)

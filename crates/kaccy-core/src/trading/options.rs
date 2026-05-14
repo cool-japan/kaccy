@@ -227,8 +227,8 @@ impl BlackScholesModel {
             ));
         }
 
-        let s = spot_price.to_f64().unwrap();
-        let k = strike_price.to_f64().unwrap();
+        let s = spot_price.to_f64().expect("spot_price is a validated positive Decimal");
+        let k = strike_price.to_f64().expect("strike_price is a validated positive Decimal");
         let t = time_to_expiration;
         let r = self.risk_free_rate;
         let sigma = volatility;
@@ -264,8 +264,8 @@ impl BlackScholesModel {
             });
         }
 
-        let s = spot_price.to_f64().unwrap();
-        let k = strike_price.to_f64().unwrap();
+        let s = spot_price.to_f64().expect("spot_price is a validated positive Decimal");
+        let k = strike_price.to_f64().expect("strike_price is a validated positive Decimal");
         let t = time_to_expiration;
         let r = self.risk_free_rate;
         let sigma = volatility;
@@ -325,7 +325,7 @@ impl BlackScholesModel {
             ));
         }
 
-        let target = market_price.to_f64().unwrap();
+        let target = market_price.to_f64().expect("market_price is a validated Decimal");
         let mut vol = 0.3; // Initial guess: 30% volatility
         let max_iterations = 100;
         let tolerance = 1e-6;
@@ -338,7 +338,7 @@ impl BlackScholesModel {
                 vol,
                 option_type,
             )?;
-            let price_f64 = price.to_f64().unwrap();
+            let price_f64 = price.to_f64().expect("price calculated from validated Decimal inputs");
 
             if (price_f64 - target).abs() < tolerance {
                 return Ok(vol);

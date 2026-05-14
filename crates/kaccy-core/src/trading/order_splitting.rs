@@ -186,7 +186,7 @@ impl TimeWeightedSplitter {
             splits.push(SplitOrder {
                 amount,
                 execution_time: start_time + time_per_split * i as i32,
-                max_slippage: Some(Decimal::from_f64_retain(0.005).unwrap()), // 0.5% max slippage
+                max_slippage: Some(Decimal::from_f64_retain(0.005).expect("0.005 is a valid f64 for Decimal")), // 0.5% max slippage
                 description: format!("Time-weighted split {}/{}", i + 1, num_splits),
             });
         }
@@ -237,7 +237,7 @@ impl AdaptiveSplitter {
 
             // Vary size based on liquidity - smaller chunks in low liquidity
             let size_factor = if self.liquidity_score < Decimal::from(5) {
-                Decimal::from_f64_retain(0.8).unwrap()
+                Decimal::from_f64_retain(0.8).expect("0.8 is a valid f64 for Decimal")
             } else {
                 Decimal::ONE
             };
@@ -253,9 +253,9 @@ impl AdaptiveSplitter {
 
             // Tighter slippage tolerance in high volatility
             let max_slippage = if self.volatility > Decimal::from(3) {
-                Decimal::from_f64_retain(0.002).unwrap() // 0.2%
+                Decimal::from_f64_retain(0.002).expect("0.002 is a valid f64 for Decimal") // 0.2%
             } else {
-                Decimal::from_f64_retain(0.01).unwrap() // 1%
+                Decimal::from_f64_retain(0.01).expect("0.01 is a valid f64 for Decimal") // 1%
             };
 
             splits.push(SplitOrder {

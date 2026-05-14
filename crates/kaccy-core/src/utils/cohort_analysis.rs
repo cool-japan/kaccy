@@ -50,39 +50,39 @@ impl CohortId {
     /// Create a new cohort ID from a date
     pub fn from_date(date: DateTime<Utc>, cohort_type: CohortType, period: CohortPeriod) -> Self {
         let start_date = match period {
-            CohortPeriod::Daily => date.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc(),
+            CohortPeriod::Daily => date.date_naive().and_hms_opt(0, 0, 0).expect("midnight is a valid time").and_utc(),
             CohortPeriod::Weekly => {
                 let days_from_monday = date.weekday().num_days_from_monday();
                 let monday = date - Duration::days(days_from_monday as i64);
-                monday.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc()
+                monday.date_naive().and_hms_opt(0, 0, 0).expect("midnight is a valid time").and_utc()
             }
             CohortPeriod::Monthly => {
                 let year = date.year();
                 let month = date.month();
                 DateTime::from_timestamp(
                     chrono::NaiveDate::from_ymd_opt(year, month, 1)
-                        .unwrap()
+                        .expect("year/month derived from existing timestamp are valid")
                         .and_hms_opt(0, 0, 0)
-                        .unwrap()
+                        .expect("midnight is a valid time")
                         .and_utc()
                         .timestamp(),
                     0,
                 )
-                .unwrap()
+                .expect("timestamp from valid NaiveDate is in range")
             }
             CohortPeriod::Quarterly => {
                 let year = date.year();
                 let quarter_month = ((date.month() - 1) / 3) * 3 + 1;
                 DateTime::from_timestamp(
                     chrono::NaiveDate::from_ymd_opt(year, quarter_month, 1)
-                        .unwrap()
+                        .expect("year/quarter_month derived from existing timestamp are valid")
                         .and_hms_opt(0, 0, 0)
-                        .unwrap()
+                        .expect("midnight is a valid time")
                         .and_utc()
                         .timestamp(),
                     0,
                 )
-                .unwrap()
+                .expect("timestamp from valid NaiveDate is in range")
             }
         };
 
@@ -105,14 +105,14 @@ impl CohortId {
                 let next_year = if month == 12 { year + 1 } else { year };
                 DateTime::from_timestamp(
                     chrono::NaiveDate::from_ymd_opt(next_year, next_month, 1)
-                        .unwrap()
+                        .expect("year/month derived from existing timestamp are valid")
                         .and_hms_opt(0, 0, 0)
-                        .unwrap()
+                        .expect("midnight is a valid time")
                         .and_utc()
                         .timestamp(),
                     0,
                 )
-                .unwrap()
+                .expect("timestamp from valid NaiveDate is in range")
             }
             CohortPeriod::Quarterly => self.start_date + Duration::days(90),
         }
@@ -360,14 +360,14 @@ impl CohortAnalyzer {
                     let adjusted_month = ((month - 1) % 12 + 1) as u32;
                     DateTime::from_timestamp(
                         chrono::NaiveDate::from_ymd_opt(adjusted_year as i32, adjusted_month, 1)
-                            .unwrap()
+                            .expect("adjusted year/month from valid cohort timestamp are valid")
                             .and_hms_opt(0, 0, 0)
-                            .unwrap()
+                            .expect("midnight is a valid time")
                             .and_utc()
                             .timestamp(),
                         0,
                     )
-                    .unwrap()
+                    .expect("timestamp from valid NaiveDate is in range")
                 }
                 CohortPeriod::Quarterly => {
                     cohort_id.start_date + Duration::days(90 * period as i64)
@@ -384,14 +384,14 @@ impl CohortAnalyzer {
                     let next_year = if month == 12 { year + 1 } else { year };
                     DateTime::from_timestamp(
                         chrono::NaiveDate::from_ymd_opt(next_year, next_month, 1)
-                            .unwrap()
+                            .expect("year/month derived from existing timestamp are valid")
                             .and_hms_opt(0, 0, 0)
-                            .unwrap()
+                            .expect("midnight is a valid time")
                             .and_utc()
                             .timestamp(),
                         0,
                     )
-                    .unwrap()
+                    .expect("timestamp from valid NaiveDate is in range")
                 }
                 CohortPeriod::Quarterly => period_start + Duration::days(90),
             };

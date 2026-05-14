@@ -142,7 +142,7 @@ impl DatabaseSnapshot {
     /// Get largest tables (top N)
     pub fn largest_tables(&self, limit: usize) -> Vec<TableSize> {
         let mut tables = self.tables.clone();
-        tables.sort_by(|a, b| b.total_bytes.cmp(&a.total_bytes));
+        tables.sort_by_key(|b| std::cmp::Reverse(b.total_bytes));
         tables.truncate(limit);
         tables
     }

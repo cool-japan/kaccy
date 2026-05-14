@@ -315,7 +315,7 @@ impl WebhookManager {
 
         for webhook in matching_webhooks {
             // Check rate limits
-            let rate_limit = self.rate_limits.get_mut(&webhook.webhook_id).unwrap();
+            let rate_limit = self.rate_limits.get_mut(&webhook.webhook_id).expect("webhook_id rate_limit entry was created when webhook was registered");
             if !rate_limit.can_deliver() {
                 continue; // Skip if rate limited
             }

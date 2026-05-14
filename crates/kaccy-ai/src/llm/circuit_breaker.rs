@@ -97,7 +97,7 @@ impl CircuitBreakerState {
 
     /// Clean up old failures outside the window
     fn clean_old_failures(&mut self, window: Duration) {
-        let cutoff = Instant::now().checked_sub(window).unwrap();
+        let cutoff = Instant::now().checked_sub(window).expect("window duration is valid and Instant::now() minus it does not overflow");
         self.recent_failures.retain(|&t| t > cutoff);
     }
 }

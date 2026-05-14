@@ -139,7 +139,7 @@ impl TechnicalFeatureExtractor {
                 ema = Some(sum / period as f64);
                 result.push(ema);
             } else {
-                let new_ema = (price - ema.unwrap()) * multiplier + ema.unwrap();
+                let new_ema = (price - ema.expect("ema is Some per else-if branch")) * multiplier + ema.expect("ema is Some per else-if branch");
                 ema = Some(new_ema);
                 result.push(Some(new_ema));
             }

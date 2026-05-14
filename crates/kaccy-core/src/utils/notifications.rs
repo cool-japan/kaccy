@@ -459,7 +459,7 @@ impl NotificationManager {
             .filter(|n| n.user_id == user_id)
             .collect();
 
-        notifications.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        notifications.sort_by_key(|b| std::cmp::Reverse(b.created_at));
         notifications.truncate(limit);
         notifications
     }

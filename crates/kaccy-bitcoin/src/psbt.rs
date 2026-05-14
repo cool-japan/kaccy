@@ -265,7 +265,7 @@ impl PsbtBuilder {
             total_input_sats: total_input,
             total_output_sats: total_output,
             fee_sats: actual_fee,
-            fee_rate: if vsize > 0 { actual_fee / vsize } else { 0 },
+            fee_rate: actual_fee.checked_div(vsize).unwrap_or(0),
             vsize,
         })
     }

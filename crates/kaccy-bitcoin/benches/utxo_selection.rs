@@ -118,7 +118,7 @@ fn bench_utxo_sorting(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(count), count, |b, _| {
             b.iter(|| {
                 let mut sorted = utxos.clone();
-                sorted.sort_by(|a, b| b.amount_sats.cmp(&a.amount_sats));
+                sorted.sort_by_key(|b| std::cmp::Reverse(b.amount_sats));
                 black_box(sorted);
             });
         });

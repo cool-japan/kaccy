@@ -149,7 +149,7 @@ impl ActivityMonitor {
             if alert.risk_score >= self.config.min_risk_score {
                 let _ = self.alert_tx.send(alert.clone());
                 if highest_alert.is_none()
-                    || alert.risk_score > highest_alert.as_ref().unwrap().risk_score
+                    || alert.risk_score > highest_alert.as_ref().expect("highest_alert is Some per is_none check").risk_score
                 {
                     highest_alert = Some(alert);
                 }

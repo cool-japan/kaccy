@@ -144,7 +144,7 @@ impl Invoice {
     pub fn is_expired(&self) -> bool {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("SystemTime should be after UNIX_EPOCH")
             .as_secs();
         now > self.expires_at
     }
@@ -163,7 +163,7 @@ impl Invoice {
     pub fn time_remaining(&self) -> Option<Duration> {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("SystemTime should be after UNIX_EPOCH")
             .as_secs();
 
         if now < self.expires_at {
@@ -530,7 +530,7 @@ impl LightningProvider for LndClient {
 
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("SystemTime should be after UNIX_EPOCH")
             .as_secs();
 
         Ok(Invoice {
@@ -972,7 +972,7 @@ mod tests {
     fn test_invoice_status() {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("SystemTime should be after UNIX_EPOCH")
             .as_secs();
 
         let invoice = Invoice {

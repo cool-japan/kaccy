@@ -75,7 +75,7 @@ impl KeyRotationManager {
     ) -> Result<RotatedKey> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("SystemTime should be after UNIX_EPOCH")
             .as_secs();
 
         let rotated_key = RotatedKey {
@@ -129,7 +129,7 @@ impl KeyRotationManager {
             if let Some(key) = self.keys.read().await.get(key_id) {
                 let now = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
-                    .unwrap()
+                    .expect("SystemTime should be after UNIX_EPOCH")
                     .as_secs();
                 return now >= key.expires_at;
             }
@@ -151,7 +151,7 @@ impl KeyRotationManager {
     pub async fn cleanup_expired_keys(&self) -> usize {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("SystemTime should be after UNIX_EPOCH")
             .as_secs();
 
         let mut keys = self.keys.write().await;
@@ -242,7 +242,7 @@ impl TimeDelayedRecoveryManager {
     pub async fn create_recovery_key(&self, derivation_path: String) -> Result<RecoveryKey> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("SystemTime should be after UNIX_EPOCH")
             .as_secs();
 
         let recovery_key = RecoveryKey {
@@ -276,7 +276,7 @@ impl TimeDelayedRecoveryManager {
 
             let now = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .expect("SystemTime should be after UNIX_EPOCH")
                 .as_secs();
             Ok(now >= key.activation_time)
         } else {
@@ -314,7 +314,7 @@ impl TimeDelayedRecoveryManager {
         if let Some(key) = keys.get(recovery_id) {
             let now = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .expect("SystemTime should be after UNIX_EPOCH")
                 .as_secs();
 
             if now >= key.activation_time {

@@ -119,7 +119,7 @@ impl MarketMakingAnalytics {
                 continue;
             }
 
-            let midpoint_exit = trade.midpoint_at_exit.unwrap();
+            let midpoint_exit = trade.midpoint_at_exit.expect("midpoint_at_exit is Some per is_none check above");
 
             // Realized spread = 2 * (midpoint_at_exit - execution_price) for buy
             //                  = 2 * (execution_price - midpoint_at_exit) for sell
@@ -155,7 +155,7 @@ impl MarketMakingAnalytics {
                 continue;
             }
 
-            let midpoint_exit = trade.midpoint_at_exit.unwrap();
+            let midpoint_exit = trade.midpoint_at_exit.expect("midpoint_at_exit is Some per is_none check above");
             let midpoint_trade = trade.midpoint_at_trade;
 
             // Adverse selection = price movement against the trade

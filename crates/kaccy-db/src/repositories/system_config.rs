@@ -317,7 +317,7 @@ impl SystemConfigRepository {
                 key
             )));
         }
-        let current = current.unwrap();
+        let current = current.expect("current is Some per is_none check above");
 
         // Deactivate old version
         sqlx::query(

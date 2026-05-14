@@ -114,7 +114,7 @@ impl QueryRoot {
             return Ok(None);
         }
 
-        let claims = claims.unwrap();
+        let claims = claims.expect("claims is Some per is_none check above");
         let pool = ctx.data::<PgPool>()?;
         let user_id = Uuid::parse_str(&claims.sub)?;
 
@@ -240,7 +240,7 @@ impl QueryRoot {
             return Err("Unauthorized".into());
         }
 
-        let claims = claims.unwrap();
+        let claims = claims.expect("claims is Some per is_none check above");
         let pool = ctx.data::<PgPool>()?;
         let user_id = Uuid::parse_str(&claims.sub)?;
 
@@ -320,7 +320,7 @@ impl MutationRoot {
             return Err("Unauthorized".into());
         }
 
-        let claims = claims.unwrap();
+        let claims = claims.expect("claims is Some per is_none check above");
         let pool = ctx.data::<PgPool>()?;
         let user_id = Uuid::parse_str(&claims.sub)?;
 

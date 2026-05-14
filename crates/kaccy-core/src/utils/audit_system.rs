@@ -115,7 +115,7 @@ impl AuditLogManager {
         // Get previous hash from chain
         let previous_hash = {
             let chain = self.hash_chain.read().unwrap_or_else(|e| e.into_inner());
-            chain.last().unwrap().clone()
+            chain.last().expect("hash_chain is initialized with at least one entry").clone()
         };
 
         // Create entry

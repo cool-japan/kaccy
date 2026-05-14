@@ -277,7 +277,7 @@ impl ReportGenerationExample {
 
         println!("Fraud Detection Summary:");
         println!("  * Total Cases Analyzed: {}", report.total_cases);
-        println!("  * Detection Accuracy: {:.1}%", report.accuracy.unwrap());
+        println!("  * Detection Accuracy: {:.1}%", report.accuracy.expect("accuracy was set when report was built"));
         println!("  * Most Common: Sybil Attack (45 cases)");
         println!("  * Critical Cases: 7");
         println!();
@@ -384,7 +384,7 @@ impl ReportGenerationExample {
         if report.total_cost > 200.0 {
             println!("ALERT: Daily cost exceeds $200 threshold!");
             println!("  Current: ${:.2}", report.total_cost);
-            println!("  Trend: +{:.1}%", report.cost_trend.unwrap());
+            println!("  Trend: +{:.1}%", report.cost_trend.expect("cost_trend is Some per outer if condition"));
             println!();
         }
 
@@ -553,7 +553,7 @@ impl DashboardIntegrationExample {
             healthy: true,
             last_check: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .expect("SystemTime should be after UNIX_EPOCH")
                 .as_secs(),
             response_time_ms: Some(45.2),
             error: None,
@@ -565,7 +565,7 @@ impl DashboardIntegrationExample {
             healthy: true,
             last_check: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .expect("SystemTime should be after UNIX_EPOCH")
                 .as_secs(),
             response_time_ms: Some(2.1),
             error: None,
@@ -577,7 +577,7 @@ impl DashboardIntegrationExample {
             healthy: true,
             last_check: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .expect("SystemTime should be after UNIX_EPOCH")
                 .as_secs(),
             response_time_ms: Some(125.8),
             error: None,

@@ -562,7 +562,7 @@ impl CollateralOptimizer {
             })
             .collect();
 
-        sorted_assets.sort_by(|a, b| a.3.partial_cmp(&b.3).unwrap());
+        sorted_assets.sort_by(|a, b| a.3.partial_cmp(&b.3).unwrap_or(std::cmp::Ordering::Equal));
 
         let mut allocation = Vec::new();
         let mut remaining = required_collateral;

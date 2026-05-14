@@ -111,7 +111,7 @@ impl MempoolHistogramAnalyzer {
             total_vsize,
             timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .expect("SystemTime should be after UNIX_EPOCH")
                 .as_secs(),
         }
     }
@@ -261,11 +261,7 @@ impl ClusteringDetector {
                     .map(|tx| tx.fee)
                     .sum();
 
-                let cluster_fee_rate = if total_vsize > 0 {
-                    total_fees / total_vsize
-                } else {
-                    0
-                };
+                let cluster_fee_rate = total_fees.checked_div(total_vsize).unwrap_or(0);
 
                 clusters.push(TransactionCluster {
                     id: format!("cluster_{}", clusters.len()),
@@ -315,7 +311,7 @@ impl FeeSpikePredictor {
     pub fn record(&mut self, fee_rate: u64, mempool_size_mb: f64) {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("SystemTime should be after UNIX_EPOCH")
             .as_secs();
 
         self.history.push_back(FeeDataPoint {
@@ -409,10 +405,10 @@ impl FeeSpikePredictor {
             };
         }
 
-        let latest = self.history.back().unwrap();
+        let latest = self.history.back().expect("history is non-empty per is_empty check above");
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("SystemTime should be after UNIX_EPOCH")
             .as_secs();
 
         let one_hour_ago = now - 3600;

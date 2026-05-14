@@ -238,7 +238,7 @@ impl AccumulationDistributionAnalyzer {
 
             // Determine signal
             let signal = if !results.is_empty() {
-                let prev_ad = results.last().unwrap().value;
+                let prev_ad = results.last().expect("results non-empty per !results.is_empty() check above").value;
                 let change_rate = (ad_line - prev_ad) / prev_ad.abs().max(1.0);
 
                 if change_rate > self.threshold {
@@ -324,8 +324,8 @@ impl VolumeDivergenceDetector {
             let window = &data[i - self.window_size..i];
 
             // Calculate price trend
-            let price_start = window.first().unwrap().close.to_f64().unwrap_or(0.0);
-            let price_end = window.last().unwrap().close.to_f64().unwrap_or(0.0);
+            let price_start = window.first().expect("window length >= window_size > 0").close.to_f64().unwrap_or(0.0);
+            let price_end = window.last().expect("window length >= window_size > 0").close.to_f64().unwrap_or(0.0);
             let price_change = (price_end - price_start) / price_start.max(0.0001);
 
             // Calculate volume trend
@@ -362,8 +362,8 @@ impl VolumeDivergenceDetector {
             if let Some(div_type) = divergence_type {
                 if strength >= self.min_strength {
                     divergences.push(VolumeDivergence {
-                        start: window.first().unwrap().timestamp,
-                        end: window.last().unwrap().timestamp,
+                        start: window.first().expect("window length >= window_size > 0").timestamp,
+                        end: window.last().expect("window length >= window_size > 0").timestamp,
                         divergence_type: div_type,
                         strength,
                     });
@@ -438,7 +438,7 @@ impl WyckoffAnalyzer {
             .map(|p| p.close.to_f64().unwrap_or(0.0))
             .collect();
         let price_start = prices[0];
-        let price_end = *prices.last().unwrap();
+        let price_end = *prices.last().expect("prices has window_size elements, which is > 0");
         let price_trend = (price_end - price_start) / price_start.max(0.0001);
 
         // Calculate volume trend
@@ -455,12 +455,12 @@ impl WyckoffAnalyzer {
         // Calculate price volatility
         let price_range = prices
             .iter()
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
-            .unwrap()
+            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .expect("prices has window_size elements, which is > 0")
             - prices
                 .iter()
-                .min_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap();
+                .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                .expect("prices has window_size elements, which is > 0");
         let volatility = price_range / price_start.max(0.0001);
 
         // Determine phase based on Wyckoff principles

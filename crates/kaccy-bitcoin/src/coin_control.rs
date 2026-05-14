@@ -276,10 +276,10 @@ impl CoinControl {
 
             match strategy {
                 SelectionStrategy::LargestFirst => {
-                    single_utxo_addresses.sort_by(|a, b| b.amount_sats.cmp(&a.amount_sats))
+                    single_utxo_addresses.sort_by_key(|b| std::cmp::Reverse(b.amount_sats))
                 }
                 SelectionStrategy::SmallestFirst => {
-                    single_utxo_addresses.sort_by(|a, b| a.amount_sats.cmp(&b.amount_sats))
+                    single_utxo_addresses.sort_by_key(|a| a.amount_sats)
                 }
                 _ => {}
             }
@@ -290,10 +290,10 @@ impl CoinControl {
 
             match strategy {
                 SelectionStrategy::LargestFirst => {
-                    all_utxos.sort_by(|a, b| b.amount_sats.cmp(&a.amount_sats))
+                    all_utxos.sort_by_key(|b| std::cmp::Reverse(b.amount_sats))
                 }
                 SelectionStrategy::SmallestFirst => {
-                    all_utxos.sort_by(|a, b| a.amount_sats.cmp(&b.amount_sats))
+                    all_utxos.sort_by_key(|a| a.amount_sats)
                 }
                 _ => {}
             }

@@ -391,13 +391,13 @@ impl TradingStats {
         self.trades_24h += 1;
 
         // Update ATH
-        if self.ath_price.is_none() || price > self.ath_price.unwrap() {
+        if self.ath_price.is_none() || price > self.ath_price.expect("ath_price is Some per is_none check") {
             self.ath_price = Some(price);
             self.ath_time = Some(Utc::now());
         }
 
         // Update ATL
-        if self.atl_price.is_none() || price < self.atl_price.unwrap() {
+        if self.atl_price.is_none() || price < self.atl_price.expect("atl_price is Some per is_none check") {
             self.atl_price = Some(price);
             self.atl_time = Some(Utc::now());
         }

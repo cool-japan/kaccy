@@ -239,7 +239,7 @@ impl TokenHolderAnalysis {
 
         // Calculate concentration
         let mut sorted_holders = holders.to_vec();
-        sorted_holders.sort_by(|a, b| b.1.cmp(&a.1));
+        sorted_holders.sort_by_key(|b| std::cmp::Reverse(b.1));
 
         // Top 10 concentration
         let top10_sum: Decimal = sorted_holders
@@ -525,7 +525,7 @@ impl SmartMoneyTracker {
             .map(|(token, value)| (token.clone(), *value))
             .collect();
 
-        tokens.sort_by(|a, b| b.1.cmp(&a.1));
+        tokens.sort_by_key(|b| std::cmp::Reverse(b.1));
         tokens
     }
 
@@ -538,7 +538,7 @@ impl SmartMoneyTracker {
             .map(|(token, value)| (token.clone(), value.abs()))
             .collect();
 
-        tokens.sort_by(|a, b| b.1.cmp(&a.1));
+        tokens.sort_by_key(|b| std::cmp::Reverse(b.1));
         tokens
     }
 

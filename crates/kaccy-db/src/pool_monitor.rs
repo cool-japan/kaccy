@@ -402,8 +402,8 @@ impl PoolMonitor {
 
         let peak = history
             .iter()
-            .max_by(|a, b| a.utilization.partial_cmp(&b.utilization).unwrap())
-            .unwrap();
+            .max_by(|a, b| a.utilization.partial_cmp(&b.utilization).unwrap_or(std::cmp::Ordering::Equal))
+            .expect("history is non-empty per len check above");
 
         let peak_utilization = peak.utilization;
         let peak_at = Some(peak.timestamp);
@@ -441,7 +441,7 @@ impl PoolMonitor {
         }
 
         let first = &history[0];
-        let last = history.last().unwrap();
+        let last = history.last().expect("history has >= 2 elements per len check above");
 
         let time_diff = last.timestamp.signed_duration_since(first.timestamp);
         let days = time_diff.num_seconds() as f64 / 86400.0;

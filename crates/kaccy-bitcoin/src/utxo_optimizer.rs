@@ -232,8 +232,7 @@ impl UtxoOptimizer {
         }
 
         // Penalize for uneconomical UTXOs
-        if total_utxos > 0 {
-            let economical_ratio = (economical_count * 100) / total_utxos;
+        if let Some(economical_ratio) = (economical_count * 100).checked_div(total_utxos) {
             if economical_ratio < 50 {
                 score = score.saturating_sub(15);
             } else if economical_ratio < 75 {
@@ -242,8 +241,7 @@ impl UtxoOptimizer {
         }
 
         // Penalize if consolidation cost is high relative to total value
-        if total_value > 0 {
-            let cost_ratio = (consolidation_cost * 100) / total_value;
+        if let Some(cost_ratio) = (consolidation_cost * 100).checked_div(total_value) {
             if cost_ratio > 10 {
                 score = score.saturating_sub(20);
             } else if cost_ratio > 5 {
@@ -391,7 +389,7 @@ impl ConsolidationScheduler {
     pub fn should_check(&mut self) -> bool {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("SystemTime should be after UNIX_EPOCH")
             .as_secs();
 
         if let Some(last) = self.last_check {
@@ -488,7 +486,7 @@ impl FeeMarketPredictor {
     pub fn record_fee_rate(&mut self, fee_rate: u64) {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("SystemTime should be after UNIX_EPOCH")
             .as_secs();
 
         self.fee_history.push(FeeDataPoint {
@@ -553,7 +551,7 @@ impl FeeMarketPredictor {
             return 50;
         }
 
-        let latest = self.fee_history.last().unwrap().fee_rate;
+        let latest = self.fee_history.last().expect("fee_history is non-empty per is_empty check above").fee_rate;
         let mut sorted: Vec<_> = self.fee_history.iter().map(|d| d.fee_rate).collect();
         sorted.sort_unstable();
 

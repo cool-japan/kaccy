@@ -290,7 +290,7 @@ impl ModelRegistry {
     /// Get latest version by name
     pub fn get_latest(&self, name: &str) -> Option<&ModelMetadata> {
         let mut versions = self.get_versions(name);
-        versions.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        versions.sort_by_key(|b| std::cmp::Reverse(b.updated_at));
         versions.first().copied()
     }
 

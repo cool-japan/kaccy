@@ -370,7 +370,7 @@ impl FairOrderingManager {
         }
 
         // Sort by received time (FIFO) - this is the fair ordering
-        batch.sort_by(|a, b| a.received_at.cmp(&b.received_at));
+        batch.sort_by_key(|a| a.received_at);
 
         // Extract transaction IDs in fair order
         let ordered_tx_ids: Vec<String> = batch.iter().map(|tx| tx.tx_id.clone()).collect();

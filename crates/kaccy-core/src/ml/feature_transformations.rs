@@ -168,8 +168,8 @@ impl FeatureBinner {
             return vec![];
         }
 
-        let min = *values.iter().min().unwrap();
-        let max = *values.iter().max().unwrap();
+        let min = *values.iter().min().expect("values is non-empty per early return above");
+        let max = *values.iter().max().expect("values is non-empty per early return above");
         let range = max - min;
         let bin_width = range / Decimal::from(self.n_bins);
 

@@ -102,7 +102,7 @@ impl PreparedStatementCache {
             .iter()
             .map(|(k, v)| (k.clone(), v.use_count))
             .collect();
-        entries.sort_by(|a, b| b.1.cmp(&a.1));
+        entries.sort_by_key(|b| std::cmp::Reverse(b.1));
         entries.truncate(limit);
         entries
     }
@@ -1055,7 +1055,7 @@ impl TransactionBatcher {
         pending.push(tx);
 
         // Sort by priority (highest first)
-        pending.sort_by(|a, b| b.priority.cmp(&a.priority));
+        pending.sort_by_key(|b| std::cmp::Reverse(b.priority));
 
         Ok(())
     }

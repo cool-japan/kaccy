@@ -129,7 +129,7 @@ impl OptimizationResult {
     /// Get top N parameter sets by score
     pub fn top_n(&self, n: usize) -> Vec<&(ParameterSet, f64)> {
         let mut sorted = self.all_results.iter().collect::<Vec<_>>();
-        sorted.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        sorted.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         sorted.into_iter().take(n).collect()
     }
 }
@@ -453,9 +453,9 @@ impl GeneticOptimizer {
 
         for param in &self.parameters {
             let value = if rng.random_range(0.0..1.0) < 0.5 {
-                *parent1.get(&param.name).unwrap()
+                *parent1.get(&param.name).expect("parent1 parameter present by construction")
             } else {
-                *parent2.get(&param.name).unwrap()
+                *parent2.get(&param.name).expect("parent2 parameter present by construction")
             };
             child.insert(param.name.clone(), value);
         }
@@ -497,7 +497,7 @@ impl GeneticOptimizer {
                 .collect();
 
             // Sort by fitness
-            fitness_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+            fitness_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
             // Selection: keep top 50%
             let survivors = fitness_scores.len() / 2;

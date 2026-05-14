@@ -354,7 +354,7 @@ impl FeeOptimizer {
 
     fn optimize_for_revenue(&self) -> FeeConfiguration {
         // Find the fee rate with highest revenue
-        let best_performance = self.fee_history.iter().max_by_key(|p| p.revenue).unwrap();
+        let best_performance = self.fee_history.iter().max_by_key(|p| p.revenue).expect("fee_history is non-empty per caller validation");
 
         let mut config = self.current_fees.clone();
         config.base_fee = best_performance.fee_rate;
@@ -370,7 +370,7 @@ impl FeeOptimizer {
             .fee_history
             .iter()
             .max_by_key(|p| p.trading_volume)
-            .unwrap();
+            .expect("fee_history is non-empty per caller validation");
 
         let mut config = self.current_fees.clone();
         config.base_fee = best_performance.fee_rate;

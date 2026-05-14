@@ -83,7 +83,7 @@ fn bench_withdrawal_sorting(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(count), count, |b, _| {
             b.iter(|| {
                 let mut sorted = withdrawals.clone();
-                sorted.sort_by(|a, b| b.priority.cmp(&a.priority));
+                sorted.sort_by_key(|b| std::cmp::Reverse(b.priority));
                 black_box(sorted);
             });
         });

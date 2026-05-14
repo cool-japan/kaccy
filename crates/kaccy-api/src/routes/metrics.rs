@@ -113,7 +113,7 @@ pub async fn get_system_metrics(
 ) -> Result<Json<SystemMetrics>, ApiError> {
     let timestamp = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
+        .expect("SystemTime should be after UNIX_EPOCH")
         .as_secs();
 
     // Calculate uptime from application start time
@@ -198,7 +198,7 @@ pub async fn get_comprehensive_health(
 ) -> Result<Json<ComprehensiveHealthResponse>, ApiError> {
     let timestamp = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
+        .expect("SystemTime should be after UNIX_EPOCH")
         .as_secs();
 
     let mut services = Vec::new();

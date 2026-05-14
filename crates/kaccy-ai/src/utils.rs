@@ -202,7 +202,7 @@ pub fn calculate_median(values: &[f64]) -> f64 {
     }
 
     let mut sorted = values.to_vec();
-    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
     let mid = sorted.len() / 2;
     if sorted.len() % 2 == 0 {
@@ -341,7 +341,7 @@ pub fn calculate_percentile(values: &[f64], percentile: f64) -> f64 {
 
     let clamped_percentile = clamp(percentile, 0.0, 100.0);
     let mut sorted = values.to_vec();
-    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
     let index = (clamped_percentile / 100.0 * (sorted.len() - 1) as f64).round() as usize;
     sorted[index.min(sorted.len() - 1)]

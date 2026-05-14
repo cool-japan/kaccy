@@ -262,7 +262,7 @@ impl BoostingEnsemble {
         for feat_idx in 0..features[0].len() {
             // Get feature values and sort
             let mut values: Vec<f64> = features.iter().map(|f| f[feat_idx]).collect();
-            values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
             // Try different thresholds
             for &threshold in &values {

@@ -84,7 +84,7 @@ impl FeatureImportanceAnalyzer {
             .collect();
 
         // Sort by importance (descending) and assign ranks
-        importances.sort_by(|a, b| b.importance_score.partial_cmp(&a.importance_score).unwrap());
+        importances.sort_by(|a, b| b.importance_score.partial_cmp(&a.importance_score).unwrap_or(std::cmp::Ordering::Equal));
 
         for (rank, importance) in importances.iter_mut().enumerate() {
             importance.rank = rank + 1;
@@ -333,7 +333,7 @@ impl ImportanceVisualizer {
         let max_score = importances
             .iter()
             .map(|i| i.importance_score)
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .unwrap_or(1.0);
 
         let mut chart = String::new();
@@ -354,7 +354,7 @@ impl ImportanceVisualizer {
     /// Get top-N most important features
     pub fn top_n(importances: &[FeatureImportance], n: usize) -> Vec<FeatureImportance> {
         let mut sorted = importances.to_vec();
-        sorted.sort_by(|a, b| b.importance_score.partial_cmp(&a.importance_score).unwrap());
+        sorted.sort_by(|a, b| b.importance_score.partial_cmp(&a.importance_score).unwrap_or(std::cmp::Ordering::Equal));
         sorted.truncate(n);
         sorted
     }

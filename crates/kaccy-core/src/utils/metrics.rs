@@ -294,7 +294,7 @@ impl Summary {
             return None;
         }
 
-        obs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        obs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         let index = ((p / 100.0) * obs.len() as f64) as usize;
         let index = index.min(obs.len() - 1);

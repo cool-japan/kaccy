@@ -190,7 +190,7 @@ impl PrivateOrder {
             .map_err(|e| CoreError::Validation(format!("Failed to parse order data: {}", e)))?;
 
         self.decrypted_order = Some(data);
-        Ok(self.decrypted_order.as_ref().unwrap())
+        Ok(self.decrypted_order.as_ref().expect("decrypted_order was just set to Some above"))
     }
 
     /// Simple XOR encryption (for demonstration)
@@ -430,7 +430,7 @@ impl PrivateTransactionPool {
             if order.user_id != user_id {
                 return Err(CoreError::Unauthorized);
             }
-            let mut order = self.pending_orders.remove(pos).unwrap();
+            let mut order = self.pending_orders.remove(pos).expect("pos was found via iter().position so it is valid");
             order.status = PrivateOrderStatus::Cancelled;
             self.executed_orders.push(order);
             return Ok(());
@@ -442,7 +442,7 @@ impl PrivateTransactionPool {
             if order.user_id != user_id {
                 return Err(CoreError::Unauthorized);
             }
-            let mut order = self.ready_orders.remove(pos).unwrap();
+            let mut order = self.ready_orders.remove(pos).expect("pos was found via iter().position so it is valid");
             order.status = PrivateOrderStatus::Cancelled;
             self.executed_orders.push(order);
             return Ok(());

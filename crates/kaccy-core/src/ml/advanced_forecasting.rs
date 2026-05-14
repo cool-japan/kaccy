@@ -220,7 +220,7 @@ impl ProbabilisticForecaster {
         let return_std = return_variance.sqrt();
 
         // Last price
-        let last_price = self.data.back().unwrap().close.to_f64().unwrap_or(100.0);
+        let last_price = self.data.back().expect("data has elements (returns is non-empty so data has elements)").close.to_f64().unwrap_or(100.0);
 
         // Monte Carlo simulation
         let mut simulated_prices = Vec::new();
@@ -352,7 +352,7 @@ impl ForecastCombiner {
             .iter()
             .map(|(_, pred)| pred.to_f64().unwrap_or(0.0))
             .collect();
-        values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         let median = if values.len() % 2 == 0 {
             (values[values.len() / 2 - 1] + values[values.len() / 2]) / 2.0
@@ -381,9 +381,9 @@ impl ForecastCombiner {
             .enumerate()
             .map(|(i, (_, pred))| (i, pred.to_f64().unwrap_or(0.0)))
             .collect();
-        indexed_values.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        indexed_values.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
 
-        let trim_count = ((forecasts.len() as f64 * trim_percent).round() as usize).max(0);
+        let trim_count = (forecasts.len() as f64 * trim_percent).round() as usize;
         let trimmed = if trim_count * 2 < indexed_values.len() {
             &indexed_values[trim_count..indexed_values.len() - trim_count]
         } else {

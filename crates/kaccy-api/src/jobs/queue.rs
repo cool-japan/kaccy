@@ -236,7 +236,7 @@ impl JobQueue {
             .collect();
 
         // Sort by completion time (oldest first)
-        completed_jobs.sort_by(|a, b| a.1.cmp(&b.1));
+        completed_jobs.sort_by_key(|a| a.1);
 
         // Remove old completed jobs
         let to_remove = completed_jobs.len().saturating_sub(keep_recent);

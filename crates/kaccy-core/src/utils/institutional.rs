@@ -671,7 +671,7 @@ impl CustodialManager {
         request.status = WithdrawalStatus::AwaitingApproval;
 
         // Check if we have enough approvals
-        let wallet = self.wallets.get(&request.wallet_id).unwrap();
+        let wallet = self.wallets.get(&request.wallet_id).expect("wallet_id in request was validated when request was created");
         if let Some(multi_sig) = &wallet.multi_sig_config {
             if request.approvals.len() >= multi_sig.required_signatures {
                 request.status = WithdrawalStatus::Approved;

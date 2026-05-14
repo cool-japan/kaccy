@@ -207,7 +207,7 @@ impl LimitEnforcer {
         let period_start = period.period_start(now);
 
         let filtered: Vec<_> = records
-            .unwrap()
+            .expect("records is Some per is_none check above")
             .iter()
             .filter(|r| r.timestamp >= period_start)
             .collect();

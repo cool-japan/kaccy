@@ -281,7 +281,7 @@ impl SandwichDetector {
 
                 // Check timing
                 let time_diff = victim.timestamp.duration_since(front.timestamp).ok();
-                if time_diff.is_none() || time_diff.unwrap() > Duration::from_secs(10) {
+                if time_diff.is_none() || time_diff.expect("time_diff is Some per is_none check") > Duration::from_secs(10) {
                     continue;
                 }
 
@@ -440,7 +440,7 @@ impl VictimTracker {
         }
 
         let mut sorted: Vec<_> = attacker_counts.into_iter().collect();
-        sorted.sort_by(|a, b| b.1.cmp(&a.1));
+        sorted.sort_by_key(|b| std::cmp::Reverse(b.1));
         sorted.truncate(limit);
         sorted
     }

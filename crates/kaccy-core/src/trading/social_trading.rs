@@ -253,7 +253,7 @@ impl SocialTradingManager {
         profiles.sort_by(|a, b| {
             b.avg_monthly_return
                 .partial_cmp(&a.avg_monthly_return)
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
         profiles.into_iter().take(limit).collect()
     }

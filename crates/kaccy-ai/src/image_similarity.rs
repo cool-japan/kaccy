@@ -290,7 +290,7 @@ impl ImageSimilarityDetector {
         }
 
         // Sort by similarity (most similar first)
-        results.sort_by(|a, b| a.1.hamming_distance.cmp(&b.1.hamming_distance));
+        results.sort_by_key(|a| a.1.hamming_distance);
 
         Ok(results)
     }
@@ -354,7 +354,7 @@ impl ImageDatabase {
         }
 
         // Sort by similarity
-        results.sort_by(|a, b| a.1.hamming_distance.cmp(&b.1.hamming_distance));
+        results.sort_by_key(|a| a.1.hamming_distance);
 
         Ok(results)
     }

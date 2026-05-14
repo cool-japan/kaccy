@@ -68,7 +68,7 @@ pub async fn stream_tokens_ndjson(
             };
 
             // Serialize to JSON and add newline
-            let json = serde_json::to_string(&token).unwrap();
+            let json = serde_json::to_string(&token).expect("TokenData serialization to JSON is infallible");
             format!("{}\n", json)
         })
         .chunks(chunk_size)
@@ -81,7 +81,7 @@ pub async fn stream_tokens_ndjson(
         .header("Content-Type", "application/x-ndjson")
         .header("Transfer-Encoding", "chunked")
         .body(body)
-        .unwrap()
+        .expect("response builder with valid headers is infallible")
 }
 
 /// JSON Lines streaming (similar to NDJSON)
@@ -105,7 +105,7 @@ pub async fn stream_orders_jsonlines(
                 "status": "pending",
             });
 
-            let json = serde_json::to_string(&order).unwrap();
+            let json = serde_json::to_string(&order).expect("order json! value serialization is infallible");
             format!("{}\n", json)
         })
         .chunks(chunk_size)
@@ -118,7 +118,7 @@ pub async fn stream_orders_jsonlines(
         .header("Content-Type", "application/jsonlines")
         .header("Transfer-Encoding", "chunked")
         .body(body)
-        .unwrap())
+        .expect("response builder with valid headers is infallible"))
 }
 
 /// Chunked JSON array streaming
@@ -143,7 +143,7 @@ pub async fn stream_tokens_chunked_json(
                 price_btc: 0.001 * (i as f64),
             };
 
-            let json = serde_json::to_string(&token).unwrap();
+            let json = serde_json::to_string(&token).expect("TokenData serialization to JSON is infallible");
             if idx == 0 { json } else { format!(",{}", json) }
         })
         .chunks(chunk_size)
@@ -161,7 +161,7 @@ pub async fn stream_tokens_chunked_json(
         .header("Content-Type", "application/json")
         .header("Transfer-Encoding", "chunked")
         .body(body)
-        .unwrap()
+        .expect("response builder with valid headers is infallible")
 }
 
 /// Export large dataset as CSV stream
@@ -200,7 +200,7 @@ pub async fn export_tokens_csv(
         .header("Content-Disposition", "attachment; filename=\"tokens.csv\"")
         .header("Transfer-Encoding", "chunked")
         .body(body)
-        .unwrap()
+        .expect("response builder with valid headers is infallible")
 }
 
 #[cfg(test)]

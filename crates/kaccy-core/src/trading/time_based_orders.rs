@@ -387,8 +387,8 @@ impl TimeBasedOrderManager {
                     .or_insert_with(Vec::new)
                     .push(order_id);
             }
-            TimeBasedOrderType::TimeSlice { start_time, .. } => {
-                if order.status == TimeBasedOrderStatus::Scheduled {
+            TimeBasedOrderType::TimeSlice { start_time, .. }
+                if order.status == TimeBasedOrderStatus::Scheduled => {
                     self.scheduled_activations
                         .write()
                         .await
@@ -396,7 +396,6 @@ impl TimeBasedOrderManager {
                         .or_insert_with(Vec::new)
                         .push(order_id);
                 }
-            }
             _ => {}
         }
 

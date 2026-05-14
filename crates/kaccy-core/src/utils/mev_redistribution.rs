@@ -352,7 +352,7 @@ impl MEVRedistributionManager {
         }
 
         // Add bid to auction
-        self.bids.get_mut(&bid.opportunity_id).unwrap().push(bid);
+        self.bids.get_mut(&bid.opportunity_id).expect("opportunity_id was validated when opportunity was registered").push(bid);
 
         Ok(())
     }
@@ -378,7 +378,7 @@ impl MEVRedistributionManager {
                     .partial_cmp(&b.value_score())
                     .unwrap_or(std::cmp::Ordering::Equal)
             })
-            .unwrap()
+            .expect("bids is non-empty per is_empty check above")
             .clone();
 
         Ok(winning_bid)
@@ -478,7 +478,7 @@ impl MEVRedistributionManager {
 
 impl Default for MEVRedistributionManager {
     fn default() -> Self {
-        Self::new(dec!(10), dec!(50)).unwrap()
+        Self::new(dec!(10), dec!(50)).expect("default MEVRedistributionManager parameters are valid")
     }
 }
 

@@ -530,7 +530,7 @@ impl ScoreComponents {
                 // Compare weighted performance
                 let performance_a = a.1 / a.2;
                 let performance_b = b.1 / b.2;
-                performance_a.partial_cmp(&performance_b).unwrap()
+                performance_a.partial_cmp(&performance_b).unwrap_or(std::cmp::Ordering::Equal)
             })
             .unwrap_or(("unknown", dec!(0), dec!(0)))
     }

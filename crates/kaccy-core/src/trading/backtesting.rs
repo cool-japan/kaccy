@@ -235,7 +235,7 @@ impl BacktestEngine {
 
                 let revenue = notional - fee;
                 self.balance += revenue;
-                *self.positions.get_mut(&token_id).unwrap() -= quantity;
+                *self.positions.get_mut(&token_id).expect("token_id position confirmed present via get check above") -= quantity;
             }
         }
 

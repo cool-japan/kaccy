@@ -71,12 +71,12 @@ pub struct PooledObject<T> {
 impl<T> PooledObject<T> {
     /// Get a reference to the underlying object
     pub fn get(&self) -> &T {
-        self.object.as_ref().unwrap()
+        self.object.as_ref().expect("PooledObject always holds Some while in use")
     }
 
     /// Get a mutable reference to the underlying object
     pub fn get_mut(&mut self) -> &mut T {
-        self.object.as_mut().unwrap()
+        self.object.as_mut().expect("PooledObject always holds Some while in use")
     }
 }
 
@@ -266,7 +266,7 @@ impl MemoryProfiler {
         MemoryStats {
             allocation_count: count,
             total_bytes: total_size,
-            average_size: if count > 0 { total_size / count } else { 0 },
+            average_size: total_size.checked_div(count).unwrap_or(0),
         }
     }
 }

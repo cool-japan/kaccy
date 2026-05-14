@@ -137,10 +137,10 @@ impl UtxoManager {
         // Sort based on strategy
         match strategy {
             SelectionStrategy::LargestFirst => {
-                utxos.sort_by(|a, b| b.amount_sats.cmp(&a.amount_sats));
+                utxos.sort_by_key(|b| std::cmp::Reverse(b.amount_sats));
             }
             SelectionStrategy::SmallestFirst => {
-                utxos.sort_by(|a, b| a.amount_sats.cmp(&b.amount_sats));
+                utxos.sort_by_key(|a| a.amount_sats);
             }
             SelectionStrategy::FirstFit => {
                 // Keep original order (usually sorted by confirmations)
@@ -148,7 +148,7 @@ impl UtxoManager {
             SelectionStrategy::BranchAndBound => {
                 // For now, use largest first as approximation
                 // Full B&B would be more complex
-                utxos.sort_by(|a, b| b.amount_sats.cmp(&a.amount_sats));
+                utxos.sort_by_key(|b| std::cmp::Reverse(b.amount_sats));
             }
         }
 
@@ -230,7 +230,7 @@ impl UtxoManager {
             })
             .collect();
 
-        consolidatable.sort_by(|a, b| a.amount_sats.cmp(&b.amount_sats));
+        consolidatable.sort_by_key(|a| a.amount_sats);
 
         if consolidatable.len() < self.config.min_utxo_count {
             return Ok(None);

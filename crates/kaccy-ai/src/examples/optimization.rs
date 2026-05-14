@@ -640,7 +640,7 @@ impl AccessControlExample {
         println!("Custom agent created:");
         println!("  Name: {}", agent.name);
         println!("  Model: {}", agent.model);
-        println!("  Specialization: {}", agent.description.as_ref().unwrap());
+        println!("  Specialization: {}", agent.description.as_ref().expect("description was set to Some in agent construction above"));
         println!("  Min tier: {:?}", agent.min_tier);
         println!();
         println!("Usage:");

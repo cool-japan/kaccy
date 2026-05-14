@@ -136,7 +136,7 @@ impl Filter {
                         placeholder
                     })
                     .collect();
-                write!(sql, " ({})", placeholders.join(", ")).unwrap();
+                write!(sql, " ({})", placeholders.join(", ")).expect("writing to String is infallible");
             }
             (Operator::In | Operator::NotIn, Some(FilterValue::IntArray(values))) => {
                 let placeholders: Vec<String> = values
@@ -147,10 +147,10 @@ impl Filter {
                         placeholder
                     })
                     .collect();
-                write!(sql, " ({})", placeholders.join(", ")).unwrap();
+                write!(sql, " ({})", placeholders.join(", ")).expect("writing to String is infallible");
             }
             (_, Some(_)) => {
-                write!(sql, " ${}", param_index).unwrap();
+                write!(sql, " ${}", param_index).expect("writing to String is infallible");
                 *param_index += 1;
             }
             _ => {}
@@ -343,9 +343,9 @@ impl QueryBuilder {
 
             for (i, filter) in self.filters.iter().enumerate() {
                 if i > 0 {
-                    write!(sql, " {} ", self.logical_op.as_sql()).unwrap();
+                    write!(sql, " {} ", self.logical_op.as_sql()).expect("writing to String is infallible");
                 }
-                write!(sql, "{}", filter.to_sql(&mut param_index)).unwrap();
+                write!(sql, "{}", filter.to_sql(&mut param_index)).expect("writing to String is infallible");
             }
         }
 
@@ -356,11 +356,11 @@ impl QueryBuilder {
         }
 
         if let Some(limit) = self.limit {
-            write!(sql, " LIMIT {}", limit).unwrap();
+            write!(sql, " LIMIT {}", limit).expect("writing to String is infallible");
         }
 
         if let Some(offset) = self.offset {
-            write!(sql, " OFFSET {}", offset).unwrap();
+            write!(sql, " OFFSET {}", offset).expect("writing to String is infallible");
         }
 
         sql

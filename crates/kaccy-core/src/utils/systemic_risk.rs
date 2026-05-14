@@ -182,7 +182,7 @@ impl SystemicRiskAnalyzer {
             .map(|&id| (id, self.interconnectedness_score(id)))
             .collect();
 
-        scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         let threshold_index = ((scores.len() as f64)
             * (dec!(1) - threshold_percentile).to_f64().unwrap_or(0.1))
@@ -275,7 +275,7 @@ impl SystemicRiskAnalyzer {
             .map(|&id| (id, self.interconnectedness_score(id)))
             .collect();
 
-        scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         let total_interconnectedness: Decimal = scores.iter().map(|(_, score)| score).sum();
 
@@ -383,7 +383,7 @@ impl SystemicRiskAnalyzer {
             .map(|(id, count)| (id, count, self.interconnectedness_score(id)))
             .collect();
 
-        hubs.sort_by(|a, b| b.1.cmp(&a.1));
+        hubs.sort_by_key(|b| std::cmp::Reverse(b.1));
         hubs.into_iter().take(n).collect()
     }
 }

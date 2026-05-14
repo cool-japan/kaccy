@@ -189,7 +189,7 @@ impl MempoolSpaceClient {
             return Ok(vec![HistoricalFeeData {
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .expect("SystemTime should be after UNIX_EPOCH")
                     .as_secs(),
                 avg_fee: 25,
                 min_fee: 5,

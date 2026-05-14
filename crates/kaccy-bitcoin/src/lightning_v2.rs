@@ -240,7 +240,7 @@ impl OfferRequest {
     pub fn with_expiry(mut self, expiry_secs: u64) -> Self {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("SystemTime should be after UNIX_EPOCH")
             .as_secs();
         self.absolute_expiry = Some(now + expiry_secs);
         self
@@ -272,7 +272,7 @@ impl Offer {
         if let Some(expiry) = self.absolute_expiry {
             let now = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .expect("SystemTime should be after UNIX_EPOCH")
                 .as_secs();
             now > expiry
         } else {
@@ -706,7 +706,7 @@ mod tests {
     fn test_offer_expiry() {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("SystemTime should be after UNIX_EPOCH")
             .as_secs();
 
         let expired_offer = Offer {

@@ -210,7 +210,7 @@ impl TapscriptTreeBuilder {
             nodes = new_nodes;
         }
 
-        Ok(nodes.into_iter().next().unwrap())
+        Ok(nodes.into_iter().next().expect("nodes has exactly one element after merging pairs"))
     }
 
     /// Build a Huffman-coded tree (optimized for weights)
@@ -254,7 +254,7 @@ impl TapscriptTreeBuilder {
             nodes.push(branch);
         }
 
-        Ok(nodes.into_iter().next().unwrap())
+        Ok(nodes.into_iter().next().expect("nodes has exactly one element after Huffman tree construction"))
     }
 
     /// Generate Merkle proof for a specific script

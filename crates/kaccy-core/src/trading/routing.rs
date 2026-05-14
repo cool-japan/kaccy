@@ -132,7 +132,7 @@ impl SmartRouter {
         available_quotes.sort_by(|a, b| {
             a.effective_price()
                 .partial_cmp(&b.effective_price())
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         let mut splits = Vec::new();

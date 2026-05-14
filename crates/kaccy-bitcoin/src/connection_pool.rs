@@ -307,7 +307,7 @@ pub struct PooledConnectionGuard {
 impl PooledConnectionGuard {
     /// Get a reference to the Bitcoin client
     pub fn client(&self) -> &BitcoinClient {
-        &self.connection.as_ref().unwrap().client
+        &self.connection.as_ref().expect("PooledConnectionGuard always holds Some while in use").client
     }
 }
 

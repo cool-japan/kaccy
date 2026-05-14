@@ -25,25 +25,25 @@ lazy_static! {
     pub static ref POOL_CONNECTIONS_ACTIVE: IntGaugeVec = IntGaugeVec::new(
         Opts::new("kaccy_db_pool_connections_active", "Number of active database connections"),
         &["pool_name"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Idle database connections
     pub static ref POOL_CONNECTIONS_IDLE: IntGaugeVec = IntGaugeVec::new(
         Opts::new("kaccy_db_pool_connections_idle", "Number of idle database connections"),
         &["pool_name"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Total pool size
     pub static ref POOL_SIZE: IntGaugeVec = IntGaugeVec::new(
         Opts::new("kaccy_db_pool_size", "Total connection pool size"),
         &["pool_name"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Connection acquisition attempts
     pub static ref POOL_ACQUIRE_TOTAL: IntCounterVec = IntCounterVec::new(
         Opts::new("kaccy_db_pool_acquire_total", "Total connection acquisition attempts"),
         &["pool_name", "status"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Connection acquisition duration
     pub static ref POOL_ACQUIRE_DURATION: HistogramVec = HistogramVec::new(
@@ -52,13 +52,13 @@ lazy_static! {
             "Connection acquisition duration in seconds"
         ).buckets(vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0]),
         &["pool_name"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Pool connection timeouts
     pub static ref POOL_TIMEOUT_TOTAL: IntCounterVec = IntCounterVec::new(
         Opts::new("kaccy_db_pool_timeout_total", "Total connection acquisition timeouts"),
         &["pool_name"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     // ============================================================
     // Cache Metrics
@@ -68,19 +68,19 @@ lazy_static! {
     pub static ref CACHE_HITS: IntCounterVec = IntCounterVec::new(
         Opts::new("kaccy_db_cache_hits_total", "Total cache hits"),
         &["cache_type"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Cache misses
     pub static ref CACHE_MISSES: IntCounterVec = IntCounterVec::new(
         Opts::new("kaccy_db_cache_misses_total", "Total cache misses"),
         &["cache_type"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Cache errors
     pub static ref CACHE_ERRORS: IntCounterVec = IntCounterVec::new(
         Opts::new("kaccy_db_cache_errors_total", "Total cache errors"),
         &["cache_type", "operation"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Cache operation duration
     pub static ref CACHE_OPERATION_DURATION: HistogramVec = HistogramVec::new(
@@ -89,19 +89,19 @@ lazy_static! {
             "Cache operation duration in seconds"
         ).buckets(vec![0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1]),
         &["cache_type", "operation"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Cache size (number of keys)
     pub static ref CACHE_SIZE: IntGaugeVec = IntGaugeVec::new(
         Opts::new("kaccy_db_cache_size", "Number of keys in cache"),
         &["cache_type"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Cache evictions
     pub static ref CACHE_EVICTIONS: IntCounterVec = IntCounterVec::new(
         Opts::new("kaccy_db_cache_evictions_total", "Total cache evictions"),
         &["cache_type"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     // ============================================================
     // Query Metrics
@@ -111,7 +111,7 @@ lazy_static! {
     pub static ref QUERY_TOTAL: IntCounterVec = IntCounterVec::new(
         Opts::new("kaccy_db_query_total", "Total database queries executed"),
         &["query_type", "status"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Query duration
     pub static ref QUERY_DURATION: HistogramVec = HistogramVec::new(
@@ -120,25 +120,25 @@ lazy_static! {
             "Query execution duration in seconds"
         ).buckets(vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]),
         &["query_type"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Slow queries (>1s)
     pub static ref QUERY_SLOW_TOTAL: IntCounterVec = IntCounterVec::new(
         Opts::new("kaccy_db_query_slow_total", "Total slow queries (>1s)"),
         &["query_type"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Query errors
     pub static ref QUERY_ERRORS: IntCounterVec = IntCounterVec::new(
         Opts::new("kaccy_db_query_errors_total", "Total query errors"),
         &["query_type", "error_type"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Active queries
     pub static ref QUERY_ACTIVE: IntGaugeVec = IntGaugeVec::new(
         Opts::new("kaccy_db_query_active", "Number of currently executing queries"),
         &["query_type"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     // ============================================================
     // Repository Metrics
@@ -148,7 +148,7 @@ lazy_static! {
     pub static ref REPO_OPERATION_TOTAL: IntCounterVec = IntCounterVec::new(
         Opts::new("kaccy_db_repo_operation_total", "Total repository operation calls"),
         &["repository", "operation", "status"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Repository operation duration
     pub static ref REPO_OPERATION_DURATION: HistogramVec = HistogramVec::new(
@@ -157,7 +157,7 @@ lazy_static! {
             "Repository operation duration in seconds"
         ).buckets(vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0]),
         &["repository", "operation"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     // ============================================================
     // Transaction Metrics
@@ -167,7 +167,7 @@ lazy_static! {
     pub static ref TRANSACTION_TOTAL: IntCounterVec = IntCounterVec::new(
         Opts::new("kaccy_db_transaction_total", "Total transaction operations"),
         &["operation", "status"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Transaction duration
     pub static ref TRANSACTION_DURATION: HistogramVec = HistogramVec::new(
@@ -176,13 +176,13 @@ lazy_static! {
             "Transaction duration in seconds"
         ).buckets(vec![0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0, 30.0]),
         &["operation"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Active transactions
     pub static ref TRANSACTION_ACTIVE: IntGauge = IntGauge::new(
         "kaccy_db_transaction_active",
         "Number of active transactions"
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     // ============================================================
     // Replica Metrics
@@ -192,19 +192,19 @@ lazy_static! {
     pub static ref REPLICA_HEALTH: IntGaugeVec = IntGaugeVec::new(
         Opts::new("kaccy_db_replica_health", "Replica health status (1=healthy, 0=unhealthy)"),
         &["replica_id"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Replica lag in bytes
     pub static ref REPLICA_LAG_BYTES: IntGaugeVec = IntGaugeVec::new(
         Opts::new("kaccy_db_replica_lag_bytes", "Replica replication lag in bytes"),
         &["replica_id"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 
     /// Replica queries routed
     pub static ref REPLICA_QUERIES: IntCounterVec = IntCounterVec::new(
         Opts::new("kaccy_db_replica_queries_total", "Total queries routed to replica"),
         &["replica_id"]
-    ).unwrap();
+    ).expect("metric constructor with valid static parameters");
 }
 
 /// Register all metrics with the Prometheus registry

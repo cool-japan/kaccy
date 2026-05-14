@@ -302,7 +302,7 @@ Format as JSON:
             format!(
                 "{} data points over {} days",
                 historical.len(),
-                historical.last().unwrap().days_ago
+                historical.last().expect("historical is non-empty per is_empty check above").days_ago
             )
         };
 

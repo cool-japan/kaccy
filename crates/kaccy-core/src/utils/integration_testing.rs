@@ -168,7 +168,7 @@ impl TestScenario {
             TestResult::Failed
         });
 
-        Ok(self.result.unwrap())
+        Ok(self.result.expect("result was just set to Some above"))
     }
 
     /// Get pass rate

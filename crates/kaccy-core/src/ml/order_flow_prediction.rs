@@ -108,7 +108,7 @@ impl OrderFlowPredictor {
             (OrderDirection::Buy, 0.5 + (imbalance * 0.3))
         } else {
             // Equal, use momentum from last order
-            let last_dir = self.history.back().unwrap().direction;
+            let last_dir = self.history.back().expect("history is non-empty (recent is non-empty which is a slice of history)").direction;
             (last_dir, 0.5)
         };
 
@@ -193,7 +193,7 @@ impl OrderSizeAnalyzer {
             .iter()
             .map(|e| e.size.to_f64().unwrap_or(0.0))
             .collect();
-        sizes.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sizes.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         let mean_f64 = sizes.iter().sum::<f64>() / sizes.len() as f64;
         let mean = Decimal::from_f64_retain(mean_f64).unwrap_or(Decimal::ZERO);

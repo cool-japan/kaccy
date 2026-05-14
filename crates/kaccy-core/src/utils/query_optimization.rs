@@ -338,7 +338,7 @@ impl NPlusOneDetector {
         }
 
         // Sort by occurrence count (descending)
-        problems.sort_by(|a, b| b.occurrence_count.cmp(&a.occurrence_count));
+        problems.sort_by_key(|b| std::cmp::Reverse(b.occurrence_count));
 
         problems
     }
@@ -351,19 +351,19 @@ impl NPlusOneDetector {
         // Replace UUIDs
         normalized =
             regex::Regex::new(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
-                .unwrap()
+                .expect("UUID regex pattern is valid")
                 .replace_all(&normalized, "?")
                 .to_string();
 
         // Replace numbers
         normalized = regex::Regex::new(r"\b\d+\b")
-            .unwrap()
+            .expect("digit regex pattern is valid")
             .replace_all(&normalized, "?")
             .to_string();
 
         // Replace string literals
         normalized = regex::Regex::new(r"'[^']*'")
-            .unwrap()
+            .expect("string literal regex pattern is valid")
             .replace_all(&normalized, "?")
             .to_string();
 

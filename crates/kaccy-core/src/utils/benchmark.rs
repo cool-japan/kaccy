@@ -527,7 +527,7 @@ impl fmt::Display for ProfilerResults {
         writeln!(f, "{}", "=".repeat(80))?;
 
         let mut sections: Vec<_> = self.sections.values().collect();
-        sections.sort_by(|a, b| b.total_duration.cmp(&a.total_duration));
+        sections.sort_by_key(|b| std::cmp::Reverse(b.total_duration));
 
         for section in sections {
             writeln!(f, "{}", section)?;

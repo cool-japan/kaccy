@@ -354,7 +354,7 @@ impl BottleneckAnalyzer {
             }
         }
 
-        bottlenecks.sort_by(|a, b| b.duration_ms.cmp(&a.duration_ms));
+        bottlenecks.sort_by_key(|b| std::cmp::Reverse(b.duration_ms));
         bottlenecks
     }
 }

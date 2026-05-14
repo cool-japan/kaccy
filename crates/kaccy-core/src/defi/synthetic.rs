@@ -331,7 +331,7 @@ impl SyntheticAssetManager {
             .write()
             .await
             .get_mut(&synthetic_asset_id)
-            .unwrap()
+            .expect("synthetic_asset_id was just validated during mint")
             .total_supply += net_mint;
 
         Ok(position_id)
@@ -364,7 +364,7 @@ impl SyntheticAssetManager {
 
         // Get burn fee
         let assets = self.assets.read().await;
-        let asset = assets.get(&synthetic_asset_id).unwrap();
+        let asset = assets.get(&synthetic_asset_id).expect("synthetic_asset_id confirmed present via position");
         let burn_fee = asset.burn_fee;
         drop(assets);
 
@@ -374,7 +374,7 @@ impl SyntheticAssetManager {
             .write()
             .await
             .get_mut(&synthetic_asset_id)
-            .unwrap()
+            .expect("synthetic_asset_id confirmed present via position")
             .total_supply -= burn_amount;
 
         Ok(fee_amount)
@@ -424,7 +424,7 @@ impl SyntheticAssetManager {
 
         // Get asset info
         let assets = self.assets.read().await;
-        let asset = assets.get(&synthetic_asset_id).unwrap();
+        let asset = assets.get(&synthetic_asset_id).expect("synthetic_asset_id confirmed present via position");
         let required_ratio = asset.collateral_ratio;
         drop(assets);
 
@@ -439,7 +439,7 @@ impl SyntheticAssetManager {
             .ok_or("Synthetic price not available")?;
 
         let positions = self.positions.read().await;
-        let position = positions.get(&position_id).unwrap();
+        let position = positions.get(&position_id).expect("position_id confirmed present via ok_or above");
 
         let new_collateral = position.collateral_amount - amount;
         let collateral_value = new_collateral * collateral_price;
@@ -456,7 +456,7 @@ impl SyntheticAssetManager {
 
         // Update position
         let mut positions = self.positions.write().await;
-        let position = positions.get_mut(&position_id).unwrap();
+        let position = positions.get_mut(&position_id).expect("position_id confirmed present via ok_or above");
         position.collateral_amount -= amount;
         position.last_update = chrono::Utc::now().timestamp();
 
@@ -479,7 +479,7 @@ impl SyntheticAssetManager {
 
         // Get asset info
         let assets = self.assets.read().await;
-        let asset = assets.get(&synthetic_asset_id).unwrap();
+        let asset = assets.get(&synthetic_asset_id).expect("synthetic_asset_id confirmed present via position");
         let liquidation_ratio = asset.liquidation_ratio;
         drop(assets);
 
@@ -495,7 +495,7 @@ impl SyntheticAssetManager {
 
         // Check if liquidatable
         let positions = self.positions.read().await;
-        let position = positions.get(&position_id).unwrap();
+        let position = positions.get(&position_id).expect("position_id confirmed present via ok_or above");
 
         if position.is_safe(collateral_price, synthetic_price, liquidation_ratio) {
             return Err("Position is not liquidatable");
@@ -514,7 +514,7 @@ impl SyntheticAssetManager {
 
         // Update position
         let mut positions = self.positions.write().await;
-        let position = positions.get_mut(&position_id).unwrap();
+        let position = positions.get_mut(&position_id).expect("position_id confirmed present via ok_or above");
         position.collateral_amount -= collateral_seized;
         position.minted_amount -= debt_to_cover;
         position.last_update = chrono::Utc::now().timestamp();
@@ -524,7 +524,7 @@ impl SyntheticAssetManager {
             .write()
             .await
             .get_mut(&synthetic_asset_id)
-            .unwrap()
+            .expect("synthetic_asset_id confirmed present via position")
             .total_supply -= debt_to_cover;
 
         Ok(SyntheticLiquidation {

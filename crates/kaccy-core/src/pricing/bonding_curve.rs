@@ -149,11 +149,10 @@ impl CurveValidator {
                     return Err("Exponential growth rate is too high (max 0.1)".to_string());
                 }
             }
-            "bancor" => {
-                if rate <= dec!(0) || rate > dec!(1) {
+            "bancor"
+                if (rate <= dec!(0) || rate > dec!(1)) => {
                     return Err("Reserve ratio must be between 0 and 1".to_string());
                 }
-            }
             _ => {}
         }
         Ok(())

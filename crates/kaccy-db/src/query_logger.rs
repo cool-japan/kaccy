@@ -243,7 +243,7 @@ impl QueryLogger {
     /// Get top N slowest query patterns
     pub fn get_slowest_queries(&self, n: usize) -> Vec<QueryStats> {
         let mut stats = self.get_stats();
-        stats.sort_by(|a, b| b.avg_duration_ms.partial_cmp(&a.avg_duration_ms).unwrap());
+        stats.sort_by(|a, b| b.avg_duration_ms.partial_cmp(&a.avg_duration_ms).unwrap_or(std::cmp::Ordering::Equal));
         stats.truncate(n);
         stats
     }
@@ -251,7 +251,7 @@ impl QueryLogger {
     /// Get top N most frequent queries
     pub fn get_most_frequent_queries(&self, n: usize) -> Vec<QueryStats> {
         let mut stats = self.get_stats();
-        stats.sort_by(|a, b| b.call_count.cmp(&a.call_count));
+        stats.sort_by_key(|b| std::cmp::Reverse(b.call_count));
         stats.truncate(n);
         stats
     }

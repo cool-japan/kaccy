@@ -365,7 +365,7 @@ impl AttentionFeatureSelector {
     /// Compute feature importance
     pub fn compute_importance(&mut self, features: &[Vec<f64>]) -> Result<Vec<f64>> {
         // Use attention to determine feature importance
-        let query = features.last().unwrap(); // Use latest as query
+        let query = features.last().expect("features is non-empty per caller contract"); // Use latest as query
         let attention_output = self
             .attention
             .compute_attention(query, features, features)?;
@@ -380,7 +380,7 @@ impl AttentionFeatureSelector {
     pub fn select_top_features(&self, k: usize) -> Vec<usize> {
         let mut indexed_scores: Vec<_> = self.importance_scores.iter().enumerate().collect();
 
-        indexed_scores.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
+        indexed_scores.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         indexed_scores.iter().take(k).map(|(i, _)| *i).collect()
     }

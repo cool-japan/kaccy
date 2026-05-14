@@ -224,7 +224,7 @@ impl PredictionModel for MovingAveragePredictionModel {
             .map(|p| p.close.to_string().parse::<f64>().unwrap_or(0.0))
             .collect();
 
-        let last_timestamp = self.historical_prices.last().unwrap().timestamp;
+        let last_timestamp = self.historical_prices.last().expect("historical_prices is non-empty per len check at function start").timestamp;
         let window_size = self.period.min(prices.len());
         let window = &prices[prices.len() - window_size..];
 
@@ -375,7 +375,7 @@ impl PredictionModel for LinearRegressionModel {
             .map(|p| p.close.to_string().parse::<f64>().unwrap_or(0.0))
             .collect();
 
-        let last_timestamp = self.historical_prices.last().unwrap().timestamp;
+        let last_timestamp = self.historical_prices.last().expect("historical_prices is non-empty per len check at function start").timestamp;
         let std_error = self.calculate_std_error(&prices);
 
         let mut predictions = Vec::new();

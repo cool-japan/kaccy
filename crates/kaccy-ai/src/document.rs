@@ -1322,17 +1322,15 @@ impl PdfParser {
                                 text.push_str(&s);
                             }
                         }
-                        Object::Integer(n) => {
+                        Object::Integer(n)
                             // Negative numbers indicate kerning/spacing
-                            if *n < -100 {
+                            if *n < -100 => {
                                 text.push(' ');
                             }
-                        }
-                        Object::Real(n) => {
-                            if *n < -100.0 {
+                        Object::Real(n)
+                            if *n < -100.0 => {
                                 text.push(' ');
                             }
-                        }
                         _ => {}
                     }
                 }

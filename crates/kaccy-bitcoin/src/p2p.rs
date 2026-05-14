@@ -374,7 +374,7 @@ impl P2pClient {
     fn create_version_message(&self, peer_addr: SocketAddr) -> Result<VersionMessage> {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("SystemTime should be after UNIX_EPOCH")
             .as_secs() as i64;
 
         // Create receiver address (the peer)

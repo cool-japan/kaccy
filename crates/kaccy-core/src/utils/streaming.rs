@@ -665,7 +665,7 @@ impl Default for UserStreamManager {
 pub fn current_timestamp_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .unwrap()
+        .expect("SystemTime should be after UNIX_EPOCH")
         .as_millis() as u64
 }
 

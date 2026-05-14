@@ -17,11 +17,11 @@ pub struct ParameterSanitizer {
 // Use LazyLock to initialize regex patterns once
 static SQL_INJECTION_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     vec![
-        Regex::new(r"(?i)(union\s+select|insert\s+into|drop\s+table|delete\s+from)").unwrap(),
-        Regex::new(r"(?i)(exec\s*\(|execute\s*\()").unwrap(),
-        Regex::new(r"(?i)(xp_cmdshell|sp_executesql)").unwrap(),
-        Regex::new(r"(--|/\*|\*/|;)").unwrap(),
-        Regex::new(r#"['\";]{2,}"#).unwrap(),
+        Regex::new(r"(?i)(union\s+select|insert\s+into|drop\s+table|delete\s+from)").expect("SQL injection regex pattern is valid"),
+        Regex::new(r"(?i)(exec\s*\(|execute\s*\()").expect("SQL injection regex pattern is valid"),
+        Regex::new(r"(?i)(xp_cmdshell|sp_executesql)").expect("SQL injection regex pattern is valid"),
+        Regex::new(r"(--|/\*|\*/|;)").expect("SQL injection regex pattern is valid"),
+        Regex::new(r#"['\";]{2,}"#).expect("SQL injection regex pattern is valid"),
     ]
 });
 
@@ -257,7 +257,7 @@ impl DataMasker {
         if let Some(at_pos) = email.find('@') {
             let (local, domain) = email.split_at(at_pos);
             if local.len() > 1 {
-                let first_char = local.chars().next().unwrap();
+                let first_char = local.chars().next().expect("local part length checked > 1 above");
                 let mask_count = local.len() - 1;
                 let masked: String = std::iter::repeat_n(self.mask_char, mask_count).collect();
                 format!("{}{}{}", first_char, masked, domain)

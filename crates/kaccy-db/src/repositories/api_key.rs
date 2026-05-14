@@ -355,7 +355,7 @@ impl ApiKeyRepository {
     fn to_summary(key: ApiKey) -> ApiKeySummary {
         let scopes: Vec<String> = serde_json::from_value(key.scopes.clone()).unwrap_or_default();
         let is_active = key.revoked_at.is_none()
-            && (key.expires_at.is_none() || key.expires_at.unwrap() > Utc::now());
+            && (key.expires_at.is_none() || key.expires_at.expect("expires_at is Some per is_none check") > Utc::now());
 
         ApiKeySummary {
             id: key.id,

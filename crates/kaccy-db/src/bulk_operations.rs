@@ -152,26 +152,26 @@ impl BulkUpdater {
                 sql.push_str(", ");
             }
 
-            write!(sql, "{} = CASE {}", column, id_column).unwrap();
+            write!(sql, "{} = CASE {}", column, id_column).expect("writing to String is infallible");
 
             for (row_idx, id) in ids.iter().enumerate() {
                 if let Some(row_values) = values.get(row_idx) {
                     if let Some(value) = row_values.get(col_idx) {
-                        write!(sql, " WHEN '{}' THEN {}", id, value).unwrap();
+                        write!(sql, " WHEN '{}' THEN {}", id, value).expect("writing to String is infallible");
                     }
                 }
             }
 
-            write!(sql, " ELSE {} END", column).unwrap();
+            write!(sql, " ELSE {} END", column).expect("writing to String is infallible");
         }
 
         // Add WHERE clause to limit updates to provided IDs
-        write!(sql, " WHERE {} IN (", id_column).unwrap();
+        write!(sql, " WHERE {} IN (", id_column).expect("writing to String is infallible");
         for (i, id) in ids.iter().enumerate() {
             if i > 0 {
                 sql.push_str(", ");
             }
-            write!(sql, "'{}'", id).unwrap();
+            write!(sql, "'{}'", id).expect("writing to String is infallible");
         }
         sql.push(')');
 

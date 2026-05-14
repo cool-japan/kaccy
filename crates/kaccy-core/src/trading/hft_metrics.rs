@@ -165,8 +165,8 @@ impl HftAnalyzer {
             return 0.0;
         }
 
-        let first_time = self.events.first().unwrap().timestamp;
-        let last_time = self.events.last().unwrap().timestamp;
+        let first_time = self.events.first().expect("events has >= 2 elements per len check above").timestamp;
+        let last_time = self.events.last().expect("events has >= 2 elements per len check above").timestamp;
         let duration_secs = (last_time - first_time).num_seconds() as f64;
 
         if duration_secs > 0.0 {
@@ -236,7 +236,7 @@ impl LatencyTracker {
         }
 
         let mut sorted: Vec<f64> = self.samples.iter().copied().collect();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         let idx = ((sorted.len() as f64) * p / 100.0) as usize;
         sorted[idx.min(sorted.len() - 1)]
@@ -247,7 +247,7 @@ impl LatencyTracker {
         self.samples
             .iter()
             .copied()
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .unwrap_or(0.0)
     }
 
@@ -256,7 +256,7 @@ impl LatencyTracker {
         self.samples
             .iter()
             .copied()
-            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .unwrap_or(0.0)
     }
 }

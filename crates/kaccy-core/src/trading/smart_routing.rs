@@ -263,7 +263,7 @@ impl SmartOrderRouter {
             })
             .collect();
 
-        scored_venues.sort_by(|a, b| b.1.cmp(&a.1));
+        scored_venues.sort_by_key(|b| std::cmp::Reverse(b.1));
 
         if let Some((best_venue, _)) = scored_venues.first() {
             if best_venue.available_liquidity >= order.amount {
