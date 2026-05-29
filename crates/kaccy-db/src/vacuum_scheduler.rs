@@ -316,7 +316,11 @@ impl VacuumScheduler {
             .collect();
 
         // Sort by priority (highest first)
-        tables.sort_by(|a, b| b.priority.partial_cmp(&a.priority).unwrap_or(std::cmp::Ordering::Equal));
+        tables.sort_by(|a, b| {
+            b.priority
+                .partial_cmp(&a.priority)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         Ok(tables)
     }

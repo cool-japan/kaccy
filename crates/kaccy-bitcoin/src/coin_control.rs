@@ -292,9 +292,7 @@ impl CoinControl {
                 SelectionStrategy::LargestFirst => {
                     all_utxos.sort_by_key(|b| std::cmp::Reverse(b.amount_sats))
                 }
-                SelectionStrategy::SmallestFirst => {
-                    all_utxos.sort_by_key(|a| a.amount_sats)
-                }
+                SelectionStrategy::SmallestFirst => all_utxos.sort_by_key(|a| a.amount_sats),
                 _ => {}
             }
 

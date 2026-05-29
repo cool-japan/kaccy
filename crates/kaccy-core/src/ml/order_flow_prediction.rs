@@ -108,7 +108,11 @@ impl OrderFlowPredictor {
             (OrderDirection::Buy, 0.5 + (imbalance * 0.3))
         } else {
             // Equal, use momentum from last order
-            let last_dir = self.history.back().expect("history is non-empty (recent is non-empty which is a slice of history)").direction;
+            let last_dir = self
+                .history
+                .back()
+                .expect("history is non-empty (recent is non-empty which is a slice of history)")
+                .direction;
             (last_dir, 0.5)
         };
 

@@ -236,12 +236,18 @@ impl MetricsSubscriber {
 
     /// Get all event counts
     pub fn get_all_counts(&self) -> std::collections::HashMap<String, u64> {
-        self.event_counts.lock().unwrap_or_else(|e| e.into_inner()).clone()
+        self.event_counts
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     /// Reset all counts
     pub fn reset(&self) {
-        self.event_counts.lock().unwrap_or_else(|e| e.into_inner()).clear();
+        self.event_counts
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clear();
     }
 }
 

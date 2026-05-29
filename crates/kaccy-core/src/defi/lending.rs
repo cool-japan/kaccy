@@ -398,7 +398,9 @@ impl LendingManager {
 
         // Update position
         let mut positions = self.positions.write().await;
-        let position = positions.get_mut(&(user_id, pool_id)).expect("position was confirmed present during deposit validation");
+        let position = positions
+            .get_mut(&(user_id, pool_id))
+            .expect("position was confirmed present during deposit validation");
         position.deposited -= amount;
 
         Ok(())
@@ -439,7 +441,9 @@ impl LendingManager {
 
         // Update pool
         let mut pools = self.pools.write().await;
-        let pool = pools.get_mut(&pool_id).expect("pool_id was validated via ok_or earlier in this function");
+        let pool = pools
+            .get_mut(&pool_id)
+            .expect("pool_id was validated via ok_or earlier in this function");
         pool.total_borrows += amount;
         pool.last_update = chrono::Utc::now().timestamp();
 
@@ -502,7 +506,9 @@ impl LendingManager {
 
         // Update pool
         let mut pools = self.pools.write().await;
-        let pool = pools.get_mut(&pool_id).expect("pool_id was validated via ok_or earlier in this function");
+        let pool = pools
+            .get_mut(&pool_id)
+            .expect("pool_id was validated via ok_or earlier in this function");
         pool.total_borrows -= actual_repay.min(position.borrowed);
         pool.last_update = chrono::Utc::now().timestamp();
 
@@ -613,7 +619,9 @@ impl LendingManager {
 
         // Update pool
         let mut pools = self.pools.write().await;
-        let pool = pools.get_mut(&pool_id).expect("pool_id was validated via ok_or earlier in this function");
+        let pool = pools
+            .get_mut(&pool_id)
+            .expect("pool_id was validated via ok_or earlier in this function");
         pool.total_borrows -= debt_to_repay;
         pool.last_update = chrono::Utc::now().timestamp();
 

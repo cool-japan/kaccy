@@ -772,10 +772,7 @@ mod tests {
             })
         }
 
-        async fn get_invoice(
-            &self,
-            payment_hash: &str,
-        ) -> Result<crate::lightning::Invoice> {
+        async fn get_invoice(&self, payment_hash: &str) -> Result<crate::lightning::Invoice> {
             Ok(crate::lightning::Invoice {
                 payment_hash: payment_hash.to_string(),
                 payment_preimage: None,
@@ -939,9 +936,15 @@ mod tests {
     async fn test_mock_provider_basic_queries() {
         let provider = MockProvider;
         provider.get_info().await.expect("get_info should succeed");
-        let balance = provider.get_balance().await.expect("get_balance should succeed");
+        let balance = provider
+            .get_balance()
+            .await
+            .expect("get_balance should succeed");
         assert_eq!(balance.local_balance_msat, 0);
-        let channels = provider.list_channels().await.expect("list_channels should succeed");
+        let channels = provider
+            .list_channels()
+            .await
+            .expect("list_channels should succeed");
         assert!(channels.is_empty());
     }
 

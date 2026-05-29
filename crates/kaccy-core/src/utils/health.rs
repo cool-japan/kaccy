@@ -254,7 +254,10 @@ impl HealthCheckManager {
 
     /// Register a health checker
     pub fn register(&self, checker: Arc<dyn HealthChecker>) {
-        self.checkers.write().unwrap_or_else(|e| e.into_inner()).push(checker);
+        self.checkers
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .push(checker);
     }
 
     /// Check all components
@@ -325,7 +328,10 @@ impl HealthCheckManager {
 
     /// Clear the cache
     pub fn clear_cache(&self) {
-        self.cache.write().unwrap_or_else(|e| e.into_inner()).clear();
+        self.cache
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .clear();
     }
 }
 

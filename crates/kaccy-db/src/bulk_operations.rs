@@ -152,12 +152,14 @@ impl BulkUpdater {
                 sql.push_str(", ");
             }
 
-            write!(sql, "{} = CASE {}", column, id_column).expect("writing to String is infallible");
+            write!(sql, "{} = CASE {}", column, id_column)
+                .expect("writing to String is infallible");
 
             for (row_idx, id) in ids.iter().enumerate() {
                 if let Some(row_values) = values.get(row_idx) {
                     if let Some(value) = row_values.get(col_idx) {
-                        write!(sql, " WHEN '{}' THEN {}", id, value).expect("writing to String is infallible");
+                        write!(sql, " WHEN '{}' THEN {}", id, value)
+                            .expect("writing to String is infallible");
                     }
                 }
             }

@@ -30,7 +30,9 @@ impl LeaderboardPeriod {
             Self::Daily => now - chrono::Duration::days(1),
             Self::Weekly => now - chrono::Duration::weeks(1),
             Self::Monthly => now - chrono::Duration::days(30),
-            Self::AllTime => DateTime::<Utc>::from_timestamp(0, 0).expect("Unix epoch timestamp 0 is valid"),
+            Self::AllTime => {
+                DateTime::<Utc>::from_timestamp(0, 0).expect("Unix epoch timestamp 0 is valid")
+            }
         }
     }
 }

@@ -384,7 +384,9 @@ impl YieldFarmingManager {
 
         // Update pool total
         let mut pools = self.pools.write().await;
-        let pool = pools.get_mut(&pool_id).expect("pool_id was validated via ok_or earlier in this function");
+        let pool = pools
+            .get_mut(&pool_id)
+            .expect("pool_id was validated via ok_or earlier in this function");
         pool.total_staked += amount;
 
         Ok(())
@@ -437,7 +439,9 @@ impl YieldFarmingManager {
 
         // Update pool total
         let mut pools = self.pools.write().await;
-        let pool = pools.get_mut(&pool_id).expect("pool_id was validated via ok_or earlier in this function");
+        let pool = pools
+            .get_mut(&pool_id)
+            .expect("pool_id was validated via ok_or earlier in this function");
         pool.total_staked -= amount;
 
         Ok(pending)

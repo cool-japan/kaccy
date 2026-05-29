@@ -453,7 +453,11 @@ impl NetworkAnalyzer {
             })
             .collect();
 
-        influencers.sort_by(|a, b| b.influence_score.partial_cmp(&a.influence_score).unwrap_or(std::cmp::Ordering::Equal));
+        influencers.sort_by(|a, b| {
+            b.influence_score
+                .partial_cmp(&a.influence_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         influencers.truncate(top_n);
         influencers
     }

@@ -405,7 +405,10 @@ impl FeeSpikePredictor {
             };
         }
 
-        let latest = self.history.back().expect("history is non-empty per is_empty check above");
+        let latest = self
+            .history
+            .back()
+            .expect("history is non-empty per is_empty check above");
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("SystemTime should be after UNIX_EPOCH")

@@ -206,7 +206,9 @@ impl MultiTierCache {
                 self.stats.write().promotions += 1;
             }
 
-            Ok(Some(l2_result.expect("l2_result is Some per outer if-let branch")))
+            Ok(Some(
+                l2_result.expect("l2_result is Some per outer if-let branch"),
+            ))
         } else {
             self.stats.write().misses += 1;
             debug!(key = %key, "Cache miss");

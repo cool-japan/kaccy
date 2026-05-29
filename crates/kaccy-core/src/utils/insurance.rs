@@ -169,8 +169,10 @@ impl Default for InsurancePoolConfig {
     fn default() -> Self {
         Self {
             premium_rate: Decimal::from_str("0.01").expect("\"0.01\" is a valid Decimal string"), // 1%
-            max_coverage_per_user: Decimal::from_str("100000").expect("\"100000\" is a valid Decimal string"),
-            max_total_coverage: Decimal::from_str("10000000").expect("\"10000000\" is a valid Decimal string"),
+            max_coverage_per_user: Decimal::from_str("100000")
+                .expect("\"100000\" is a valid Decimal string"),
+            max_total_coverage: Decimal::from_str("10000000")
+                .expect("\"10000000\" is a valid Decimal string"),
             min_claim_amount: Decimal::from_str("100").expect("\"100\" is a valid Decimal string"),
             coverage_duration_days: 365,
         }
@@ -467,7 +469,9 @@ impl InsurancePool {
             ));
         }
 
-        let payout_amount = claim.payout_amount.expect("payout_amount is set when claim status is Approved");
+        let payout_amount = claim
+            .payout_amount
+            .expect("payout_amount is set when claim status is Approved");
 
         // Check balance again
         if payout_amount > self.stats.pool_balance {

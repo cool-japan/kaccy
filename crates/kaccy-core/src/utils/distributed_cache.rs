@@ -97,7 +97,10 @@ impl StampedeProtection {
 
     /// Get or create a lock for a key
     fn get_lock(&self, key: &str) -> Arc<Mutex<()>> {
-        let mut locks = self.loading_locks.write().unwrap_or_else(|e| e.into_inner());
+        let mut locks = self
+            .loading_locks
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
         locks
             .entry(key.to_string())
             .or_insert_with(|| Arc::new(Mutex::new(())))
@@ -127,7 +130,10 @@ impl StampedeProtection {
 
     /// Clean up old locks
     pub fn cleanup(&self) {
-        let mut locks = self.loading_locks.write().unwrap_or_else(|e| e.into_inner());
+        let mut locks = self
+            .loading_locks
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
         locks.retain(|_, lock| Arc::strong_count(lock) > 1);
     }
 }

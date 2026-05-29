@@ -92,7 +92,10 @@ impl PreparedStatementCache {
 
     /// Clear the cache
     pub fn clear(&self) {
-        self.statements.write().unwrap_or_else(|e| e.into_inner()).clear();
+        self.statements
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .clear();
     }
 
     /// Get most frequently used statements
@@ -365,7 +368,10 @@ impl QueryPerformanceAnalyzer {
             rows_affected,
         };
 
-        let mut history = self.query_history.write().unwrap_or_else(|e| e.into_inner());
+        let mut history = self
+            .query_history
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
         history.push(execution);
 
         // Trim history if needed
@@ -519,7 +525,10 @@ impl MaterializedViewManager {
             estimated_rows: 0,
         };
 
-        self.views.write().unwrap_or_else(|e| e.into_inner()).insert(name, view);
+        self.views
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(name, view);
     }
 
     /// Check if a view needs refresh
@@ -701,12 +710,18 @@ impl PartialIndexOptimizer {
             reason,
         };
 
-        self.recommendations.write().unwrap_or_else(|e| e.into_inner()).push(rec);
+        self.recommendations
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .push(rec);
     }
 
     /// Get all recommendations
     pub fn get_recommendations(&self) -> Vec<IndexRecommendation> {
-        self.recommendations.read().unwrap_or_else(|e| e.into_inner()).clone()
+        self.recommendations
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     /// Generate CREATE INDEX SQL
@@ -734,7 +749,10 @@ impl PartialIndexOptimizer {
 
     /// Clear recommendations
     pub fn clear(&self) {
-        self.recommendations.write().unwrap_or_else(|e| e.into_inner()).clear();
+        self.recommendations
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .clear();
     }
 }
 
@@ -940,7 +958,10 @@ impl QueryResultCache {
 
     /// Invalidate a specific cache entry
     pub fn invalidate(&self, key: &str) {
-        self.cache.write().unwrap_or_else(|e| e.into_inner()).remove(key);
+        self.cache
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(key);
     }
 
     /// Invalidate all cache entries matching a pattern
@@ -981,7 +1002,10 @@ impl QueryResultCache {
 
     /// Clear all cache
     pub fn clear(&self) {
-        self.cache.write().unwrap_or_else(|e| e.into_inner()).clear();
+        self.cache
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .clear();
     }
 }
 
@@ -1090,7 +1114,12 @@ impl TransactionBatcher {
         TransactionBatchStats {
             pending_count: pending.len(),
             oldest_transaction_age_ms: oldest_age,
-            time_since_last_flush_ms: self.last_flush.read().unwrap_or_else(|e| e.into_inner()).elapsed().as_millis() as u64,
+            time_since_last_flush_ms: self
+                .last_flush
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .elapsed()
+                .as_millis() as u64,
         }
     }
 

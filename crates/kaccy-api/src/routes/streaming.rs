@@ -68,7 +68,8 @@ pub async fn stream_tokens_ndjson(
             };
 
             // Serialize to JSON and add newline
-            let json = serde_json::to_string(&token).expect("TokenData serialization to JSON is infallible");
+            let json = serde_json::to_string(&token)
+                .expect("TokenData serialization to JSON is infallible");
             format!("{}\n", json)
         })
         .chunks(chunk_size)
@@ -105,7 +106,8 @@ pub async fn stream_orders_jsonlines(
                 "status": "pending",
             });
 
-            let json = serde_json::to_string(&order).expect("order json! value serialization is infallible");
+            let json = serde_json::to_string(&order)
+                .expect("order json! value serialization is infallible");
             format!("{}\n", json)
         })
         .chunks(chunk_size)
@@ -143,7 +145,8 @@ pub async fn stream_tokens_chunked_json(
                 price_btc: 0.001 * (i as f64),
             };
 
-            let json = serde_json::to_string(&token).expect("TokenData serialization to JSON is infallible");
+            let json = serde_json::to_string(&token)
+                .expect("TokenData serialization to JSON is infallible");
             if idx == 0 { json } else { format!(",{}", json) }
         })
         .chunks(chunk_size)

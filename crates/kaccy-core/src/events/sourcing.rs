@@ -346,7 +346,11 @@ where
             aggregate.apply_event(&stored_event.event);
             // Clone the aggregate at each step (this is expensive but useful for replay)
             states.push(
-                serde_json::from_str::<A>(&serde_json::to_string(&aggregate).expect("aggregate serialization to string is infallible")).expect("aggregate serialized just above so deserialization succeeds"),
+                serde_json::from_str::<A>(
+                    &serde_json::to_string(&aggregate)
+                        .expect("aggregate serialization to string is infallible"),
+                )
+                .expect("aggregate serialized just above so deserialization succeeds"),
             );
         }
 

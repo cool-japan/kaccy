@@ -254,7 +254,10 @@ impl ReplicaManager {
             )));
         }
 
-        let replica = self.replicas.get(replica_id).expect("replica_id confirmed present via contains_key check above");
+        let replica = self
+            .replicas
+            .get(replica_id)
+            .expect("replica_id confirmed present via contains_key check above");
         if !replica.is_available {
             return Err(Error::Validation(format!(
                 "Replica {} is not available",

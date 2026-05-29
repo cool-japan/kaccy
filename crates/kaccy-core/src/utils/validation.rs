@@ -37,7 +37,8 @@ impl EmailValidator {
     /// Validate email format
     pub fn validate(email: &str) -> ValidationResult {
         let regex = EMAIL_REGEX.get_or_init(|| {
-            Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").expect("email regex pattern is valid")
+            Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+                .expect("email regex pattern is valid")
         });
 
         if email.is_empty() {
@@ -62,7 +63,9 @@ pub struct UsernameValidator;
 impl UsernameValidator {
     /// Validate username format
     pub fn validate(username: &str) -> ValidationResult {
-        let regex = USERNAME_REGEX.get_or_init(|| Regex::new(r"^[a-zA-Z0-9_-]{3,30}$").expect("username regex pattern is valid"));
+        let regex = USERNAME_REGEX.get_or_init(|| {
+            Regex::new(r"^[a-zA-Z0-9_-]{3,30}$").expect("username regex pattern is valid")
+        });
 
         if username.is_empty() {
             return Err(ValidationError("Username is required".to_string()));
@@ -91,7 +94,9 @@ pub struct SymbolValidator;
 impl SymbolValidator {
     /// Validate token symbol format
     pub fn validate(symbol: &str) -> ValidationResult {
-        let regex = SYMBOL_REGEX.get_or_init(|| Regex::new(r"^\$[A-Z0-9]{1,9}$").expect("symbol regex pattern is valid"));
+        let regex = SYMBOL_REGEX.get_or_init(|| {
+            Regex::new(r"^\$[A-Z0-9]{1,9}$").expect("symbol regex pattern is valid")
+        });
 
         if symbol.is_empty() {
             return Err(ValidationError("Symbol is required".to_string()));
@@ -125,7 +130,8 @@ impl BtcAddressValidator {
         // 1: P2PKH (26-35 chars)
         // 3: P2SH (26-35 chars)
         let regex = BTC_ADDRESS_REGEX.get_or_init(|| {
-            Regex::new(r"^(bc1[a-z0-9]{39,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$").expect("bitcoin address regex pattern is valid")
+            Regex::new(r"^(bc1[a-z0-9]{39,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$")
+                .expect("bitcoin address regex pattern is valid")
         });
 
         if address.is_empty() {

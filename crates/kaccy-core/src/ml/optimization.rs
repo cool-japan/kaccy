@@ -453,9 +453,13 @@ impl GeneticOptimizer {
 
         for param in &self.parameters {
             let value = if rng.random_range(0.0..1.0) < 0.5 {
-                *parent1.get(&param.name).expect("parent1 parameter present by construction")
+                *parent1
+                    .get(&param.name)
+                    .expect("parent1 parameter present by construction")
             } else {
-                *parent2.get(&param.name).expect("parent2 parameter present by construction")
+                *parent2
+                    .get(&param.name)
+                    .expect("parent2 parameter present by construction")
             };
             child.insert(param.name.clone(), value);
         }
@@ -497,7 +501,8 @@ impl GeneticOptimizer {
                 .collect();
 
             // Sort by fitness
-            fitness_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+            fitness_scores
+                .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
             // Selection: keep top 50%
             let survivors = fitness_scores.len() / 2;

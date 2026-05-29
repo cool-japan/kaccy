@@ -207,12 +207,15 @@ pub struct ProtectionConfig {
 impl Default for ProtectionConfig {
     fn default() -> Self {
         Self {
-            max_price_change_per_hour: Decimal::from_str("0.20").expect("constant decimal string is valid"), // 20%
-            max_volume_multiplier: Decimal::from_str("5.0").expect("constant decimal string is valid"),      // 5x normal
-            min_transaction_interval: 5,                                   // 5 seconds
+            max_price_change_per_hour: Decimal::from_str("0.20")
+                .expect("constant decimal string is valid"), // 20%
+            max_volume_multiplier: Decimal::from_str("5.0")
+                .expect("constant decimal string is valid"), // 5x normal
+            min_transaction_interval: 5, // 5 seconds
             rapid_transaction_threshold: 10,
             auto_pause_enabled: true,
-            compensation_pool_reserve: Decimal::from_str("0.05").expect("constant decimal string is valid"), // 5%
+            compensation_pool_reserve: Decimal::from_str("0.05")
+                .expect("constant decimal string is valid"), // 5%
         }
     }
 }
@@ -277,8 +280,16 @@ impl ProtocolProtection {
                 .collect();
 
             if recent_prices.len() >= 2 {
-                let min_price = recent_prices.iter().min().copied().expect("recent_prices has >= 2 elements per len check");
-                let max_price = recent_prices.iter().max().copied().expect("recent_prices has >= 2 elements per len check");
+                let min_price = recent_prices
+                    .iter()
+                    .min()
+                    .copied()
+                    .expect("recent_prices has >= 2 elements per len check");
+                let max_price = recent_prices
+                    .iter()
+                    .max()
+                    .copied()
+                    .expect("recent_prices has >= 2 elements per len check");
 
                 if min_price > Decimal::ZERO {
                     let price_change = (max_price - min_price) / min_price;

@@ -547,13 +547,12 @@ impl RLMarketMaker {
             CoreError::Serialization(format!("Failed to read model from '{}': {}", path, e))
         })?;
 
-        let snapshot: RLModelSnapshot =
-            serde_json::from_str(&json).map_err(|e| {
-                CoreError::Serialization(format!(
-                    "Failed to deserialise model snapshot from '{}': {}",
-                    path, e
-                ))
-            })?;
+        let snapshot: RLModelSnapshot = serde_json::from_str(&json).map_err(|e| {
+            CoreError::Serialization(format!(
+                "Failed to deserialise model snapshot from '{}': {}",
+                path, e
+            ))
+        })?;
 
         self.config = snapshot.config;
         self.q_network = snapshot.q_network;
@@ -847,13 +846,17 @@ mod tests {
         let path_str = tmp_path.to_str().expect("valid UTF-8 temp path");
 
         // Save
-        maker.save_model(path_str).expect("save_model should succeed");
+        maker
+            .save_model(path_str)
+            .expect("save_model should succeed");
         assert!(tmp_path.exists(), "snapshot file should exist after save");
 
         // Load into a fresh instance
         let config2 = RLMarketMakerConfig::default();
         let mut loaded = RLMarketMaker::new(config2, dec!(1), dec!(1));
-        loaded.load_model(path_str).expect("load_model should succeed");
+        loaded
+            .load_model(path_str)
+            .expect("load_model should succeed");
 
         // Verify key fields were round-tripped
         assert_eq!(loaded.step_count, 7);

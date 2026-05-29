@@ -98,7 +98,10 @@ impl RegtestHelper {
     /// Mine a single block
     pub fn mine_block(&self) -> Result<String, BitcoinError> {
         let blocks = self.mine_blocks(1)?;
-        Ok(blocks.into_iter().next().expect("mine_blocks(1) always returns exactly one block hash"))
+        Ok(blocks
+            .into_iter()
+            .next()
+            .expect("mine_blocks(1) always returns exactly one block hash"))
     }
 
     /// Fund a wallet address with test coins

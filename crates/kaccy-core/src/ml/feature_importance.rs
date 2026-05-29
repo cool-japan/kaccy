@@ -84,7 +84,11 @@ impl FeatureImportanceAnalyzer {
             .collect();
 
         // Sort by importance (descending) and assign ranks
-        importances.sort_by(|a, b| b.importance_score.partial_cmp(&a.importance_score).unwrap_or(std::cmp::Ordering::Equal));
+        importances.sort_by(|a, b| {
+            b.importance_score
+                .partial_cmp(&a.importance_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         for (rank, importance) in importances.iter_mut().enumerate() {
             importance.rank = rank + 1;
@@ -354,7 +358,11 @@ impl ImportanceVisualizer {
     /// Get top-N most important features
     pub fn top_n(importances: &[FeatureImportance], n: usize) -> Vec<FeatureImportance> {
         let mut sorted = importances.to_vec();
-        sorted.sort_by(|a, b| b.importance_score.partial_cmp(&a.importance_score).unwrap_or(std::cmp::Ordering::Equal));
+        sorted.sort_by(|a, b| {
+            b.importance_score
+                .partial_cmp(&a.importance_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         sorted.truncate(n);
         sorted
     }

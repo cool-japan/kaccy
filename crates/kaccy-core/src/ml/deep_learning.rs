@@ -365,7 +365,9 @@ impl AttentionFeatureSelector {
     /// Compute feature importance
     pub fn compute_importance(&mut self, features: &[Vec<f64>]) -> Result<Vec<f64>> {
         // Use attention to determine feature importance
-        let query = features.last().expect("features is non-empty per caller contract"); // Use latest as query
+        let query = features
+            .last()
+            .expect("features is non-empty per caller contract"); // Use latest as query
         let attention_output = self
             .attention
             .compute_attention(query, features, features)?;

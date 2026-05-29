@@ -115,7 +115,10 @@ impl AuditLogManager {
         // Get previous hash from chain
         let previous_hash = {
             let chain = self.hash_chain.read().unwrap_or_else(|e| e.into_inner());
-            chain.last().expect("hash_chain is initialized with at least one entry").clone()
+            chain
+                .last()
+                .expect("hash_chain is initialized with at least one entry")
+                .clone()
         };
 
         // Create entry
@@ -143,10 +146,16 @@ impl AuditLogManager {
         entry.hash = hash.clone();
 
         // Add to logs
-        self.logs.write().unwrap_or_else(|e| e.into_inner()).push(entry.clone());
+        self.logs
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .push(entry.clone());
 
         // Add to hash chain
-        self.hash_chain.write().unwrap_or_else(|e| e.into_inner()).push(hash);
+        self.hash_chain
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .push(hash);
 
         // Update analytics
         self.analytics
@@ -269,7 +278,10 @@ impl AuditLogManager {
 
     /// Get audit analytics
     pub fn get_analytics(&self) -> AuditAnalytics {
-        self.analytics.read().unwrap_or_else(|e| e.into_inner()).clone()
+        self.analytics
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     /// Detect anomalies in audit logs

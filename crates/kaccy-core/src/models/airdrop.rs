@@ -192,7 +192,12 @@ impl MerkleTree {
         // Make number of leaves a power of 2 by padding
         let next_power_of_2 = leaves.len().next_power_of_two();
         while leaves.len() < next_power_of_2 {
-            leaves.push(leaves.last().expect("leaves is non-empty per push above").clone());
+            leaves.push(
+                leaves
+                    .last()
+                    .expect("leaves is non-empty per push above")
+                    .clone(),
+            );
         }
 
         let mut levels = vec![leaves.clone()];
@@ -218,7 +223,10 @@ impl MerkleTree {
 
     /// Get the Merkle root
     pub fn root(&self) -> String {
-        self.levels.last().expect("levels always has at least the leaves level")[0].clone()
+        self.levels
+            .last()
+            .expect("levels always has at least the leaves level")[0]
+            .clone()
     }
 
     /// Generate a Merkle proof for a leaf at given index

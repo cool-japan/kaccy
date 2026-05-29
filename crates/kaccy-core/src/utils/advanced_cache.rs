@@ -136,7 +136,10 @@ impl MultiTierCache {
     pub fn get<T: DeserializeOwned>(&self, key: &str) -> Result<Option<T>, CoreError> {
         // Record access
         {
-            let mut tracker = self.access_tracker.write().unwrap_or_else(|e| e.into_inner());
+            let mut tracker = self
+                .access_tracker
+                .write()
+                .unwrap_or_else(|e| e.into_inner());
             tracker.record_access(key.to_string());
         }
 
@@ -236,8 +239,14 @@ impl MultiTierCache {
 
     /// Delete a key from all tiers
     pub fn delete(&self, key: &str) -> Result<(), CoreError> {
-        self.l1.write().unwrap_or_else(|e| e.into_inner()).remove(key);
-        self.l2.write().unwrap_or_else(|e| e.into_inner()).remove(key);
+        self.l1
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(key);
+        self.l2
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(key);
         Ok(())
     }
 
@@ -245,8 +254,16 @@ impl MultiTierCache {
     pub fn clear(&self) -> Result<(), CoreError> {
         self.l1.write().unwrap_or_else(|e| e.into_inner()).clear();
         self.l2.write().unwrap_or_else(|e| e.into_inner()).clear();
-        self.access_tracker.write().unwrap_or_else(|e| e.into_inner()).history.clear();
-        self.access_tracker.write().unwrap_or_else(|e| e.into_inner()).frequency.clear();
+        self.access_tracker
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .history
+            .clear();
+        self.access_tracker
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .frequency
+            .clear();
         Ok(())
     }
 
@@ -266,7 +283,10 @@ impl MultiTierCache {
 
     /// Get hot keys (most frequently accessed)
     pub fn get_hot_keys(&self, top_n: usize) -> Vec<String> {
-        let tracker = self.access_tracker.read().unwrap_or_else(|e| e.into_inner());
+        let tracker = self
+            .access_tracker
+            .read()
+            .unwrap_or_else(|e| e.into_inner());
         tracker.get_hot_keys(top_n)
     }
 
@@ -375,7 +395,10 @@ impl PredictivePreloader {
             return;
         }
 
-        let mut patterns = self.access_patterns.write().unwrap_or_else(|e| e.into_inner());
+        let mut patterns = self
+            .access_patterns
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
 
         // For each key, record the other keys it was accessed with
         for (i, key) in keys.iter().enumerate() {
@@ -401,7 +424,10 @@ impl PredictivePreloader {
         F: Fn(&[String]) -> Result<HashMap<String, T>, CoreError>,
         T: Serialize,
     {
-        let patterns = self.access_patterns.read().unwrap_or_else(|e| e.into_inner());
+        let patterns = self
+            .access_patterns
+            .read()
+            .unwrap_or_else(|e| e.into_inner());
 
         if let Some(related_keys) = patterns.get(accessed_key) {
             // Get unique related keys that aren't already in cache
@@ -432,7 +458,10 @@ impl PredictivePreloader {
 
     /// Get access pattern statistics
     pub fn pattern_stats(&self) -> Vec<(String, usize)> {
-        let patterns = self.access_patterns.read().unwrap_or_else(|e| e.into_inner());
+        let patterns = self
+            .access_patterns
+            .read()
+            .unwrap_or_else(|e| e.into_inner());
         patterns.iter().map(|(k, v)| (k.clone(), v.len())).collect()
     }
 }

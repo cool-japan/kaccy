@@ -641,7 +641,10 @@ impl IBCConnectionManager {
         }
 
         // Get next sequence number
-        let sequence = self.packet_sequences.get_mut(channel_id).expect("channel_id was validated via contains_key or channel lookup earlier");
+        let sequence = self
+            .packet_sequences
+            .get_mut(channel_id)
+            .expect("channel_id was validated via contains_key or channel lookup earlier");
         *sequence += 1;
 
         let packet = IBCPacket::new(

@@ -60,7 +60,9 @@ impl NonceTracker {
         // Cleanup expired nonces
         self.cleanup();
 
-        let expires_at = Utc::now() + chrono::Duration::from_std(self.ttl).expect("ttl Duration is valid for chrono conversion");
+        let expires_at = Utc::now()
+            + chrono::Duration::from_std(self.ttl)
+                .expect("ttl Duration is valid for chrono conversion");
 
         // Try to insert the nonce
         if self.nonces.contains_key(nonce) {

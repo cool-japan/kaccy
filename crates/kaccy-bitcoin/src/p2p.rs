@@ -198,12 +198,21 @@ impl PeerManager {
 
     /// Get all peer addresses
     pub fn get_peers(&self) -> Vec<SocketAddr> {
-        self.peers.read().unwrap_or_else(|e| e.into_inner()).keys().copied().collect()
+        self.peers
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .keys()
+            .copied()
+            .collect()
     }
 
     /// Get peer info
     pub fn get_peer_info(&self, address: &SocketAddr) -> Option<PeerInfo> {
-        self.peers.read().unwrap_or_else(|e| e.into_inner()).get(address).cloned()
+        self.peers
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(address)
+            .cloned()
     }
 
     /// Remove stale peers
@@ -307,7 +316,10 @@ impl P2pClient {
         info!(?txid, "Broadcasting transaction");
 
         // Mark as known
-        self.known_txs.write().unwrap_or_else(|e| e.into_inner()).insert(txid);
+        self.known_txs
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(txid);
 
         // Create inventory message
         let inv = Inventory::Transaction(txid);

@@ -76,7 +76,8 @@ impl Factory<Token> for TokenFactory {
             total_supply: Decimal::from(1000000),
             circulating_supply: Decimal::from(0),
             initial_price_btc: Decimal::from(1),
-            price_increment_btc: Decimal::from_str_exact("0.0001").expect("\"0.0001\" is a valid Decimal string"),
+            price_increment_btc: Decimal::from_str_exact("0.0001")
+                .expect("\"0.0001\" is a valid Decimal string"),
             created_at: Utc::now(),
             status: TokenStatus::Active,
         }
@@ -183,8 +184,10 @@ impl Factory<Trade> for TradeFactory {
             amount,
             price_btc,
             total_btc,
-            platform_fee_btc: total_btc * Decimal::from_str_exact("0.025").expect("\"0.025\" is a valid Decimal string"),
-            issuer_royalty_btc: total_btc * Decimal::from_str_exact("0.005").expect("\"0.005\" is a valid Decimal string"),
+            platform_fee_btc: total_btc
+                * Decimal::from_str_exact("0.025").expect("\"0.025\" is a valid Decimal string"),
+            issuer_royalty_btc: total_btc
+                * Decimal::from_str_exact("0.005").expect("\"0.005\" is a valid Decimal string"),
             executed_at: Utc::now(),
         }
     }
@@ -300,7 +303,10 @@ impl MockDataGenerator {
         let random_chars: String = (0..33)
             .map(|_| {
                 let chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-                chars.chars().nth(rng.random_range(0..chars.len())).expect("index is within bounds of chars.len()")
+                chars
+                    .chars()
+                    .nth(rng.random_range(0..chars.len()))
+                    .expect("index is within bounds of chars.len()")
             })
             .collect();
         format!("{}{}", prefix, random_chars)

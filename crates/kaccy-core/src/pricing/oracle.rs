@@ -99,8 +99,12 @@ impl AggregatedPrice {
         let sum: Decimal = prices.iter().sum();
         let mean_price = sum / Decimal::from(prices.len());
 
-        let min_price = *prices.first().expect("prices is non-empty per sources.is_empty check above");
-        let max_price = *prices.last().expect("prices is non-empty per sources.is_empty check above");
+        let min_price = *prices
+            .first()
+            .expect("prices is non-empty per sources.is_empty check above");
+        let max_price = *prices
+            .last()
+            .expect("prices is non-empty per sources.is_empty check above");
 
         // Calculate standard deviation
         let variance: Decimal = prices

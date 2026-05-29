@@ -240,15 +240,19 @@ impl DateRange {
 
         if let Some(from) = self.from {
             filters.push(
-                Filter::new(field, FilterOperator::Gte)
-                    .with_value(serde_json::to_value(from.to_rfc3339()).expect("RFC3339 string serialization to Value is infallible")),
+                Filter::new(field, FilterOperator::Gte).with_value(
+                    serde_json::to_value(from.to_rfc3339())
+                        .expect("RFC3339 string serialization to Value is infallible"),
+                ),
             );
         }
 
         if let Some(to) = self.to {
             filters.push(
-                Filter::new(field, FilterOperator::Lte)
-                    .with_value(serde_json::to_value(to.to_rfc3339()).expect("RFC3339 string serialization to Value is infallible")),
+                Filter::new(field, FilterOperator::Lte).with_value(
+                    serde_json::to_value(to.to_rfc3339())
+                        .expect("RFC3339 string serialization to Value is infallible"),
+                ),
             );
         }
 
@@ -301,15 +305,19 @@ impl NumericRange {
 
         if let Some(min) = self.min {
             filters.push(
-                Filter::new(field, FilterOperator::Gte)
-                    .with_value(serde_json::to_value(min).expect("numeric value serialization to Value is infallible")),
+                Filter::new(field, FilterOperator::Gte).with_value(
+                    serde_json::to_value(min)
+                        .expect("numeric value serialization to Value is infallible"),
+                ),
             );
         }
 
         if let Some(max) = self.max {
             filters.push(
-                Filter::new(field, FilterOperator::Lte)
-                    .with_value(serde_json::to_value(max).expect("numeric value serialization to Value is infallible")),
+                Filter::new(field, FilterOperator::Lte).with_value(
+                    serde_json::to_value(max)
+                        .expect("numeric value serialization to Value is infallible"),
+                ),
             );
         }
 
@@ -380,7 +388,10 @@ impl QueryBuilder {
 
     /// Add filter for UUID field
     pub fn filter_uuid(self, field: impl Into<String>, uuid: Uuid) -> Self {
-        self.filter(Filter::eq(field, serde_json::to_value(uuid).expect("UUID serialization to Value is infallible")))
+        self.filter(Filter::eq(
+            field,
+            serde_json::to_value(uuid).expect("UUID serialization to Value is infallible"),
+        ))
     }
 
     /// Add filter for string field

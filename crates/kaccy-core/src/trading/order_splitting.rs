@@ -186,7 +186,9 @@ impl TimeWeightedSplitter {
             splits.push(SplitOrder {
                 amount,
                 execution_time: start_time + time_per_split * i as i32,
-                max_slippage: Some(Decimal::from_f64_retain(0.005).expect("0.005 is a valid f64 for Decimal")), // 0.5% max slippage
+                max_slippage: Some(
+                    Decimal::from_f64_retain(0.005).expect("0.005 is a valid f64 for Decimal"),
+                ), // 0.5% max slippage
                 description: format!("Time-weighted split {}/{}", i + 1, num_splits),
             });
         }

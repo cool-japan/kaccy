@@ -399,7 +399,10 @@ impl SilentPaymentScanner {
             if !input.witness.is_empty() {
                 // P2WPKH witness: [signature, pubkey]
                 if input.witness.len() == 2 {
-                    let pubkey_bytes = input.witness.nth(1).expect("witness has exactly 2 elements per len == 2 check above");
+                    let pubkey_bytes = input
+                        .witness
+                        .nth(1)
+                        .expect("witness has exactly 2 elements per len == 2 check above");
                     if let Ok(pk) = PublicKey::from_slice(pubkey_bytes) {
                         pubkeys.push(pk);
                         continue;

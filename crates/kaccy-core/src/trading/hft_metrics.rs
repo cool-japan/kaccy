@@ -165,8 +165,16 @@ impl HftAnalyzer {
             return 0.0;
         }
 
-        let first_time = self.events.first().expect("events has >= 2 elements per len check above").timestamp;
-        let last_time = self.events.last().expect("events has >= 2 elements per len check above").timestamp;
+        let first_time = self
+            .events
+            .first()
+            .expect("events has >= 2 elements per len check above")
+            .timestamp;
+        let last_time = self
+            .events
+            .last()
+            .expect("events has >= 2 elements per len check above")
+            .timestamp;
         let duration_secs = (last_time - first_time).num_seconds() as f64;
 
         if duration_secs > 0.0 {

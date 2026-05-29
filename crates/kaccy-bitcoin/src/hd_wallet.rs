@@ -230,7 +230,10 @@ impl HdWallet {
 
         // Cache the result
         if self.config.enable_cache {
-            let mut cache = self.address_cache.write().unwrap_or_else(|e| e.into_inner());
+            let mut cache = self
+                .address_cache
+                .write()
+                .unwrap_or_else(|e| e.into_inner());
             cache.insert(
                 (chain, index),
                 CachedAddress {
@@ -248,7 +251,10 @@ impl HdWallet {
     /// Get the next unused external (receiving) address
     pub fn get_next_receiving_address(&self) -> Result<AddressInfo> {
         let index = {
-            let mut next = self.next_external_index.write().unwrap_or_else(|e| e.into_inner());
+            let mut next = self
+                .next_external_index
+                .write()
+                .unwrap_or_else(|e| e.into_inner());
             let current = *next;
             *next += 1;
             current
@@ -278,7 +284,10 @@ impl HdWallet {
     /// Get the next unused internal (change) address
     pub fn get_next_change_address(&self) -> Result<AddressInfo> {
         let index = {
-            let mut next = self.next_internal_index.write().unwrap_or_else(|e| e.into_inner());
+            let mut next = self
+                .next_internal_index
+                .write()
+                .unwrap_or_else(|e| e.into_inner());
             let current = *next;
             *next += 1;
             current
@@ -332,7 +341,10 @@ impl HdWallet {
     /// Mark an address as used
     pub fn mark_address_used(&self, chain: u32, index: u32) {
         if self.config.enable_cache {
-            let mut cache = self.address_cache.write().unwrap_or_else(|e| e.into_inner());
+            let mut cache = self
+                .address_cache
+                .write()
+                .unwrap_or_else(|e| e.into_inner());
             if let Some(entry) = cache.get_mut(&(chain, index)) {
                 entry.used = true;
             }
@@ -410,23 +422,35 @@ impl HdWallet {
 
     /// Get the current index for external chain
     pub fn current_external_index(&self) -> u32 {
-        *self.next_external_index.read().unwrap_or_else(|e| e.into_inner())
+        *self
+            .next_external_index
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
     }
 
     /// Get the current index for internal chain
     pub fn current_internal_index(&self) -> u32 {
-        *self.next_internal_index.read().unwrap_or_else(|e| e.into_inner())
+        *self
+            .next_internal_index
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
     }
 
     /// Set the starting index for external chain
     pub fn set_external_index(&self, index: u32) {
-        let mut next = self.next_external_index.write().unwrap_or_else(|e| e.into_inner());
+        let mut next = self
+            .next_external_index
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
         *next = index;
     }
 
     /// Set the starting index for internal chain
     pub fn set_internal_index(&self, index: u32) {
-        let mut next = self.next_internal_index.write().unwrap_or_else(|e| e.into_inner());
+        let mut next = self
+            .next_internal_index
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
         *next = index;
     }
 
@@ -489,19 +513,28 @@ impl AddressBook {
 
     /// Associate an order with an address
     pub fn set_order_address(&self, order_id: &str, address: &str) {
-        let mut order_addresses = self.order_addresses.write().unwrap_or_else(|e| e.into_inner());
+        let mut order_addresses = self
+            .order_addresses
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
         order_addresses.insert(order_id.to_string(), address.to_string());
     }
 
     /// Get the address for an order
     pub fn get_order_address(&self, order_id: &str) -> Option<String> {
-        let order_addresses = self.order_addresses.read().unwrap_or_else(|e| e.into_inner());
+        let order_addresses = self
+            .order_addresses
+            .read()
+            .unwrap_or_else(|e| e.into_inner());
         order_addresses.get(order_id).cloned()
     }
 
     /// Get the order ID for an address
     pub fn get_address_order(&self, address: &str) -> Option<String> {
-        let order_addresses = self.order_addresses.read().unwrap_or_else(|e| e.into_inner());
+        let order_addresses = self
+            .order_addresses
+            .read()
+            .unwrap_or_else(|e| e.into_inner());
         for (order_id, addr) in order_addresses.iter() {
             if addr == address {
                 return Some(order_id.clone());

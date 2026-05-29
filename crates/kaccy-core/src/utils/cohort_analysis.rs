@@ -50,11 +50,19 @@ impl CohortId {
     /// Create a new cohort ID from a date
     pub fn from_date(date: DateTime<Utc>, cohort_type: CohortType, period: CohortPeriod) -> Self {
         let start_date = match period {
-            CohortPeriod::Daily => date.date_naive().and_hms_opt(0, 0, 0).expect("midnight is a valid time").and_utc(),
+            CohortPeriod::Daily => date
+                .date_naive()
+                .and_hms_opt(0, 0, 0)
+                .expect("midnight is a valid time")
+                .and_utc(),
             CohortPeriod::Weekly => {
                 let days_from_monday = date.weekday().num_days_from_monday();
                 let monday = date - Duration::days(days_from_monday as i64);
-                monday.date_naive().and_hms_opt(0, 0, 0).expect("midnight is a valid time").and_utc()
+                monday
+                    .date_naive()
+                    .and_hms_opt(0, 0, 0)
+                    .expect("midnight is a valid time")
+                    .and_utc()
             }
             CohortPeriod::Monthly => {
                 let year = date.year();

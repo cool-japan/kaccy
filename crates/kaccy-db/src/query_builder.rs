@@ -136,7 +136,8 @@ impl Filter {
                         placeholder
                     })
                     .collect();
-                write!(sql, " ({})", placeholders.join(", ")).expect("writing to String is infallible");
+                write!(sql, " ({})", placeholders.join(", "))
+                    .expect("writing to String is infallible");
             }
             (Operator::In | Operator::NotIn, Some(FilterValue::IntArray(values))) => {
                 let placeholders: Vec<String> = values
@@ -147,7 +148,8 @@ impl Filter {
                         placeholder
                     })
                     .collect();
-                write!(sql, " ({})", placeholders.join(", ")).expect("writing to String is infallible");
+                write!(sql, " ({})", placeholders.join(", "))
+                    .expect("writing to String is infallible");
             }
             (_, Some(_)) => {
                 write!(sql, " ${}", param_index).expect("writing to String is infallible");
@@ -343,9 +345,11 @@ impl QueryBuilder {
 
             for (i, filter) in self.filters.iter().enumerate() {
                 if i > 0 {
-                    write!(sql, " {} ", self.logical_op.as_sql()).expect("writing to String is infallible");
+                    write!(sql, " {} ", self.logical_op.as_sql())
+                        .expect("writing to String is infallible");
                 }
-                write!(sql, "{}", filter.to_sql(&mut param_index)).expect("writing to String is infallible");
+                write!(sql, "{}", filter.to_sql(&mut param_index))
+                    .expect("writing to String is infallible");
             }
         }
 

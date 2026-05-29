@@ -144,7 +144,11 @@ impl PortfolioAnalytics {
     /// Get largest positions
     pub fn top_positions(&self, n: usize) -> Vec<&Holding> {
         let mut holdings = self.holdings.iter().collect::<Vec<_>>();
-        holdings.sort_by(|a, b| b.current_value.partial_cmp(&a.current_value).unwrap_or(std::cmp::Ordering::Equal));
+        holdings.sort_by(|a, b| {
+            b.current_value
+                .partial_cmp(&a.current_value)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         holdings.into_iter().take(n).collect()
     }
 

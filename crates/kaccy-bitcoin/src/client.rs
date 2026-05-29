@@ -203,7 +203,9 @@ impl BitcoinClient {
             }
         }
 
-        Err(BitcoinError::Rpc(last_error.expect("last_error is Some because at least one retry attempt was made and error was set")))
+        Err(BitcoinError::Rpc(last_error.expect(
+            "last_error is Some because at least one retry attempt was made and error was set",
+        )))
     }
 
     /// Get the configured network

@@ -352,7 +352,10 @@ impl MEVRedistributionManager {
         }
 
         // Add bid to auction
-        self.bids.get_mut(&bid.opportunity_id).expect("opportunity_id was validated when opportunity was registered").push(bid);
+        self.bids
+            .get_mut(&bid.opportunity_id)
+            .expect("opportunity_id was validated when opportunity was registered")
+            .push(bid);
 
         Ok(())
     }
@@ -478,7 +481,8 @@ impl MEVRedistributionManager {
 
 impl Default for MEVRedistributionManager {
     fn default() -> Self {
-        Self::new(dec!(10), dec!(50)).expect("default MEVRedistributionManager parameters are valid")
+        Self::new(dec!(10), dec!(50))
+            .expect("default MEVRedistributionManager parameters are valid")
     }
 }
 

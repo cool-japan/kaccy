@@ -173,7 +173,9 @@ async fn handle_price_stream(socket: WebSocket, state: AppState) {
     };
     if sender
         .send(Message::Text(
-            serde_json::to_string(&confirm).expect("WsMessage serialization to JSON is infallible").into(),
+            serde_json::to_string(&confirm)
+                .expect("WsMessage serialization to JSON is infallible")
+                .into(),
         ))
         .await
         .is_err()
@@ -186,7 +188,11 @@ async fn handle_price_stream(socket: WebSocket, state: AppState) {
         while let Ok(update) = price_rx.recv().await {
             let msg = WsMessage::PriceUpdate(update);
             if sender
-                .send(Message::Text(serde_json::to_string(&msg).expect("WsMessage serialization to JSON is infallible").into()))
+                .send(Message::Text(
+                    serde_json::to_string(&msg)
+                        .expect("WsMessage serialization to JSON is infallible")
+                        .into(),
+                ))
                 .await
                 .is_err()
             {
@@ -252,7 +258,9 @@ async fn handle_token_stream(socket: WebSocket, state: AppState, token_id: Uuid)
     };
     if sender
         .send(Message::Text(
-            serde_json::to_string(&confirm).expect("WsMessage serialization to JSON is infallible").into(),
+            serde_json::to_string(&confirm)
+                .expect("WsMessage serialization to JSON is infallible")
+                .into(),
         ))
         .await
         .is_err()
@@ -265,7 +273,11 @@ async fn handle_token_stream(socket: WebSocket, state: AppState, token_id: Uuid)
         while let Ok(trade) = trade_rx.recv().await {
             let msg = WsMessage::TradeExecuted(trade);
             if sender
-                .send(Message::Text(serde_json::to_string(&msg).expect("WsMessage serialization to JSON is infallible").into()))
+                .send(Message::Text(
+                    serde_json::to_string(&msg)
+                        .expect("WsMessage serialization to JSON is infallible")
+                        .into(),
+                ))
                 .await
                 .is_err()
             {
@@ -306,7 +318,11 @@ pub async fn user_orders_ws(
                         message: "Invalid or expired token".to_string(),
                     };
                     let _ = sender
-                        .send(Message::Text(serde_json::to_string(&msg).expect("WsMessage serialization to JSON is infallible").into()))
+                        .send(Message::Text(
+                            serde_json::to_string(&msg)
+                                .expect("WsMessage serialization to JSON is infallible")
+                                .into(),
+                        ))
                         .await;
                 });
             }
@@ -318,7 +334,11 @@ pub async fn user_orders_ws(
                     message: "Authentication required".to_string(),
                 };
                 let _ = sender
-                    .send(Message::Text(serde_json::to_string(&msg).expect("WsMessage serialization to JSON is infallible").into()))
+                    .send(Message::Text(
+                        serde_json::to_string(&msg)
+                            .expect("WsMessage serialization to JSON is infallible")
+                            .into(),
+                    ))
                     .await;
             });
         }
@@ -340,7 +360,9 @@ async fn handle_user_orders_stream(socket: WebSocket, state: AppState, user_id: 
     };
     if sender
         .send(Message::Text(
-            serde_json::to_string(&confirm).expect("WsMessage serialization to JSON is infallible").into(),
+            serde_json::to_string(&confirm)
+                .expect("WsMessage serialization to JSON is infallible")
+                .into(),
         ))
         .await
         .is_err()
@@ -353,7 +375,11 @@ async fn handle_user_orders_stream(socket: WebSocket, state: AppState, user_id: 
         while let Ok(update) = order_rx.recv().await {
             let msg = WsMessage::OrderUpdate(update);
             if sender
-                .send(Message::Text(serde_json::to_string(&msg).expect("WsMessage serialization to JSON is infallible").into()))
+                .send(Message::Text(
+                    serde_json::to_string(&msg)
+                        .expect("WsMessage serialization to JSON is infallible")
+                        .into(),
+                ))
                 .await
                 .is_err()
             {
@@ -395,7 +421,11 @@ pub async fn token_chat_ws(
                         message: "Invalid or expired token".to_string(),
                     };
                     let _ = sender
-                        .send(Message::Text(serde_json::to_string(&msg).expect("WsMessage serialization to JSON is infallible").into()))
+                        .send(Message::Text(
+                            serde_json::to_string(&msg)
+                                .expect("WsMessage serialization to JSON is infallible")
+                                .into(),
+                        ))
                         .await;
                 });
             }
@@ -407,7 +437,11 @@ pub async fn token_chat_ws(
                     message: "Authentication required for chat".to_string(),
                 };
                 let _ = sender
-                    .send(Message::Text(serde_json::to_string(&msg).expect("WsMessage serialization to JSON is infallible").into()))
+                    .send(Message::Text(
+                        serde_json::to_string(&msg)
+                            .expect("WsMessage serialization to JSON is infallible")
+                            .into(),
+                    ))
                     .await;
             });
         }
@@ -448,7 +482,9 @@ async fn handle_chat_stream(socket: WebSocket, state: AppState, token_id: Uuid, 
     };
     if sender
         .send(Message::Text(
-            serde_json::to_string(&confirm).expect("WsMessage serialization to JSON is infallible").into(),
+            serde_json::to_string(&confirm)
+                .expect("WsMessage serialization to JSON is infallible")
+                .into(),
         ))
         .await
         .is_err()
@@ -464,7 +500,11 @@ async fn handle_chat_stream(socket: WebSocket, state: AppState, token_id: Uuid, 
         while let Ok(message) = chat_rx.recv().await {
             let msg = WsMessage::ChatMessage(message);
             if sender
-                .send(Message::Text(serde_json::to_string(&msg).expect("WsMessage serialization to JSON is infallible").into()))
+                .send(Message::Text(
+                    serde_json::to_string(&msg)
+                        .expect("WsMessage serialization to JSON is infallible")
+                        .into(),
+                ))
                 .await
                 .is_err()
             {

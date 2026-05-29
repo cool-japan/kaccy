@@ -173,15 +173,25 @@ impl TenantManager {
             api_key_prefix: format!("tenant_{}_", &id.to_string()[..8]),
         };
 
-        self.tenants.write().unwrap_or_else(|e| e.into_inner()).insert(id, tenant);
-        self.configs.write().unwrap_or_else(|e| e.into_inner()).insert(id, config);
+        self.tenants
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(id, tenant);
+        self.configs
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(id, config);
 
         Ok(id)
     }
 
     /// Get tenant by ID
     pub fn get_tenant(&self, tenant_id: &TenantId) -> Option<Tenant> {
-        self.tenants.read().unwrap_or_else(|e| e.into_inner()).get(tenant_id).cloned()
+        self.tenants
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(tenant_id)
+            .cloned()
     }
 
     /// Update tenant status
@@ -309,7 +319,11 @@ impl TenantManager {
 
     /// Get tenant configuration
     pub fn get_config(&self, tenant_id: &TenantId) -> Option<TenantConfig> {
-        self.configs.read().unwrap_or_else(|e| e.into_inner()).get(tenant_id).cloned()
+        self.configs
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(tenant_id)
+            .cloned()
     }
 
     /// Update tenant configuration
@@ -319,7 +333,12 @@ impl TenantManager {
         config: TenantConfig,
     ) -> Result<(), CoreError> {
         let mut configs = self.configs.write().unwrap_or_else(|e| e.into_inner());
-        if self.tenants.read().unwrap_or_else(|e| e.into_inner()).contains_key(tenant_id) {
+        if self
+            .tenants
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .contains_key(tenant_id)
+        {
             configs.insert(*tenant_id, config);
             Ok(())
         } else {
@@ -357,7 +376,12 @@ impl TenantManager {
 
     /// List all tenants
     pub fn list_tenants(&self) -> Vec<TenantId> {
-        self.tenants.read().unwrap_or_else(|e| e.into_inner()).keys().copied().collect()
+        self.tenants
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .keys()
+            .copied()
+            .collect()
     }
 
     /// Get tenant count

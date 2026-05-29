@@ -285,7 +285,11 @@ impl LoadTester {
         let elapsed = start_time.elapsed();
 
         // Collect and analyze results
-        let results = self.results.read().unwrap_or_else(|e| e.into_inner()).clone();
+        let results = self
+            .results
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
         LoadTestResults::from_results(results, elapsed)
     }
 

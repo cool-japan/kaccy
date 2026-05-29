@@ -407,8 +407,13 @@ pub async fn get_api_key_quota(
     // Get current month's usage
     let now = Utc::now();
     let naive_date = now.date_naive();
-    let start_of_month_date = naive_date.with_day(1).expect("day 1 is always a valid day of month");
-    let start_of_month = start_of_month_date.and_hms_opt(0, 0, 0).expect("midnight is a valid time").and_utc();
+    let start_of_month_date = naive_date
+        .with_day(1)
+        .expect("day 1 is always a valid day of month");
+    let start_of_month = start_of_month_date
+        .and_hms_opt(0, 0, 0)
+        .expect("midnight is a valid time")
+        .and_utc();
 
     let current_usage: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM api_key_usage
@@ -428,11 +433,16 @@ pub async fn get_api_key_quota(
 
     // Calculate reset date (first day of next month)
     let next_month = if naive_date.month() == 12 {
-        chrono::NaiveDate::from_ymd_opt(naive_date.year() + 1, 1, 1).expect("January 1 of next year is always a valid date")
+        chrono::NaiveDate::from_ymd_opt(naive_date.year() + 1, 1, 1)
+            .expect("January 1 of next year is always a valid date")
     } else {
-        chrono::NaiveDate::from_ymd_opt(naive_date.year(), naive_date.month() + 1, 1).expect("first day of next month derived from existing date is always valid")
+        chrono::NaiveDate::from_ymd_opt(naive_date.year(), naive_date.month() + 1, 1)
+            .expect("first day of next month derived from existing date is always valid")
     };
-    let reset_at = next_month.and_hms_opt(0, 0, 0).expect("midnight is a valid time").and_utc();
+    let reset_at = next_month
+        .and_hms_opt(0, 0, 0)
+        .expect("midnight is a valid time")
+        .and_utc();
 
     Ok(Json(QuotaUsage {
         api_key_id,

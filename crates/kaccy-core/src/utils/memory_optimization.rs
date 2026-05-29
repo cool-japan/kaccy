@@ -71,12 +71,16 @@ pub struct PooledObject<T> {
 impl<T> PooledObject<T> {
     /// Get a reference to the underlying object
     pub fn get(&self) -> &T {
-        self.object.as_ref().expect("PooledObject always holds Some while in use")
+        self.object
+            .as_ref()
+            .expect("PooledObject always holds Some while in use")
     }
 
     /// Get a mutable reference to the underlying object
     pub fn get_mut(&mut self) -> &mut T {
-        self.object.as_mut().expect("PooledObject always holds Some while in use")
+        self.object
+            .as_mut()
+            .expect("PooledObject always holds Some while in use")
     }
 }
 
@@ -209,7 +213,10 @@ impl MemoryProfiler {
             timestamp: chrono::Utc::now().timestamp(),
         };
 
-        self.allocations.lock().unwrap_or_else(|e| e.into_inner()).push(record);
+        self.allocations
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push(record);
         id
     }
 
@@ -225,7 +232,10 @@ impl MemoryProfiler {
 
     /// Get current allocation count
     pub fn allocation_count(&self) -> usize {
-        self.allocations.lock().unwrap_or_else(|e| e.into_inner()).len()
+        self.allocations
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .len()
     }
 
     /// Get total allocated bytes

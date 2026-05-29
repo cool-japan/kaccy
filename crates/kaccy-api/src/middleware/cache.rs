@@ -85,7 +85,9 @@ pub async fn cache_middleware(State(state): State<AppState>, req: Request, next:
         // Add cache status header
         response = response.header("X-Cache-Status", "HIT");
 
-        return response.body(Body::from(cached_response.body)).expect("body builder with valid status and headers is infallible");
+        return response
+            .body(Body::from(cached_response.body))
+            .expect("body builder with valid status and headers is infallible");
     }
 
     // Cache miss - execute request
@@ -142,7 +144,9 @@ pub async fn cache_middleware(State(state): State<AppState>, req: Request, next:
         response = response.header(key, value);
     }
 
-    response.body(Body::from(body_bytes)).expect("body builder with valid status and headers is infallible")
+    response
+        .body(Body::from(body_bytes))
+        .expect("body builder with valid status and headers is infallible")
 }
 
 /// Cache invalidation helper

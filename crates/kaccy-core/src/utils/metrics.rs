@@ -288,7 +288,11 @@ impl Summary {
 
     /// Get percentile value
     pub fn percentile(&self, p: f64) -> Option<f64> {
-        let mut obs = self.observations.read().unwrap_or_else(|e| e.into_inner()).clone();
+        let mut obs = self
+            .observations
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
 
         if obs.is_empty() {
             return None;
@@ -324,7 +328,10 @@ impl Summary {
         let last = *self.last_cleanup.read().unwrap_or_else(|e| e.into_inner());
 
         if last.elapsed() > self.max_age {
-            self.observations.write().unwrap_or_else(|e| e.into_inner()).clear();
+            self.observations
+                .write()
+                .unwrap_or_else(|e| e.into_inner())
+                .clear();
             *self.last_cleanup.write().unwrap_or_else(|e| e.into_inner()) = Instant::now();
         }
     }
@@ -405,7 +412,12 @@ impl MetricsRegistry {
         let mut output = String::new();
 
         // Export counters
-        for (name, counter) in self.counters.read().unwrap_or_else(|e| e.into_inner()).iter() {
+        for (name, counter) in self
+            .counters
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .iter()
+        {
             output.push_str(&format!("# HELP {} {}\n", name, counter.help));
             output.push_str(&format!("# TYPE {} counter\n", name));
             output.push_str(&format!("{} {}\n", name, counter.get()));
@@ -419,7 +431,12 @@ impl MetricsRegistry {
         }
 
         // Export histograms
-        for (name, histogram) in self.histograms.read().unwrap_or_else(|e| e.into_inner()).iter() {
+        for (name, histogram) in self
+            .histograms
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .iter()
+        {
             output.push_str(&format!("# HELP {} {}\n", name, histogram.help));
             output.push_str(&format!("# TYPE {} histogram\n", name));
 
@@ -435,7 +452,12 @@ impl MetricsRegistry {
         }
 
         // Export summaries
-        for (name, summary) in self.summaries.read().unwrap_or_else(|e| e.into_inner()).iter() {
+        for (name, summary) in self
+            .summaries
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .iter()
+        {
             output.push_str(&format!("# HELP {} {}\n", name, summary.help));
             output.push_str(&format!("# TYPE {} summary\n", name));
 

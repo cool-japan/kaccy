@@ -551,7 +551,11 @@ impl FeeMarketPredictor {
             return 50;
         }
 
-        let latest = self.fee_history.last().expect("fee_history is non-empty per is_empty check above").fee_rate;
+        let latest = self
+            .fee_history
+            .last()
+            .expect("fee_history is non-empty per is_empty check above")
+            .fee_rate;
         let mut sorted: Vec<_> = self.fee_history.iter().map(|d| d.fee_rate).collect();
         sorted.sort_unstable();
 

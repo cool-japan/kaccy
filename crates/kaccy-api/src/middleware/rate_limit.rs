@@ -550,7 +550,10 @@ impl DynamicRateLimiter {
 
     /// Automatically adjust based on system metrics
     fn maybe_adjust(&self) {
-        let last_adjustment = self.last_adjustment.lock().unwrap_or_else(|e| e.into_inner());
+        let last_adjustment = self
+            .last_adjustment
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         if last_adjustment.elapsed() >= self.adjustment_interval {
             drop(last_adjustment); // Release lock before adjustment
 
@@ -570,7 +573,9 @@ impl DynamicRateLimiter {
                 *self.multiplier.read().unwrap_or_else(|e| e.into_inner())
             };
 
-            if (*self.multiplier.read().unwrap_or_else(|e| e.into_inner()) - new_multiplier).abs() > 0.01 {
+            if (*self.multiplier.read().unwrap_or_else(|e| e.into_inner()) - new_multiplier).abs()
+                > 0.01
+            {
                 *self.multiplier.write().unwrap_or_else(|e| e.into_inner()) = new_multiplier;
                 self.apply_multiplier();
                 tracing::info!(
@@ -580,7 +585,10 @@ impl DynamicRateLimiter {
                 );
             }
 
-            *self.last_adjustment.lock().unwrap_or_else(|e| e.into_inner()) = Instant::now();
+            *self
+                .last_adjustment
+                .lock()
+                .unwrap_or_else(|e| e.into_inner()) = Instant::now();
         }
     }
 
@@ -596,7 +604,8 @@ impl DynamicRateLimiter {
             cleanup_interval: self.base_config.cleanup_interval,
         };
 
-        *self.limiter.write().unwrap_or_else(|e| e.into_inner()) = RateLimiter::with_config(new_config);
+        *self.limiter.write().unwrap_or_else(|e| e.into_inner()) =
+            RateLimiter::with_config(new_config);
     }
 
     /// Get analytics

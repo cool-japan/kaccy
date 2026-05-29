@@ -281,7 +281,10 @@ impl SandwichDetector {
 
                 // Check timing
                 let time_diff = victim.timestamp.duration_since(front.timestamp).ok();
-                if time_diff.is_none() || time_diff.expect("time_diff is Some per is_none check") > Duration::from_secs(10) {
+                if time_diff.is_none()
+                    || time_diff.expect("time_diff is Some per is_none check")
+                        > Duration::from_secs(10)
+                {
                     continue;
                 }
 

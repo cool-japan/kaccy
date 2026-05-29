@@ -342,7 +342,8 @@ impl MonteCarloSimulator {
             * (dec!(1) - self.params.confidence_level)
                 .to_string()
                 .parse::<f64>()
-                .expect("confidence_level Decimal to_string produces a valid f64 string")) as usize;
+                .expect("confidence_level Decimal to_string produces a valid f64 string"))
+            as usize;
         let var_value = simulated_values[var_idx];
         let var = initial_value - var_value;
 

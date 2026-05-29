@@ -89,7 +89,11 @@ impl MaintenanceService {
         }
 
         report.completed_at = Some(Utc::now());
-        report.duration_seconds = (report.completed_at.expect("completed_at was just set to Some above") - started_at).num_seconds() as i32;
+        report.duration_seconds = (report
+            .completed_at
+            .expect("completed_at was just set to Some above")
+            - started_at)
+            .num_seconds() as i32;
 
         Ok(report)
     }
@@ -142,7 +146,11 @@ impl MaintenanceService {
         }
 
         report.completed_at = Some(Utc::now());
-        report.duration_seconds = (report.completed_at.expect("completed_at was just set to Some above") - started_at).num_seconds() as i32;
+        report.duration_seconds = (report
+            .completed_at
+            .expect("completed_at was just set to Some above")
+            - started_at)
+            .num_seconds() as i32;
 
         Ok(report)
     }

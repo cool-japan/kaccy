@@ -136,7 +136,10 @@ pub async fn check_connection_health(pool: &PgPool) -> Result<ConnectionHealth> 
     let status = if is_healthy {
         "Healthy".to_string()
     } else {
-        format!("Unhealthy: {}", result.expect_err("is_healthy is false so result is Err"))
+        format!(
+            "Unhealthy: {}",
+            result.expect_err("is_healthy is false so result is Err")
+        )
     };
 
     Ok(ConnectionHealth {

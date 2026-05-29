@@ -220,7 +220,13 @@ impl ProbabilisticForecaster {
         let return_std = return_variance.sqrt();
 
         // Last price
-        let last_price = self.data.back().expect("data has elements (returns is non-empty so data has elements)").close.to_f64().unwrap_or(100.0);
+        let last_price = self
+            .data
+            .back()
+            .expect("data has elements (returns is non-empty so data has elements)")
+            .close
+            .to_f64()
+            .unwrap_or(100.0);
 
         // Monte Carlo simulation
         let mut simulated_prices = Vec::new();

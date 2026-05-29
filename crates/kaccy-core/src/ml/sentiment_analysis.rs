@@ -237,8 +237,14 @@ impl SentimentTrendAnalyzer {
             sentiments
         };
 
-        let current = window.last().expect("window is sentiments slice, non-empty per len check above").score;
-        let previous = window.first().expect("window is sentiments slice, non-empty per len check above").score;
+        let current = window
+            .last()
+            .expect("window is sentiments slice, non-empty per len check above")
+            .score;
+        let previous = window
+            .first()
+            .expect("window is sentiments slice, non-empty per len check above")
+            .score;
 
         // Calculate rate of change
         let rate_of_change = (current - previous) / window.len() as f64;
@@ -349,13 +355,27 @@ impl SentimentDivergenceDetector {
             let price_window = &prices[i - self.window_size..i];
 
             // Calculate sentiment trend
-            let sentiment_start = sentiment_window.first().expect("window length >= window_size > 0").score;
-            let sentiment_end = sentiment_window.last().expect("window length >= window_size > 0").score;
+            let sentiment_start = sentiment_window
+                .first()
+                .expect("window length >= window_size > 0")
+                .score;
+            let sentiment_end = sentiment_window
+                .last()
+                .expect("window length >= window_size > 0")
+                .score;
             let sentiment_change = sentiment_end - sentiment_start;
 
             // Calculate price trend
-            let price_start = price_window.first().expect("window length >= window_size > 0").to_f64().unwrap_or(0.0);
-            let price_end = price_window.last().expect("window length >= window_size > 0").to_f64().unwrap_or(0.0);
+            let price_start = price_window
+                .first()
+                .expect("window length >= window_size > 0")
+                .to_f64()
+                .unwrap_or(0.0);
+            let price_end = price_window
+                .last()
+                .expect("window length >= window_size > 0")
+                .to_f64()
+                .unwrap_or(0.0);
             let price_change = (price_end - price_start) / price_start.max(0.0001);
 
             // Detect divergence
@@ -376,8 +396,14 @@ impl SentimentDivergenceDetector {
             if let Some(div_type) = divergence_type {
                 if strength >= self.min_strength {
                     divergences.push(SentimentDivergence {
-                        start: sentiment_window.first().expect("window length >= window_size > 0").timestamp,
-                        end: sentiment_window.last().expect("window length >= window_size > 0").timestamp,
+                        start: sentiment_window
+                            .first()
+                            .expect("window length >= window_size > 0")
+                            .timestamp,
+                        end: sentiment_window
+                            .last()
+                            .expect("window length >= window_size > 0")
+                            .timestamp,
                         divergence_type: div_type,
                         strength,
                     });
@@ -452,7 +478,9 @@ impl ContrarianIndicator {
         }
 
         let recent = &sentiments[sentiments.len() - self.min_duration..];
-        let current = recent.last().expect("recent slice has min_duration elements, which is > 0");
+        let current = recent
+            .last()
+            .expect("recent slice has min_duration elements, which is > 0");
 
         let mut reasoning = Vec::new();
 

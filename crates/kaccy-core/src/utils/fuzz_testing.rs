@@ -299,9 +299,15 @@ impl MutationFuzzer {
         // Flip case or change to random char
         if chars[pos].is_alphabetic() {
             chars[pos] = if chars[pos].is_uppercase() {
-                chars[pos].to_lowercase().next().expect("alphabetic char always has lowercase")
+                chars[pos]
+                    .to_lowercase()
+                    .next()
+                    .expect("alphabetic char always has lowercase")
             } else {
-                chars[pos].to_uppercase().next().expect("alphabetic char always has uppercase")
+                chars[pos]
+                    .to_uppercase()
+                    .next()
+                    .expect("alphabetic char always has uppercase")
             };
         } else {
             chars[pos] = self

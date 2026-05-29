@@ -411,7 +411,10 @@ impl MultivariateGarch {
     /// Create a new multivariate GARCH model
     pub fn new(n_assets: usize) -> Self {
         let models = (0..n_assets)
-            .map(|_| GarchModel::new(GarchParams::default_params()).expect("default GARCH parameters are valid"))
+            .map(|_| {
+                GarchModel::new(GarchParams::default_params())
+                    .expect("default GARCH parameters are valid")
+            })
             .collect();
 
         let correlation = vec![vec![dec!(0); n_assets]; n_assets];
