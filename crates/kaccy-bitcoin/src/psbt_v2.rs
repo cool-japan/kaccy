@@ -17,6 +17,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
 
+// `hex` is a workspace dependency used for decoding pubkey bytes in `PsbtV2Output::p2wpkh`.
+use hex;
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Errors
 // ──────────────────────────────────────────────────────────────────────────────
@@ -333,15 +336,24 @@ impl PsbtV2Output {
     /// Computes a P2WPKH scriptPubKey (`OP_0 OP_PUSH20 <HASH160(pubkey)>`)
     /// from a 33-byte compressed public key encoded as hex.
     ///
-    /// # Note
-    /// The HASH160 is computed as SHA-256 followed by a 20-byte truncation
-    /// (a lightweight substitute used within this module's model layer).  For
-    /// production key derivation use the full RIPEMD-160 implementation.
+    /// HASH160 is computed correctly as RIPEMD160(SHA256(pubkey_bytes)), which
+    /// is the Bitcoin standard required for all on-chain addresses and scripts.
+    ///
+    /// # Panics
+    /// Panics if `pubkey_hex` is not valid lowercase hex (i.e. contains
+    /// non-hexadecimal characters or has an odd length).  Callers must
+    /// supply a well-formed compressed public-key hex string (66 chars = 33 bytes).
     pub fn p2wpkh(amount: u64, pubkey_hex: &str) -> Self {
-        // Build the OP_0 OP_PUSH20 <keyhash> script.
-        // We use SHA-256 output truncated to 20 bytes as a deterministic
-        // stand-in for HASH160 since ripemd is not a workspace dependency.
-        let keyhash_hex = sha256_truncated_20_hex(pubkey_hex);
+        // Decode the hex-encoded public key to raw bytes.
+        let pubkey_bytes = hex::decode(pubkey_hex).expect("pubkey_hex must be valid hex");
+
+        // Compute Bitcoin HASH160 = RIPEMD160(SHA256(pubkey_bytes)).
+        let hash20 = hash160_of_bytes(&pubkey_bytes);
+
+        // Encode the 20-byte witness program as lowercase hex.
+        let keyhash_hex: String = hash20.iter().map(|b| format!("{b:02x}")).collect();
+
+        // P2WPKH scriptPubKey: OP_0 OP_PUSHBYTES_20 <20-byte-hash>
         let script_pubkey = format!("0014{keyhash_hex}");
         Self::new(amount, script_pubkey)
     }
@@ -362,16 +374,14 @@ impl PsbtV2Output {
     }
 }
 
-/// Compute SHA-256 of the UTF-8 bytes of `input_hex` and return the first 20
-/// bytes as a lowercase hex string.  Used as a simplified HASH160 substitute.
-fn sha256_truncated_20_hex(input_hex: &str) -> String {
-    use bitcoin::hashes::{Hash, sha256};
-    let hash = sha256::Hash::hash(input_hex.as_bytes());
-    let bytes = hash.to_byte_array();
-    bytes[..20]
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect::<String>()
+/// Compute Bitcoin HASH160 = RIPEMD160(SHA256(data)) and return the 20-byte result.
+///
+/// This is the exact hash function used for all P2PKH and P2WPKH addresses in Bitcoin.
+/// Using any substitute (e.g. truncated SHA-256) produces an irrecoverable wrong witness
+/// program and makes the output permanently unspendable.
+fn hash160_of_bytes(data: &[u8]) -> [u8; 20] {
+    use bitcoin::hashes::{Hash, hash160};
+    hash160::Hash::hash(data).to_byte_array()
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -969,12 +979,72 @@ mod tests {
         let pubkey_hex = "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5";
         let output = PsbtV2Output::p2wpkh(50_000, pubkey_hex);
         assert_eq!(output.amount, 50_000);
-        // P2WPKH script starts with "0014"
+        // P2WPKH script must start with "0014" (OP_0 OP_PUSHBYTES_20).
         assert!(
             output.script_pubkey.starts_with("0014"),
             "P2WPKH script should start with 0014"
         );
-        assert_eq!(output.script_pubkey.len(), 44); // "0014" + 40 hex chars
+        // Total length: 4 (OP_0 OP_PUSH20 prefix hex) + 40 (20 bytes of witness program hex).
+        assert_eq!(output.script_pubkey.len(), 44);
+    }
+
+    /// Known-answer test: verifies that `PsbtV2Output::p2wpkh` produces the
+    /// EXACT Bitcoin-standard HASH160 = RIPEMD160(SHA256(pubkey)) for the
+    /// well-known compressed public key used throughout BIP test vectors.
+    ///
+    /// The expected HASH160 is computed independently by the `bitcoin` crate's
+    /// `hash160::Hash::hash` so that the test proves both:
+    ///   1. The implementation applies real HASH160 (not truncated SHA-256).
+    ///   2. The resulting P2WPKH scriptPubKey has the correct `OP_0 <20-byte-hash>` form.
+    #[test]
+    fn test_p2wpkh_hash160_known_answer() {
+        use bitcoin::hashes::{Hash as _, hash160};
+
+        // BIP test-vector compressed public key (SEC1 compressed, 33 bytes).
+        let pubkey_hex = "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5";
+
+        // Decode and compute the expected HASH160 directly with the bitcoin crate.
+        let pubkey_bytes = hex::decode(pubkey_hex).expect("valid hex");
+        let expected_hash = hash160::Hash::hash(&pubkey_bytes);
+        let expected_hash_hex: String = expected_hash
+            .to_byte_array()
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+
+        // The expected scriptPubKey: OP_0 OP_PUSHBYTES_20 <hash160>.
+        let expected_script = format!("0014{expected_hash_hex}");
+
+        // Build the output using the fixed implementation.
+        let output = PsbtV2Output::p2wpkh(100_000, pubkey_hex);
+
+        // Structural checks.
+        assert_eq!(output.amount, 100_000);
+        assert!(
+            output.script_pubkey.starts_with("0014"),
+            "P2WPKH scriptPubKey must begin with OP_0 OP_PUSHBYTES_20 (hex: 0014)"
+        );
+        assert_eq!(
+            output.script_pubkey.len(),
+            44,
+            "P2WPKH scriptPubKey must be exactly 22 bytes (4 prefix + 40 hash hex chars)"
+        );
+
+        // Exact known-answer check: the 20-byte witness program must equal the
+        // bitcoin-crate-computed HASH160, proving we use RIPEMD160(SHA256(·))
+        // and not any truncated or approximate substitute.
+        assert_eq!(
+            output.script_pubkey, expected_script,
+            "P2WPKH scriptPubKey mismatch: got {}, want {}",
+            output.script_pubkey, expected_script
+        );
+
+        // Cross-check: confirm the embedded 20-byte hash is 20 bytes of real HASH160.
+        let embedded_hash_hex = &output.script_pubkey[4..]; // strip "0014"
+        assert_eq!(
+            embedded_hash_hex, expected_hash_hex,
+            "Embedded witness program does not match RIPEMD160(SHA256(pubkey))"
+        );
     }
 
     #[test]

@@ -248,9 +248,9 @@ impl AdvancedRbfManager {
             if confirmations == 0 {
                 // Recommend RBF
                 recommendations.push(RbfRecommendation {
-                    txid: *txid,                                                  // Copy the Txid value
-                    current_fee_rate: FeeRate::from_sat_per_vb_unchecked(1),      // Placeholder
-                    recommended_fee_rate: FeeRate::from_sat_per_vb_unchecked(10), // Placeholder
+                    txid: *txid,                                            // Copy the Txid value
+                    current_fee_rate: FeeRate::from_sat_per_vb_u32(1),      // Placeholder
+                    recommended_fee_rate: FeeRate::from_sat_per_vb_u32(10), // Placeholder
                     reason: RecommendationReason::Stuck,
                     urgency: RecommendationUrgency::High,
                 });
@@ -331,7 +331,7 @@ mod tests {
     fn test_batch_rbf_operation_creation() {
         let op = BatchRbfOperation {
             original_txids: vec![Txid::all_zeros(); 1],
-            new_fee_rate: FeeRate::from_sat_per_vb_unchecked(10),
+            new_fee_rate: FeeRate::from_sat_per_vb_u32(10),
             consolidate: true,
         };
 
@@ -363,8 +363,8 @@ mod tests {
         let txid = Txid::all_zeros();
         let rec = RbfRecommendation {
             txid,
-            current_fee_rate: FeeRate::from_sat_per_vb_unchecked(1),
-            recommended_fee_rate: FeeRate::from_sat_per_vb_unchecked(10),
+            current_fee_rate: FeeRate::from_sat_per_vb_u32(1),
+            recommended_fee_rate: FeeRate::from_sat_per_vb_u32(10),
             reason: RecommendationReason::Stuck,
             urgency: RecommendationUrgency::High,
         };

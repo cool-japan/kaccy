@@ -112,6 +112,14 @@ sha2 = "0.11"
 md5 = "0.8"
 aes-gcm = "0.10"
 chacha20poly1305 = "0.10"
+pbkdf2 = "0.13"
+hmac = "0.13"
+hkdf = "0.13"
+# Post-quantum cryptography (pure Rust, RustCrypto)
+ml-dsa = "0.1"
+ml-kem = { version = "0.3", features = ["getrandom"] }
+# Bitcoin output-descriptor / miniscript policy compilation
+miniscript = "13.1"
 
 # Metrics
 prometheus = { version = "0.14", features = ["process"] }

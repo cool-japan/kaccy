@@ -363,19 +363,55 @@ impl PoolAutoscaler {
         info!("Stopping connection pool auto-scaler");
     }
 
-    /// Get current utilization metrics
-    async fn get_utilization_metrics(_pool: &PgPool) -> Result<UtilizationMetrics> {
-        // SQLx doesn't expose these metrics directly, so we approximate
-        // In production, you'd query pg_stat_database or use pool.size() if available
+    /// Get current utilization metrics from the live pool state.
+    ///
+    /// Uses `pool.size()` (allocated connections), `pool.num_idle()` (idle connections),
+    /// and `pool.options().get_max_connections()` (configured capacity) to derive all
+    /// fields without touching the database.
+    async fn get_utilization_metrics(pool: &PgPool) -> Result<UtilizationMetrics> {
+        let size = pool.size();
+        let num_idle = pool.num_idle();
+        let max_connections = pool.options().get_max_connections();
+        Ok(Self::compute_utilization_metrics(size, num_idle, max_connections))
+    }
 
-        // For now, return mock metrics (in production, query actual pool state)
-        Ok(UtilizationMetrics {
-            total_connections: 10, // Would get from pool.options().get_max_connections()
-            active_connections: 7, // Would calculate from pool internal state
-            idle_connections: 3,
-            utilization: 0.7,
+    /// Pure arithmetic helper: derive [`UtilizationMetrics`] from raw pool counters.
+    ///
+    /// This is extracted from the async path so that unit tests can exercise the
+    /// utilization computation without requiring a live database connection.
+    ///
+    /// # Arguments
+    ///
+    /// * `size`            — `pool.size()`: total allocated connections (active + idle).
+    /// * `num_idle`        — `pool.num_idle()`: idle connections within the pool.
+    /// * `max_connections` — `pool.options().get_max_connections()`: configured capacity.
+    ///
+    /// # Semantics
+    ///
+    /// * `total_connections` is `size` (what sqlx actually allocated, bounded by max).
+    /// * `idle_connections`  is `min(num_idle as u32, size)` (guard against stale counters).
+    /// * `active_connections` is `size.saturating_sub(idle_connections)`.
+    /// * `utilization` is `active_connections / max_connections`; zero when max is 0.
+    fn compute_utilization_metrics(size: u32, num_idle: usize, max_connections: u32) -> UtilizationMetrics {
+        // Guard: num_idle should never exceed size, but saturate defensively.
+        let idle = (num_idle as u32).min(size);
+        let active = size.saturating_sub(idle);
+
+        // Guard divide-by-zero: if the pool was somehow created with max_connections == 0
+        // (should be impossible via PoolOptions validation, but we must not panic).
+        let utilization = if max_connections == 0 {
+            0.0_f64
+        } else {
+            active as f64 / max_connections as f64
+        };
+
+        UtilizationMetrics {
+            total_connections: size,
+            active_connections: active,
+            idle_connections: idle,
+            utilization,
             timestamp: Utc::now(),
-        })
+        }
     }
 
     /// Determine if scaling is needed and calculate new size
@@ -731,5 +767,89 @@ mod tests {
     fn test_scaling_event_types() {
         assert_eq!(ScalingEventType::ScaleUp, ScalingEventType::ScaleUp);
         assert_ne!(ScalingEventType::ScaleUp, ScalingEventType::ScaleDown);
+    }
+
+    // -----------------------------------------------------------------------
+    // Unit tests for compute_utilization_metrics (no live DB required)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_compute_utilization_metrics_typical() {
+        // 10 total, 3 idle → 7 active, max 10 → utilization 0.7
+        let m = PoolAutoscaler::compute_utilization_metrics(10, 3, 10);
+        assert_eq!(m.total_connections, 10);
+        assert_eq!(m.idle_connections, 3);
+        assert_eq!(m.active_connections, 7);
+        assert!((m.utilization - 0.7).abs() < 1e-9, "utilization should be 0.7, got {}", m.utilization);
+    }
+
+    #[test]
+    fn test_compute_utilization_metrics_all_idle() {
+        // All connections idle → active = 0, utilization = 0
+        let m = PoolAutoscaler::compute_utilization_metrics(20, 20, 50);
+        assert_eq!(m.total_connections, 20);
+        assert_eq!(m.idle_connections, 20);
+        assert_eq!(m.active_connections, 0);
+        assert!((m.utilization - 0.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_compute_utilization_metrics_all_active() {
+        // No idle connections → active = size, utilization = size / max
+        let m = PoolAutoscaler::compute_utilization_metrics(15, 0, 20);
+        assert_eq!(m.total_connections, 15);
+        assert_eq!(m.idle_connections, 0);
+        assert_eq!(m.active_connections, 15);
+        assert!((m.utilization - 0.75).abs() < 1e-9, "utilization should be 0.75, got {}", m.utilization);
+    }
+
+    #[test]
+    fn test_compute_utilization_metrics_zero_max_no_panic() {
+        // max_connections == 0 must not divide-by-zero; utilization returns 0.0
+        let m = PoolAutoscaler::compute_utilization_metrics(5, 2, 0);
+        assert_eq!(m.total_connections, 5);
+        assert_eq!(m.idle_connections, 2);
+        assert_eq!(m.active_connections, 3);
+        assert_eq!(m.utilization, 0.0, "zero max_connections must yield utilization 0.0");
+    }
+
+    #[test]
+    fn test_compute_utilization_metrics_idle_exceeds_size_saturates() {
+        // Defensive: if num_idle somehow > size (stale counter), saturate to size; active = 0
+        let m = PoolAutoscaler::compute_utilization_metrics(5, 99, 10);
+        assert_eq!(m.total_connections, 5);
+        assert_eq!(m.idle_connections, 5, "idle capped at size");
+        assert_eq!(m.active_connections, 0, "active saturates to 0");
+        assert!((m.utilization - 0.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_compute_utilization_metrics_zero_size() {
+        // Empty pool: no connections at all
+        let m = PoolAutoscaler::compute_utilization_metrics(0, 0, 10);
+        assert_eq!(m.total_connections, 0);
+        assert_eq!(m.idle_connections, 0);
+        assert_eq!(m.active_connections, 0);
+        assert_eq!(m.utilization, 0.0);
+    }
+
+    #[test]
+    fn test_compute_utilization_metrics_at_capacity() {
+        // All slots active and pool is at configured max
+        let m = PoolAutoscaler::compute_utilization_metrics(50, 0, 50);
+        assert_eq!(m.total_connections, 50);
+        assert_eq!(m.active_connections, 50);
+        assert_eq!(m.idle_connections, 0);
+        assert!((m.utilization - 1.0).abs() < 1e-9, "fully saturated pool should have utilization 1.0");
+    }
+
+    #[test]
+    fn test_compute_utilization_metrics_partial_utilization() {
+        // 8 of 40 max are active (size=10, 2 idle), utilization = 8/40 = 0.2
+        let m = PoolAutoscaler::compute_utilization_metrics(10, 2, 40);
+        assert_eq!(m.total_connections, 10);
+        assert_eq!(m.idle_connections, 2);
+        assert_eq!(m.active_connections, 8);
+        assert!((m.utilization - 0.2).abs() < 1e-9, "expected 0.2 utilization, got {}", m.utilization);
     }
 }

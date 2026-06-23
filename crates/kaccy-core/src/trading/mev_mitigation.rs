@@ -4,10 +4,172 @@
 //! protecting users from sandwich attacks, front-running, and other MEV exploits.
 
 use crate::error::CoreError;
+use aes_gcm::{
+    Aes256Gcm,
+    aead::{Aead, KeyInit, OsRng, rand_core::RngCore},
+};
+use chacha20poly1305::ChaCha20Poly1305;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::time::{Duration, SystemTime};
+
+/// Length of the AEAD nonce in bytes (96 bits, the standard for both AES-256-GCM
+/// and ChaCha20-Poly1305).
+const AEAD_NONCE_LEN: usize = 12;
+
+/// Length of the AEAD symmetric key in bytes (256 bits).
+const AEAD_KEY_LEN: usize = 32;
+
+/// Length of the Poly1305 / GCM authentication tag in bytes (128 bits).
+const AEAD_TAG_LEN: usize = 16;
+
+/// Domain-separation label for deriving the AEAD encryption key from the reveal key.
+///
+/// Using a label distinct from the commitment-hash label guarantees that the publicly
+/// stored `decryption_key_hash` (see [`commitment_hash`]) can never be used to recover the
+/// actual encryption key, even though both are derived from the same reveal key.
+const AEAD_KEY_DERIVATION_LABEL: &[u8] = b"kaccy-mev/commit-reveal/aead-key/v1";
+
+/// Domain-separation label for the public reveal-key commitment hash.
+const KEY_COMMITMENT_LABEL: &[u8] = b"kaccy-mev/commit-reveal/key-commitment/v1";
+
+/// AEAD construction used to encrypt a committed transaction.
+///
+/// Both variants provide IND-CCA2 authenticated encryption with a 256-bit key, a 96-bit
+/// nonce and a 128-bit authentication tag; they differ only in the underlying primitive.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AeadScheme {
+    /// ChaCha20-Poly1305 (RFC 8439). Constant-time in software, the default.
+    ChaCha20Poly1305,
+    /// AES-256-GCM (NIST SP 800-38D). Hardware-accelerated where AES-NI is available.
+    Aes256Gcm,
+}
+
+impl AeadScheme {
+    /// Default AEAD scheme used by the convenience commit helpers.
+    pub const DEFAULT: Self = Self::ChaCha20Poly1305;
+}
+
+/// Derive the 256-bit AEAD key from an arbitrary-length reveal key.
+///
+/// The reveal key supplied by callers may be any length; the AEAD ciphers require an
+/// exactly 32-byte key, so we deterministically derive one as
+/// `SHA-256(AEAD_KEY_DERIVATION_LABEL || reveal_key)`. The domain-separation label keeps
+/// this key distinct from the public commitment hash.
+fn derive_aead_key(reveal_key: &[u8]) -> [u8; AEAD_KEY_LEN] {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(AEAD_KEY_DERIVATION_LABEL);
+    hasher.update(reveal_key);
+    let digest = hasher.finalize();
+    let mut key = [0u8; AEAD_KEY_LEN];
+    key.copy_from_slice(&digest);
+    key
+}
+
+/// Compute the public commitment for a reveal key.
+///
+/// This is the value bound at commit time and stored as `decryption_key_hash`. It is
+/// `hex(SHA-256(KEY_COMMITMENT_LABEL || reveal_key))`. Because it uses a label distinct from
+/// [`derive_aead_key`], publishing the commitment leaks nothing about the AEAD key.
+pub fn commitment_hash(reveal_key: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(KEY_COMMITMENT_LABEL);
+    hasher.update(reveal_key);
+    hex::encode(hasher.finalize())
+}
+
+/// Generate a fresh random 96-bit nonce from the operating-system CSPRNG.
+fn random_nonce() -> [u8; AEAD_NONCE_LEN] {
+    let mut nonce = [0u8; AEAD_NONCE_LEN];
+    OsRng.fill_bytes(&mut nonce);
+    nonce
+}
+
+/// Authenticated-encrypt `plaintext` under `reveal_key` using the requested AEAD scheme.
+///
+/// A fresh random nonce is generated and prepended to the ciphertext (which already carries
+/// the authentication tag). The returned blob is laid out as `nonce || ciphertext || tag`
+/// and is exactly what [`aead_decrypt`] expects.
+fn aead_encrypt(
+    scheme: AeadScheme,
+    plaintext: &[u8],
+    reveal_key: &[u8],
+) -> Result<Vec<u8>, CoreError> {
+    let key = derive_aead_key(reveal_key);
+    let nonce_bytes = random_nonce();
+
+    let ciphertext = match scheme {
+        AeadScheme::ChaCha20Poly1305 => {
+            let cipher = ChaCha20Poly1305::new_from_slice(&key).map_err(|e| {
+                CoreError::Validation(format!("Failed to initialize ChaCha20-Poly1305: {e}"))
+            })?;
+            cipher
+                .encrypt(nonce_bytes.as_slice().into(), plaintext)
+                .map_err(|_| {
+                    CoreError::Validation("ChaCha20-Poly1305 encryption failed".to_string())
+                })?
+        }
+        AeadScheme::Aes256Gcm => {
+            let cipher = Aes256Gcm::new_from_slice(&key).map_err(|e| {
+                CoreError::Validation(format!("Failed to initialize AES-256-GCM: {e}"))
+            })?;
+            cipher
+                .encrypt(nonce_bytes.as_slice().into(), plaintext)
+                .map_err(|_| CoreError::Validation("AES-256-GCM encryption failed".to_string()))?
+        }
+    };
+
+    let mut blob = Vec::with_capacity(AEAD_NONCE_LEN + ciphertext.len());
+    blob.extend_from_slice(&nonce_bytes);
+    blob.extend_from_slice(&ciphertext);
+    Ok(blob)
+}
+
+/// Authenticated-decrypt a `nonce || ciphertext || tag` blob produced by [`aead_encrypt`].
+///
+/// The AEAD authentication tag is verified as part of decryption: a tampered ciphertext or a
+/// wrong key yields a [`CoreError::Validation`] error instead of corrupted plaintext.
+fn aead_decrypt(
+    scheme: AeadScheme,
+    blob: &[u8],
+    reveal_key: &[u8],
+) -> Result<Vec<u8>, CoreError> {
+    // A valid blob must contain at least a nonce and a full authentication tag.
+    if blob.len() < AEAD_NONCE_LEN + AEAD_TAG_LEN {
+        return Err(CoreError::Validation(
+            "Ciphertext too short to contain nonce and authentication tag".to_string(),
+        ));
+    }
+    let (nonce_bytes, ciphertext) = blob.split_at(AEAD_NONCE_LEN);
+
+    let key = derive_aead_key(reveal_key);
+    match scheme {
+        AeadScheme::ChaCha20Poly1305 => {
+            let cipher = ChaCha20Poly1305::new_from_slice(&key).map_err(|e| {
+                CoreError::Validation(format!("Failed to initialize ChaCha20-Poly1305: {e}"))
+            })?;
+            cipher.decrypt(nonce_bytes.into(), ciphertext).map_err(|_| {
+                CoreError::Validation(
+                    "ChaCha20-Poly1305 authentication failed (tampered data or wrong key)"
+                        .to_string(),
+                )
+            })
+        }
+        AeadScheme::Aes256Gcm => {
+            let cipher = Aes256Gcm::new_from_slice(&key).map_err(|e| {
+                CoreError::Validation(format!("Failed to initialize AES-256-GCM: {e}"))
+            })?;
+            cipher.decrypt(nonce_bytes.into(), ciphertext).map_err(|_| {
+                CoreError::Validation(
+                    "AES-256-GCM authentication failed (tampered data or wrong key)".to_string(),
+                )
+            })
+        }
+    }
+}
 
 /// Types of MEV mitigation strategies
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -408,11 +570,24 @@ pub struct PrivateExecutionEngine {
 struct EncryptedTransaction {
     #[allow(dead_code)]
     tx_id: String,
+    /// AEAD ciphertext laid out as `nonce || ciphertext || tag` (see [`aead_encrypt`]).
     encrypted_data: Vec<u8>,
+    /// AEAD construction used to encrypt `encrypted_data`.
+    scheme: AeadScheme,
     #[allow(dead_code)]
     submitted_at: SystemTime,
-    #[allow(dead_code)]
+    /// Public commitment to the reveal key, `hex(SHA-256(label || key))`.
+    ///
+    /// Bound at commit time; the supplied reveal key is checked against this commitment
+    /// before any decryption is attempted, so the revealed key is provably the one the
+    /// committer intended.
     decryption_key_hash: String,
+    /// Optional time-lock: the reveal key must not be accepted before this instant.
+    ///
+    /// When set, [`PrivateExecutionEngine::decrypt_and_execute`] rejects decryption attempts
+    /// made before the unlock time even if the correct key is presented, modelling a
+    /// commit-reveal scheme where the key only becomes valid at/after the unlock time.
+    unlock_time: Option<SystemTime>,
 }
 
 impl PrivateExecutionEngine {
@@ -423,39 +598,181 @@ impl PrivateExecutionEngine {
         }
     }
 
-    /// Submits an encrypted transaction
+    /// Submits an already-encrypted transaction (commit phase).
+    ///
+    /// `encrypted_data` must be a `nonce || ciphertext || tag` blob produced by
+    /// [`Self::encrypt_transaction`] using the default AEAD scheme, and
+    /// `decryption_key_hash` must be the [`commitment_hash`] of the reveal key. The reveal
+    /// key itself is never supplied here, so the transaction stays confidential until it is
+    /// revealed via [`Self::decrypt_and_execute`].
     pub fn submit_encrypted_transaction(
         &mut self,
         tx_id: String,
         encrypted_data: Vec<u8>,
         decryption_key_hash: String,
     ) -> Result<(), CoreError> {
+        self.submit_encrypted_transaction_with_scheme(
+            tx_id,
+            encrypted_data,
+            decryption_key_hash,
+            AeadScheme::DEFAULT,
+            None,
+        )
+    }
+
+    /// Submits an already-encrypted transaction, specifying the AEAD scheme and an optional
+    /// time-lock (commit phase).
+    ///
+    /// `encrypted_data` must be a `nonce || ciphertext || tag` blob produced by
+    /// [`Self::encrypt_transaction_with_scheme`] under the same `scheme`. When `unlock_time`
+    /// is `Some`, the revealed key is only accepted at/after that instant.
+    pub fn submit_encrypted_transaction_with_scheme(
+        &mut self,
+        tx_id: String,
+        encrypted_data: Vec<u8>,
+        decryption_key_hash: String,
+        scheme: AeadScheme,
+        unlock_time: Option<SystemTime>,
+    ) -> Result<(), CoreError> {
+        if encrypted_data.len() < AEAD_NONCE_LEN + AEAD_TAG_LEN {
+            return Err(CoreError::Validation(
+                "Encrypted transaction too short to contain nonce and authentication tag"
+                    .to_string(),
+            ));
+        }
+        if self.encrypted_pool.contains_key(&tx_id) {
+            return Err(CoreError::AlreadyExists(format!(
+                "Encrypted transaction {tx_id} already committed"
+            )));
+        }
+
         let encrypted_tx = EncryptedTransaction {
             tx_id: tx_id.clone(),
             encrypted_data,
+            scheme,
             submitted_at: SystemTime::now(),
             decryption_key_hash,
+            unlock_time,
         };
 
         self.encrypted_pool.insert(tx_id, encrypted_tx);
         Ok(())
     }
 
-    /// Decrypts and executes a transaction
-    /// In a real implementation, this would verify the decryption key
+    /// Authenticated-encrypt raw transaction bytes under `reveal_key` (default AEAD scheme).
+    ///
+    /// Returns a `nonce || ciphertext || tag` blob suitable for
+    /// [`Self::submit_encrypted_transaction`]. Each call uses a fresh random 96-bit nonce, so
+    /// encrypting identical plaintexts yields distinct ciphertexts.
+    pub fn encrypt_transaction(
+        tx_bytes: &[u8],
+        reveal_key: &[u8],
+    ) -> Result<Vec<u8>, CoreError> {
+        aead_encrypt(AeadScheme::DEFAULT, tx_bytes, reveal_key)
+    }
+
+    /// Authenticated-encrypt raw transaction bytes under `reveal_key` with an explicit scheme.
+    pub fn encrypt_transaction_with_scheme(
+        tx_bytes: &[u8],
+        reveal_key: &[u8],
+        scheme: AeadScheme,
+    ) -> Result<Vec<u8>, CoreError> {
+        aead_encrypt(scheme, tx_bytes, reveal_key)
+    }
+
+    /// Encrypt and commit a transaction in one step (commit phase, default scheme).
+    ///
+    /// Derives the reveal-key commitment, encrypts `tx_bytes` and stores the ciphertext. The
+    /// returned value is the ciphertext blob that was committed. The reveal key must be kept
+    /// secret by the caller until the reveal phase.
+    pub fn commit_transaction(
+        &mut self,
+        tx_id: String,
+        tx_bytes: &[u8],
+        reveal_key: &[u8],
+    ) -> Result<Vec<u8>, CoreError> {
+        self.commit_transaction_with_unlock(tx_id, tx_bytes, reveal_key, AeadScheme::DEFAULT, None)
+    }
+
+    /// Encrypt and commit a transaction with an explicit scheme and optional time-lock.
+    ///
+    /// When `unlock_time` is `Some`, [`Self::decrypt_and_execute`] refuses to reveal the
+    /// transaction before that instant, even when the correct key is supplied.
+    pub fn commit_transaction_with_unlock(
+        &mut self,
+        tx_id: String,
+        tx_bytes: &[u8],
+        reveal_key: &[u8],
+        scheme: AeadScheme,
+        unlock_time: Option<SystemTime>,
+    ) -> Result<Vec<u8>, CoreError> {
+        let encrypted_data = aead_encrypt(scheme, tx_bytes, reveal_key)?;
+        let key_hash = commitment_hash(reveal_key);
+        self.submit_encrypted_transaction_with_scheme(
+            tx_id,
+            encrypted_data.clone(),
+            key_hash,
+            scheme,
+            unlock_time,
+        )?;
+        Ok(encrypted_data)
+    }
+
+    /// Reveal, decrypt and verify a committed transaction (reveal phase).
+    ///
+    /// The supplied `decryption_key` is the revealed reveal key. Decryption proceeds only
+    /// when:
+    ///
+    /// 1. a transaction with `tx_id` exists in the pool;
+    /// 2. the transaction is not time-locked, or the unlock time has passed;
+    /// 3. the key matches the commitment bound at commit time; and
+    /// 4. the AEAD authentication tag verifies.
+    ///
+    /// On success the decrypted plaintext transaction bytes are returned and the entry is
+    /// removed from the pool. On any failure an honest [`CoreError`] is returned and the
+    /// committed ciphertext is left untouched, so a wrong or early key cannot discard a
+    /// pending transaction. Before the correct key is revealed (and, for time-locked entries,
+    /// before the unlock time) the plaintext cannot be recovered — there is no passthrough.
     pub fn decrypt_and_execute(
         &mut self,
         tx_id: &str,
-        _decryption_key: &[u8],
+        decryption_key: &[u8],
     ) -> Result<Vec<u8>, CoreError> {
+        // Look up without removing: a failed reveal must not consume the commitment.
         let encrypted_tx = self
             .encrypted_pool
-            .remove(tx_id)
-            .ok_or_else(|| CoreError::NotFound(format!("Transaction {} not found", tx_id)))?;
+            .get(tx_id)
+            .ok_or_else(|| CoreError::NotFound(format!("Transaction {tx_id} not found")))?;
 
-        // In a real implementation, verify the key hash and decrypt
-        // For now, we just return the encrypted data as placeholder
-        Ok(encrypted_tx.encrypted_data)
+        // Enforce the time-lock: the key is only valid at/after the unlock time.
+        if let Some(unlock_time) = encrypted_tx.unlock_time {
+            if SystemTime::now() < unlock_time {
+                return Err(CoreError::InvalidState(format!(
+                    "Transaction {tx_id} is time-locked and cannot be decrypted before its unlock time"
+                )));
+            }
+        }
+
+        // Verify the revealed key against the commitment bound at commit time. This is a
+        // constant-time-irrelevant equality on hashes (not the key itself); the real
+        // confidentiality guarantee is the AEAD tag check below.
+        let provided_commitment = commitment_hash(decryption_key);
+        if provided_commitment != encrypted_tx.decryption_key_hash {
+            return Err(CoreError::Validation(format!(
+                "Revealed key does not match the commitment for transaction {tx_id}"
+            )));
+        }
+
+        // Authenticated decryption: rejects tampered ciphertext or a wrong key via the tag.
+        let plaintext = aead_decrypt(
+            encrypted_tx.scheme,
+            &encrypted_tx.encrypted_data,
+            decryption_key,
+        )?;
+
+        // Only consume the commitment once the reveal has fully succeeded.
+        self.encrypted_pool.remove(tx_id);
+        Ok(plaintext)
     }
 
     /// Gets the number of encrypted transactions in the pool
@@ -606,23 +923,190 @@ mod tests {
     }
 
     #[test]
-    fn test_private_execution_engine() {
+    fn test_private_execution_commit_reveal_roundtrip() {
         let mut engine = PrivateExecutionEngine::new();
 
-        let encrypted_data = vec![1, 2, 3, 4, 5];
+        // Commit phase: encrypt the real transaction bytes under a reveal key.
+        let tx_plaintext = b"swap 1.5 BTC -> 30000 USDC @ market".to_vec();
+        let reveal_key = b"super-secret-reveal-key-0xdeadbeef";
+
+        let ciphertext = engine
+            .commit_transaction("tx1".to_string(), &tx_plaintext, reveal_key)
+            .unwrap();
+
+        // The committed blob must be genuine ciphertext, not the plaintext passthrough.
+        assert_ne!(ciphertext, tx_plaintext);
+        assert!(ciphertext.len() >= tx_plaintext.len() + AEAD_NONCE_LEN + AEAD_TAG_LEN);
+        // The plaintext must not appear verbatim inside the ciphertext.
+        assert!(
+            !ciphertext
+                .windows(tx_plaintext.len())
+                .any(|w| w == tx_plaintext.as_slice()),
+            "plaintext leaked into ciphertext"
+        );
+        assert_eq!(engine.pool_size(), 1);
+
+        // Reveal phase: the correct key recovers the original transaction.
+        let decrypted = engine.decrypt_and_execute("tx1", reveal_key).unwrap();
+        assert_eq!(decrypted, tx_plaintext);
+        assert_eq!(engine.pool_size(), 0);
+    }
+
+    #[test]
+    fn test_private_execution_separately_encrypted_then_submitted() {
+        // Exercise the lower-level submit/encrypt API directly (client-side encryption).
+        let mut engine = PrivateExecutionEngine::new();
+        let tx_plaintext = b"limit sell 100 SOL @ 240.50".to_vec();
+        let reveal_key = b"another-reveal-key";
+
+        let ciphertext = PrivateExecutionEngine::encrypt_transaction(&tx_plaintext, reveal_key)
+            .expect("encryption should succeed");
         engine
             .submit_encrypted_transaction(
-                "tx1".to_string(),
-                encrypted_data.clone(),
-                "key_hash".to_string(),
+                "tx-sol".to_string(),
+                ciphertext,
+                commitment_hash(reveal_key),
             )
             .unwrap();
 
+        let decrypted = engine.decrypt_and_execute("tx-sol", reveal_key).unwrap();
+        assert_eq!(decrypted, tx_plaintext);
+    }
+
+    #[test]
+    fn test_private_execution_tampered_ciphertext_fails() {
+        let mut engine = PrivateExecutionEngine::new();
+        let tx_plaintext = b"transfer 5 ETH to 0xabc".to_vec();
+        let reveal_key = b"tamper-test-key";
+
+        let mut ciphertext = PrivateExecutionEngine::encrypt_transaction(&tx_plaintext, reveal_key)
+            .expect("encryption should succeed");
+
+        // Flip a byte inside the ciphertext body (past the nonce) to simulate tampering.
+        let tamper_index = ciphertext.len() - 1;
+        ciphertext[tamper_index] ^= 0xff;
+
+        engine
+            .submit_encrypted_transaction(
+                "tx-tampered".to_string(),
+                ciphertext,
+                commitment_hash(reveal_key),
+            )
+            .unwrap();
+
+        // The correct key is presented, but the authentication tag must reject the data.
+        let result = engine.decrypt_and_execute("tx-tampered", reveal_key);
+        assert!(result.is_err(), "tampered ciphertext must fail to decrypt");
+        // The commitment is not consumed on a failed reveal.
+        assert_eq!(engine.pool_size(), 1);
+    }
+
+    #[test]
+    fn test_private_execution_wrong_key_fails() {
+        let mut engine = PrivateExecutionEngine::new();
+        let tx_plaintext = b"buy 0.25 BTC @ market".to_vec();
+        let reveal_key = b"the-real-reveal-key";
+        let wrong_key = b"a-different-wrong-key";
+
+        engine
+            .commit_transaction("tx-wrongkey".to_string(), &tx_plaintext, reveal_key)
+            .unwrap();
+
+        let result = engine.decrypt_and_execute("tx-wrongkey", wrong_key);
+        assert!(result.is_err(), "wrong key must fail to decrypt");
+        // A wrong key must not discard the pending transaction.
         assert_eq!(engine.pool_size(), 1);
 
-        let decrypted = engine.decrypt_and_execute("tx1", b"key").unwrap();
-        assert_eq!(decrypted, encrypted_data);
+        // The correct key still works afterwards.
+        let decrypted = engine.decrypt_and_execute("tx-wrongkey", reveal_key).unwrap();
+        assert_eq!(decrypted, tx_plaintext);
         assert_eq!(engine.pool_size(), 0);
+    }
+
+    #[test]
+    fn test_private_execution_timelock_rejects_early_reveal() {
+        let mut engine = PrivateExecutionEngine::new();
+        let tx_plaintext = b"time-locked order payload".to_vec();
+        let reveal_key = b"timelock-reveal-key";
+
+        // Lock far enough in the future that an early reveal is deterministically rejected.
+        let unlock_time = SystemTime::now() + Duration::from_secs(3600);
+        engine
+            .commit_transaction_with_unlock(
+                "tx-locked".to_string(),
+                &tx_plaintext,
+                reveal_key,
+                AeadScheme::DEFAULT,
+                Some(unlock_time),
+            )
+            .unwrap();
+
+        // Even with the correct key, decryption before the unlock time is rejected.
+        let early = engine.decrypt_and_execute("tx-locked", reveal_key);
+        assert!(early.is_err(), "early reveal of a time-locked tx must fail");
+        assert_eq!(engine.pool_size(), 1);
+    }
+
+    #[test]
+    fn test_private_execution_timelock_allows_reveal_after_unlock() {
+        let mut engine = PrivateExecutionEngine::new();
+        let tx_plaintext = b"unlocked order payload".to_vec();
+        let reveal_key = b"timelock-reveal-key-2";
+
+        // Lock in the past so the unlock time has already elapsed.
+        let unlock_time = SystemTime::now() - Duration::from_secs(1);
+        engine
+            .commit_transaction_with_unlock(
+                "tx-unlocked".to_string(),
+                &tx_plaintext,
+                reveal_key,
+                AeadScheme::Aes256Gcm,
+                Some(unlock_time),
+            )
+            .unwrap();
+
+        let decrypted = engine.decrypt_and_execute("tx-unlocked", reveal_key).unwrap();
+        assert_eq!(decrypted, tx_plaintext);
+    }
+
+    #[test]
+    fn test_private_execution_aes_gcm_roundtrip() {
+        let mut engine = PrivateExecutionEngine::new();
+        let tx_plaintext = b"aes-gcm transaction body".to_vec();
+        let reveal_key = b"aes-gcm-reveal-key";
+
+        let ciphertext = PrivateExecutionEngine::encrypt_transaction_with_scheme(
+            &tx_plaintext,
+            reveal_key,
+            AeadScheme::Aes256Gcm,
+        )
+        .unwrap();
+        assert_ne!(ciphertext, tx_plaintext);
+
+        engine
+            .submit_encrypted_transaction_with_scheme(
+                "tx-aes".to_string(),
+                ciphertext,
+                commitment_hash(reveal_key),
+                AeadScheme::Aes256Gcm,
+                None,
+            )
+            .unwrap();
+
+        let decrypted = engine.decrypt_and_execute("tx-aes", reveal_key).unwrap();
+        assert_eq!(decrypted, tx_plaintext);
+    }
+
+    #[test]
+    fn test_private_execution_nonce_is_randomized() {
+        let tx_plaintext = b"same plaintext".to_vec();
+        let reveal_key = b"same-key";
+
+        let c1 = PrivateExecutionEngine::encrypt_transaction(&tx_plaintext, reveal_key).unwrap();
+        let c2 = PrivateExecutionEngine::encrypt_transaction(&tx_plaintext, reveal_key).unwrap();
+
+        // Fresh random nonce per encryption => identical plaintext yields different ciphertext.
+        assert_ne!(c1, c2, "nonce reuse detected: ciphertexts must differ");
     }
 
     #[test]

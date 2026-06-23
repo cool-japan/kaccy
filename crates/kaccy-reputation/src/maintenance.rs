@@ -12,6 +12,18 @@ use crate::error::ReputationError;
 use crate::score::ReputationEngine;
 use crate::score_history::ScoreHistoryRepository;
 
+/// Compute the cutoff timestamp for archival or cleanup operations.
+///
+/// This is a pure function (no I/O) so that callers and tests can verify the
+/// date arithmetic independently of any database connection.
+///
+/// # Arguments
+/// * `days` — number of days to look back from *now*.  Rows older than this
+///   are eligible for archival.
+pub(crate) fn compute_cutoff_date(days: i64) -> DateTime<Utc> {
+    Utc::now() - chrono::Duration::days(days)
+}
+
 /// Service for automated maintenance tasks
 pub struct MaintenanceService {
     pool: PgPool,
@@ -240,23 +252,60 @@ impl MaintenanceService {
         Ok(())
     }
 
-    /// Archive old audit logs
+    /// Archive old audit logs by moving qualifying rows into `audit_trail_archive`.
+    ///
+    /// Execution contract (all within one transaction):
+    ///   1. Ensure `audit_trail_archive` exists (idempotent DDL).
+    ///   2. `INSERT INTO audit_trail_archive SELECT * FROM audit_trail WHERE created_at < $cutoff`.
+    ///   3. `DELETE FROM audit_trail WHERE created_at < $cutoff`.
+    ///   4. Commit.
+    ///
+    /// Returns the number of rows actually moved (DELETE rows_affected).
+    /// On any error the transaction is rolled back automatically and the error
+    /// is propagated as `ReputationError::Database`.
     async fn archive_old_audit_logs(&self, days: i32) -> Result<i32, ReputationError> {
-        let cutoff_date = Utc::now() - chrono::Duration::days(days as i64);
+        let cutoff_date = compute_cutoff_date(days as i64);
 
-        // In production, this would move to an archive table or cold storage
-        // For now, we'll just count what would be archived
-        let query = "SELECT COUNT(*) as count FROM audit_trail WHERE created_at < $1";
-
-        let row = sqlx::query(query)
-            .bind(cutoff_date)
-            .fetch_one(&self.pool)
+        let mut tx = self
+            .pool
+            .begin()
             .await
             .map_err(ReputationError::Database)?;
 
-        let count: i64 = row.try_get("count").map_err(ReputationError::Database)?;
+        // Step 1 — ensure archive table exists with identical structure and constraints.
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS audit_trail_archive \
+             (LIKE audit_trail INCLUDING ALL)",
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(ReputationError::Database)?;
 
-        Ok(count as i32)
+        // Step 2 — copy qualifying rows to the archive table.
+        sqlx::query(
+            "INSERT INTO audit_trail_archive \
+             SELECT * FROM audit_trail WHERE created_at < $1",
+        )
+        .bind(cutoff_date)
+        .execute(&mut *tx)
+        .await
+        .map_err(ReputationError::Database)?;
+
+        // Step 3 — remove those same rows from the live table.
+        let delete_result = sqlx::query(
+            "DELETE FROM audit_trail WHERE created_at < $1",
+        )
+        .bind(cutoff_date)
+        .execute(&mut *tx)
+        .await
+        .map_err(ReputationError::Database)?;
+
+        let rows_moved = delete_result.rows_affected() as i32;
+
+        // Step 4 — commit; any earlier error would have already propagated via `?`.
+        tx.commit().await.map_err(ReputationError::Database)?;
+
+        Ok(rows_moved)
     }
 
     /// Run health checks
@@ -374,6 +423,73 @@ pub struct HealthCheckReport {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // --- compute_cutoff_date unit tests (no DB required) ---
+
+    #[test]
+    fn test_compute_cutoff_date_is_in_the_past() {
+        let before = Utc::now();
+        let cutoff = compute_cutoff_date(1);
+        let after = Utc::now();
+        // cutoff must be strictly before the moment we called the function
+        assert!(
+            cutoff < before,
+            "cutoff ({cutoff}) should be before the current time"
+        );
+        // and at least 23 h 59 m before the latest possible "now"
+        let min_expected = after - chrono::Duration::days(1) - chrono::Duration::seconds(1);
+        assert!(
+            cutoff > min_expected,
+            "cutoff ({cutoff}) should be within 1 day + 1 s of now"
+        );
+    }
+
+    #[test]
+    fn test_compute_cutoff_date_zero_days_is_approximately_now() {
+        let before = Utc::now();
+        let cutoff = compute_cutoff_date(0);
+        let after = Utc::now();
+        // With 0 days the cutoff equals "now" (within clock jitter of the test)
+        assert!(
+            cutoff >= before - chrono::Duration::seconds(1),
+            "zero-day cutoff should be at or very close to the moment before the call"
+        );
+        assert!(
+            cutoff <= after,
+            "zero-day cutoff should not exceed current time"
+        );
+    }
+
+    #[test]
+    fn test_compute_cutoff_date_ordering() {
+        let cutoff_90 = compute_cutoff_date(90);
+        let cutoff_180 = compute_cutoff_date(180);
+        // A longer lookback should produce an earlier (older) timestamp
+        assert!(
+            cutoff_180 < cutoff_90,
+            "180-day cutoff ({cutoff_180}) should be earlier than 90-day cutoff ({cutoff_90})"
+        );
+    }
+
+    #[test]
+    fn test_compute_cutoff_date_delta_matches_days() {
+        // The difference between now and the cutoff should be approximately `days`.
+        let days = 30_i64;
+        let before = Utc::now();
+        let cutoff = compute_cutoff_date(days);
+        let after = Utc::now();
+
+        let min_delta = (before - cutoff).num_days();
+        let max_delta = (after - cutoff).num_days();
+
+        // Allow for sub-second rounding: delta should be 29 or 30 days.
+        assert!(
+            min_delta >= days - 1 && max_delta <= days + 1,
+            "expected ~{days} days delta, got min={min_delta} max={max_delta}"
+        );
+    }
+
+    // --- MaintenanceReport / HealthCheckReport struct tests ---
 
     #[test]
     fn test_maintenance_report_default() {
