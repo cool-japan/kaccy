@@ -1,5 +1,44 @@
 # kaccy-core TODO
 
+## De-Fabrication Status (2026-06-23)
+
+### What was made REAL in this crate
+
+The following implementations were identified as fabrications (code that compiled and passed
+shallow tests but returned fake/placeholder values) and replaced with correct implementations:
+
+| File | Before | After |
+|---|---|---|
+| `utils/encryption.rs` | Base64 encode/decode masquerading as encryption | Real AES-256-GCM + ChaCha20-Poly1305 AEAD |
+| `trading/private_pool.rs` | XOR "encryption" | Real AEAD (AES-256-GCM) |
+| `utils/threshold_encryption.rs` | Hash-based fake secret sharing | Real Shamir SSS over GF(256) + secp256k1 Pedersen commitment |
+| `trading/mev_mitigation.rs` | Passthrough (commit-reveal was a no-op) | Real AEAD commit-reveal scheme |
+| `utils/post_quantum_crypto.rs` | Zero-filled key buffers | Real ML-DSA-65 + ML-KEM-768 + secp256k1 hybrid |
+| `ml/garch.rs` | Artificial 0.95/0.05 damping (correct formula masked) | Real GARCH/GJR recursion with proper parameter estimation |
+| `utils/advanced_risk.rs` | Historical-delegate + hardcoded z-table lookups | Real Monte Carlo Expected Shortfall + inverse-normal CDF |
+| `trading/tca.rs` | Silent `return 0.0` for market impact | Real Almgren square-root market-impact model |
+| `ml/deep_learning.rs` | Dummy loss + naive last-value prediction | Real LSTM (BPTT) / scaled-dot-product attention / self-attention transformer / MLP GAN |
+| `ml/reinforcement_learning.rs` + `trading/rl_market_maker.rs` | Hardcoded heuristic actions + no-op update | Real Q-learning TD updates with experience replay |
+| `ml/advanced_forecasting.rs` | Relabeled exponential smoothing | Real 3-model ensemble + probabilistic prediction intervals |
+
+### Remaining follow-ups (honest, not done this session)
+
+- `utils/threshold_encryption.rs`: Feldman-VSS verification step is simplified (share
+  consistency proof not yet computed); `TimeLockedKey::unlock` uses a placeholder round-trip.
+- `utils/post_quantum_crypto.rs`: SPHINCS+ and code-based algorithm labels currently map
+  to ML-DSA variants; the label is an acknowledged approximation.
+- `ml/deep_learning.rs`: GAN discriminator gradient estimation uses SPSA (simultaneous
+  perturbation), not full analytic backpropagation through the generator.
+- `utils/advanced_risk.rs`: Parametric ES sign convention should be reviewed against the
+  Basel definition (positive = loss vs. negative = loss).
+
+### Refactor needed
+
+- No single file currently exceeds 2000 lines after this session, but continued growth of
+  `ml/deep_learning.rs` and `trading/tca.rs` should be monitored.
+
+---
+
 ## Phase 0 (MVP)
 
 ### Models

@@ -1,5 +1,33 @@
 # kaccy-ai TODO
 
+## De-Fabrication Status (2026-06-23)
+
+### What was made REAL in this crate
+
+| File | Before | After |
+|---|---|---|
+| `social.rs` | Always returned `Verified` for Twitter and YouTube regardless of whether any API call was made | Returns `NeedsManualReview` (honest error) when API credentials are absent; calls real Twitter API v2 and YouTube Data API v3 when credentials are configured |
+| `transcript.rs` | Fetched a partial response and treated truncation as success; no YouTube timedtext parsing | Real YouTube timedtext XML fetch and parse; returns honest `TranscriptUnavailable` error when the video has no public transcript |
+
+### Remaining follow-ups (honest, not done this session)
+
+- LinkedIn API verification in `social.rs`: LinkedIn's API requires OAuth2 authorization
+  from the user being verified. This is structurally deferred (no user-token flow exists
+  yet); LinkedIn verification returns `NeedsManualReview` until it is implemented.
+- YouTube transcript language selection: the current implementation fetches the first
+  available language track. Fallback ordering and language preference are not yet
+  configurable.
+- Custom model training (Phase 2, already marked `[ ]`): still requires external ML
+  infrastructure and is out of scope.
+
+### What was NOT overclaimed (accurate before this session)
+
+The LLM integration clients (OpenAI, Anthropic, Gemini), fraud detection, GitHub verifier,
+oracle consensus, cost optimizer, circuit breaker, retry logic, and rate limiter were
+genuine implementations throughout and are unchanged.
+
+---
+
 ## Phase 0 (MVP)
 
 > Note: AI features are NOT included in MVP. Manual admin verification is used instead. This crate provides the foundation for Phase 1 AI integration.

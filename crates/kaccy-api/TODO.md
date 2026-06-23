@@ -1,5 +1,37 @@
 # kaccy-api TODO
 
+## De-Fabrication Status (2026-06-23)
+
+### What was made REAL in this crate
+
+The following implementations were identified as fabrications and replaced with correct ones:
+
+| File | Before | After |
+|---|---|---|
+| `notifications/email.rs` | Always returned `Ok("Sent")` regardless of configuration | Real `lettre` SMTP integration; returns honest `NotConfigured` error when SMTP credentials are absent |
+| `notifications/sms.rs` | Stub returning success | Real Twilio REST API + AWS SigV4 SNS; returns honest error when unconfigured |
+| `notifications/push.rs` | Stub returning success | Real FCM HTTP v1 / legacy push + APNS HTTP/2 with ES256-JWT; returns honest error when unconfigured |
+| `jobs/worker.rs` | Called `simulate_email_send` (printed to stdout) | Wired to real notifiers; unconfigured notifier now produces an honest failure record |
+| `routes/oauth2.rs` | In-memory map with no CSRF protection and no PKCE binding | Real Redis-backed one-time-use CSRF state + PKCE verifier storage |
+
+### Remaining follow-ups (honest, not done this session)
+
+- Per-user device-token registry for push notifications is not yet implemented; FCM/APNS
+  currently require the caller to supply a device token directly.
+- FCM OAuth2 service-account token refresh (automatic rotation when the short-lived token
+  expires) is not yet implemented.
+- APNS JWT signing key caching (avoid re-signing on every request) is not yet implemented.
+- Workspace dependency hoisting: `kaccy-api` still declares per-crate version pins for
+  `async-graphql`, `oauth2`, `sys-info`, and `lettre` instead of using workspace-level
+  `[workspace.dependencies]` entries. This should be consolidated.
+
+### What was NOT overclaimed (accurate before this session)
+
+The Phase 1 WebSocket, GraphQL, KYC, 2FA/TOTP, request batching, streaming, observability,
+and rate-limiting modules were genuine implementations throughout and are unchanged.
+
+---
+
 ## Phase 0 (MVP)
 
 ### Authentication Routes

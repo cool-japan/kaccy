@@ -1,5 +1,30 @@
 # kaccy-db TODO
 
+## De-Fabrication Status (2026-06-23)
+
+### What was made REAL in this crate
+
+| File | Before | After |
+|---|---|---|
+| `pool_autoscaling.rs` | Pool utilization metrics hardcoded to 10 total / 7 idle / 3 active / 0.7 utilization | Real metrics derived from `pool.size()`, `pool.num_idle()`, and `pool.options().get_max_connections()` |
+
+### Remaining follow-ups (honest, not done this session)
+
+- Runtime pool resizing (actually adding or removing connections from a live pool) is not
+  yet implemented. The autoscaling module now correctly reads real utilization metrics and
+  emits scaling recommendations, but the `sqlx` `PgPool` API does not expose a public
+  `resize()` method. Acting on recommendations still requires a pool restart, which must
+  be triggered externally.
+
+### Correction to "Final Status Summary" below
+
+The "Feature Completion: 100%" and "Production Readiness: READY" summary below was written
+before the de-fabrication audit. The pool autoscaling metrics were hardcoded at that time,
+meaning autoscaling decisions were based on fabricated load data. This is now corrected.
+All other modules in this crate were genuine implementations and remain unchanged.
+
+---
+
 ## Phase 0 (MVP)
 
 ### Connection Pool

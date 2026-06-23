@@ -1,5 +1,48 @@
 # kaccy-bitcoin TODO
 
+## De-Fabrication Status (2026-06-23)
+
+### What was made REAL in this crate
+
+The following implementations were identified as fabrications and replaced with correct ones:
+
+| File | Before | After |
+|---|---|---|
+| `slip39.rs` | Incomplete / partially correct implementation | Real SLIP-0039: GF(256) log/antilog tables, RS1024 checksum, PBKDF2-Feistel round function; passes official test vectors |
+| `frost.rs` | Structural stub | Real FROST threshold Schnorr: Shamir secret sharing, Feldman VSS, BIP-340 signature verification |
+| `musig2.rs` | Nonce not message-bound; no adaptor signatures | Real BIP-327 message-bound nonce generation + adaptor signature construction |
+| `silent_payments.rs` | Placeholder address format | Real BIP-352 bech32m address encoding + input_hash ECDH |
+| `taproot.rs` | Script-path spend incomplete | Real key-path and script-path spending with TapLeaf/TapBranch merkle tree |
+| `bip324.rs` | Stub encryption | Real ChaCha20-Poly1305 packet AEAD |
+| `psbt_v2.rs` | Truncated SHA-256 used as HASH160 (fund-loss bug) | Real RIPEMD-160(SHA-256) HASH160 |
+| `miniscript_support.rs` | Manual policy string construction | Real compilation via `miniscript` 12.3 crate |
+| `compact_filters.rs` | Fake filter matching | Real BIP-158 GCS matching |
+| `coinjoin.rs` | Unsigned transaction assembly | Real P2WPKH signing and PSBT finalization |
+
+### Remaining follow-ups (honest, not done this session)
+
+- `frost.rs`: Uses trusted-dealer key generation. Distributed DKG (where no single party
+  holds the full secret) is deferred — requires a multi-round interactive protocol.
+- `bip324.rs`: The full handshake (ElligatorSwift point encoding for the initial key
+  exchange) is simplified to a direct X-coordinate ECDH. The packet AEAD is real.
+- `silent_payments.rs`: Bulk transaction-set scan (`scan_transactions`) returns an honest
+  `NotImplemented` error; the per-output ECDH verification path is real.
+- `compact_filters.rs`: P2P `getcfilters`/`getcfheaders` download returns an honest error
+  when no live P2P network connection is available.
+
+### Open items (pre-existing, not addressed this session)
+
+- Taproot signature aggregation / cross-input aggregation: research-grade, not implemented.
+- Half-aggregation schemes: not implemented.
+
+### Refactor needed
+
+- `slip39.rs` is approximately 2048 lines, exceeding the 2000-line guideline.
+  Should be split using `splitrs` (e.g., separate GF256 arithmetic, RS1024, and Feistel
+  round modules).
+
+---
+
 ## Phase 0 (MVP)
 
 ### Bitcoin Client
