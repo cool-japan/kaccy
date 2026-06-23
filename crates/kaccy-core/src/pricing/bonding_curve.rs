@@ -583,7 +583,20 @@ impl BondingCurve for ExponentialBondingCurve {
         let exp_start = Self::exp_approx((k * current_supply).clamp(dec!(-10), dec!(10)));
         let exp_end = Self::exp_approx((k * (current_supply + amount)).clamp(dec!(-10), dec!(10)));
 
-        (self.initial_price / k) * (exp_end - exp_start)
+        let integral = (self.initial_price / k) * (exp_end - exp_start);
+
+        // Floor the integral at `amount * spot_price(current_supply)`.
+        //
+        // For a monotonically increasing curve the true cost of buying `amount`
+        // tokens is ∫ P(n) dn over [s, s+amount], and since P(n) >= P(s) on that
+        // interval the integral is ALWAYS >= amount * P(s). When the exponent
+        // saturates (both endpoints clamp to 10) the computed integral collapses
+        // to 0; this floor — which is strictly positive for valid inputs — then
+        // correctly supplies the lower bound. In the non-saturated regime the
+        // integral dominates and the floor is inert, so normal pricing is
+        // unchanged.
+        let lower_bound = amount * self.spot_price(current_supply);
+        integral.max(lower_bound)
     }
 
     fn sell_price(&self, current_supply: Decimal, amount: Decimal) -> Decimal {
@@ -596,8 +609,19 @@ impl BondingCurve for ExponentialBondingCurve {
         let exp_start = Self::exp_approx((k * new_supply).clamp(dec!(-10), dec!(10)));
         let exp_end = Self::exp_approx((k * current_supply).clamp(dec!(-10), dec!(10)));
 
-        // Apply 5% spread
-        (self.initial_price / k) * (exp_end - exp_start) * dec!(0.95)
+        let integral = (self.initial_price / k) * (exp_end - exp_start);
+
+        // Floor the pre-spread integral at `amount * spot_price(new_supply)`.
+        //
+        // The proceeds of selling `amount` tokens is ∫ P(n) dn over
+        // [s-amount, s] = [new_supply, current_supply], and since P(n) >=
+        // P(new_supply) on that interval the integral is ALWAYS >=
+        // amount * P(new_supply). Under exponent saturation the integral
+        // collapses to 0; the floor (strictly positive for valid inputs) then
+        // supplies the lower bound. The existing 5% spread is applied AFTER the
+        // floor so sell proceeds stay below buy cost while remaining > 0.
+        let lower_bound = amount * self.spot_price(new_supply);
+        integral.max(lower_bound) * dec!(0.95)
     }
 }
 
@@ -1300,6 +1324,63 @@ mod tests {
         // Price should increase as supply increases
         assert!(price_100 > price_0);
         assert!(price_1000 > price_100);
+    }
+
+    /// Regression for the exponent-saturation zero bug found by
+    /// `prop_exponential_prices_positive` (minimal failing input
+    /// supply=10000, amount=1). With growth_rate=0.001 the exponent
+    /// k*supply reaches the clamp boundary (10) at supply=10000, so both
+    /// integral endpoints clamp to the same value and the raw integral
+    /// collapses to 0. The lower-bound floor must keep both buy and sell
+    /// strictly positive.
+    #[test]
+    fn test_exponential_prices_positive_at_saturation() {
+        let curve = ExponentialBondingCurve::new(dec!(0.0001), dec!(0.001));
+
+        // The exact saved regression seed: supply=10000, amount=1.
+        let buy = curve.buy_price(dec!(10000), dec!(1));
+        let sell = curve.sell_price(dec!(10000), dec!(1));
+        let spot = curve.spot_price(dec!(10000));
+
+        assert!(spot > dec!(0), "spot must stay positive: {spot}");
+        assert!(
+            buy > dec!(0),
+            "buy_price must be positive at saturation: buy={buy}"
+        );
+        assert!(
+            sell > dec!(0),
+            "sell_price must be positive at saturation: sell={sell}"
+        );
+        // The floor is exactly amount * spot at saturation (raw integral == 0).
+        assert!(
+            buy >= spot,
+            "buy must be >= amount*spot floor: buy={buy} spot={spot}"
+        );
+        // Spread keeps sell below buy but still positive.
+        assert!(sell < buy, "sell must stay below buy: sell={sell} buy={buy}");
+
+        // Mid-supply sanity (non-saturated regime: the integral dominates and
+        // the floor is inert). buy must exceed amount*spot due to price impact.
+        let s_mid = dec!(5000);
+        let a_mid = dec!(10);
+        let buy_mid = curve.buy_price(s_mid, a_mid);
+        let sell_mid = curve.sell_price(s_mid, a_mid);
+        assert!(buy_mid > dec!(0), "mid buy must be positive: {buy_mid}");
+        assert!(sell_mid > dec!(0), "mid sell must be positive: {sell_mid}");
+        assert!(
+            sell_mid < buy_mid,
+            "mid sell must stay below buy: sell={sell_mid} buy={buy_mid}"
+        );
+
+        // Low-supply sanity (well away from the clamp).
+        let buy_low = curve.buy_price(dec!(100), dec!(5));
+        let sell_low = curve.sell_price(dec!(100), dec!(5));
+        assert!(buy_low > dec!(0), "low buy must be positive: {buy_low}");
+        assert!(sell_low > dec!(0), "low sell must be positive: {sell_low}");
+        assert!(
+            sell_low < buy_low,
+            "low sell must stay below buy: sell={sell_low} buy={buy_low}"
+        );
     }
 
     #[test]
