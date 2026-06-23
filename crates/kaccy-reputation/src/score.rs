@@ -19,6 +19,24 @@ pub const MIN_SCORE: Decimal = dec!(0);
 /// Maximum score
 pub const MAX_SCORE: Decimal = dec!(1000);
 
+/// Neutral prior used for a component when no observations are available.
+///
+/// This is an explicitly neutral midpoint (not a favorable value). It is only
+/// ever emitted together with zero `data_points`, so any confidence layer that
+/// inspects the data quantity reports it as low/very-low confidence rather than
+/// treating it as an earned score.
+pub const NEUTRAL_COMPONENT_PRIOR: Decimal = dec!(50);
+
+/// Reference responsiveness horizon, in hours, used to map fulfilment latency
+/// to a 0-100 response-time sub-score.
+///
+/// The mapping `score = 100 * H / (H + latency_hours)` yields exactly
+/// [`NEUTRAL_COMPONENT_PRIOR`] (50) when the observed latency equals this
+/// horizon, approaches 100 as latency approaches zero, and decays toward 0 as
+/// latency grows without bound. A horizon of one week (168 h) treats sub-day
+/// fulfilment as highly responsive and multi-week fulfilment as poor.
+pub const RESPONSE_TIME_HORIZON_HOURS: Decimal = dec!(168);
+
 /// A user's complete reputation score including tier and component breakdown.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReputationScore {
@@ -324,6 +342,43 @@ impl ComponentWeights {
             + self.community_trust
             + self.longevity
     }
+}
+
+/// Derive the response-time sub-score (0-100) and its supporting data-point
+/// count from observed commitment fulfilment latencies.
+///
+/// `sample_count` is the number of verified commitments that had a measurable
+/// latency, and `total_latency_hours` is the summed latency across those
+/// samples. Responsiveness is computed from the *mean* latency via
+/// `100 * H / (H + mean_hours)`, where `H` is [`RESPONSE_TIME_HORIZON_HOURS`].
+///
+/// Honesty contract:
+/// - With **no** samples (`sample_count <= 0`), this returns the explicit
+///   [`NEUTRAL_COMPONENT_PRIOR`] together with `0` data points. The neutral
+///   midpoint is never presented as an earned, confident value — callers pair
+///   it with the real `data_points` so the confidence layer reports it as
+///   low/very-low confidence.
+/// - With samples, the score is fully data-derived and the returned data-point
+///   count equals `sample_count`, so confidence scales with the real number of
+///   observations.
+///
+/// The returned score is always clamped to the inclusive range `[0, 100]`.
+pub fn response_time_score(sample_count: i64, total_latency_hours: Decimal) -> (Decimal, i64) {
+    if sample_count <= 0 {
+        return (NEUTRAL_COMPONENT_PRIOR, 0);
+    }
+
+    // Mean latency in hours. Negative latencies (clock skew / out-of-order
+    // timestamps) are clamped to zero so they read as maximally responsive
+    // rather than producing an out-of-range score.
+    let mean_hours = (total_latency_hours / Decimal::from(sample_count)).max(dec!(0));
+
+    let score = (dec!(100) * RESPONSE_TIME_HORIZON_HOURS
+        / (RESPONSE_TIME_HORIZON_HOURS + mean_hours))
+        .min(dec!(100))
+        .max(dec!(0));
+
+    (score, sample_count)
 }
 
 impl ScoreComponents {
@@ -637,6 +692,13 @@ struct EventStats {
     total_quality_score: Decimal,
     quality_score_count: i64,
     account_age_days: i64,
+    /// Number of verified commitments that carried a measurable fulfilment
+    /// latency (both `created_at` and `verified_at` present). This is the data
+    /// quantity backing the response-time component.
+    response_sample_count: i64,
+    /// Sum of fulfilment latencies (in hours) across `response_sample_count`
+    /// verified commitments, used to derive the mean latency.
+    response_total_hours: Decimal,
 }
 
 /// Engine for computing and updating reputation scores.
@@ -685,9 +747,12 @@ impl ReputationEngine {
             dec!(50) // Default for new users
         };
 
-        // Response time: placeholder (would need timing data)
-        // Default to 70 (good) for now
-        let response_time = dec!(70);
+        // Response time: derived from how quickly verified commitments were
+        // fulfilled (verified_at - created_at). With no verified commitments
+        // this falls back to an explicit neutral prior with zero data points
+        // rather than asserting a favorable value.
+        let (response_time, _response_data_points) =
+            response_time_score(stats.response_sample_count, stats.response_total_hours);
 
         // Quality rating: average quality score from events
         let quality_rating = if stats.quality_score_count > 0 {
@@ -812,6 +877,32 @@ impl ReputationEngine {
 
         let account_age_days = account_age.map(|(d,)| d).unwrap_or(0);
 
+        // Response-time data: fulfilment latency of verified commitments, i.e.
+        // verified_at - created_at, in hours. Only commitments that have
+        // actually been verified contribute, so the sample count reflects real
+        // responsiveness observations rather than a hardcoded value.
+        let response_stats: Option<(i64, Decimal)> = sqlx::query_as(
+            r#"
+            SELECT
+                COUNT(*) AS sample_count,
+                COALESCE(
+                    SUM(EXTRACT(EPOCH FROM (verified_at - created_at)) / 3600.0),
+                    0
+                )::numeric AS total_hours
+            FROM output_commitments
+            WHERE user_id = $1
+              AND status = 'verified'
+              AND verified_at IS NOT NULL
+              AND verified_at >= created_at
+            "#,
+        )
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let (response_sample_count, response_total_hours) =
+            response_stats.unwrap_or((0, dec!(0)));
+
         Ok(EventStats {
             total_commitments,
             fulfilled_commitments,
@@ -819,6 +910,8 @@ impl ReputationEngine {
             total_quality_score,
             quality_score_count,
             account_age_days,
+            response_sample_count,
+            response_total_hours,
         })
     }
 
@@ -1811,5 +1904,109 @@ mod tests {
             Some(dec!(85))
         );
         assert_eq!(components.component_as_percentile("invalid"), None);
+    }
+
+    #[test]
+    fn test_response_time_score_no_data_is_neutral_not_favorable() {
+        // No verified-commitment observations: must be the explicit neutral
+        // prior with ZERO data points, never the old hardcoded favorable 70.
+        let (score, data_points) = response_time_score(0, dec!(0));
+        assert_eq!(score, NEUTRAL_COMPONENT_PRIOR);
+        assert_eq!(score, dec!(50));
+        assert_ne!(score, dec!(70));
+        assert_eq!(data_points, 0);
+    }
+
+    #[test]
+    fn test_response_time_score_negative_sample_count_is_neutral() {
+        // Defensive: a non-positive sample count is treated as "no data".
+        let (score, data_points) = response_time_score(-5, dec!(100));
+        assert_eq!(score, NEUTRAL_COMPONENT_PRIOR);
+        assert_eq!(data_points, 0);
+    }
+
+    #[test]
+    fn test_response_time_score_reports_real_data_points() {
+        // The data-point count must reflect the real number of observations so
+        // the confidence layer can scale with it.
+        let (_score, data_points) = response_time_score(7, dec!(7) * dec!(24));
+        assert_eq!(data_points, 7);
+    }
+
+    #[test]
+    fn test_response_time_score_at_horizon_is_neutral_midpoint() {
+        // Mean latency exactly equal to the horizon maps to 50.
+        let (score, data_points) = response_time_score(1, RESPONSE_TIME_HORIZON_HOURS);
+        assert_eq!(score, dec!(50));
+        assert_eq!(data_points, 1);
+    }
+
+    #[test]
+    fn test_response_time_score_fast_is_high() {
+        // Fulfilling within ~1 hour (mean) is highly responsive: well above 50,
+        // approaching but never exceeding 100.
+        let (score, _) = response_time_score(3, dec!(3) * dec!(1));
+        assert!(score > dec!(95), "fast fulfilment should score high: {score}");
+        assert!(score <= dec!(100));
+    }
+
+    #[test]
+    fn test_response_time_score_slow_is_low() {
+        // A mean latency of ~10 weeks is poor responsiveness: well below 50.
+        let weeks_10 = RESPONSE_TIME_HORIZON_HOURS * dec!(10);
+        let (score, _) = response_time_score(2, weeks_10 * dec!(2));
+        assert!(score < dec!(15), "slow fulfilment should score low: {score}");
+        assert!(score >= dec!(0));
+    }
+
+    #[test]
+    fn test_response_time_score_is_monotonic_in_latency() {
+        // Faster mean latency must never score lower than slower mean latency.
+        let (fast, _) = response_time_score(1, dec!(24)); // 1 day
+        let (medium, _) = response_time_score(1, dec!(168)); // 1 week
+        let (slow, _) = response_time_score(1, dec!(720)); // ~1 month
+        assert!(fast > medium, "{fast} should exceed {medium}");
+        assert!(medium > slow, "{medium} should exceed {slow}");
+    }
+
+    #[test]
+    fn test_response_time_score_uses_mean_latency() {
+        // Two samples summing to 2 weeks => 1-week mean => exactly 50.
+        let (score, data_points) =
+            response_time_score(2, RESPONSE_TIME_HORIZON_HOURS * dec!(2));
+        assert_eq!(score, dec!(50));
+        assert_eq!(data_points, 2);
+    }
+
+    #[test]
+    fn test_response_time_score_clamped_to_bounds() {
+        // Zero mean latency maps to the upper bound exactly; never exceeds 100.
+        let (score, _) = response_time_score(4, dec!(0));
+        assert_eq!(score, dec!(100));
+
+        // Negative aggregate latency (clock skew) is clamped to 0 hours, so the
+        // score is the maximum rather than out-of-range.
+        let (skewed, _) = response_time_score(1, dec!(-50));
+        assert_eq!(skewed, dec!(100));
+    }
+
+    #[test]
+    fn test_response_time_score_drives_overall_honestly() {
+        // The data-derived component flows through the weighted overall score,
+        // and a no-data user is NOT rewarded with the old favorable 70.
+        let (no_data, _) = response_time_score(0, dec!(0));
+        let neutral_components = ScoreComponents {
+            commitment_fulfillment: dec!(50),
+            response_time: no_data,
+            quality_rating: dec!(50),
+            community_trust: dec!(50),
+            longevity: dec!(0),
+        };
+        // With response_time at the neutral 50 (not 70), the contribution is
+        // 50 * 0.15 = 7.5, strictly less than the fabricated 70 * 0.15 = 10.5.
+        let fabricated_contribution = dec!(70) * COMPONENT_WEIGHTS.response_time;
+        let honest_contribution =
+            neutral_components.response_time * COMPONENT_WEIGHTS.response_time;
+        assert!(honest_contribution < fabricated_contribution);
     }
 }

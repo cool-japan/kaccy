@@ -72,6 +72,15 @@ pub enum AiError {
     /// The requested resource was not found.
     #[error("Not found: {0}")]
     NotFound(String),
+
+    /// No transcript or caption track is available for this video.
+    ///
+    /// This is returned when captions are disabled, the video has no
+    /// caption track, or the caption endpoint cannot be reached.  Callers
+    /// MUST NOT treat this as a partial-success; the transcript is simply
+    /// not available.
+    #[error("Transcript unavailable: {0}")]
+    TranscriptUnavailable(String),
 }
 
 /// Convenience alias for `Result<T, AiError>`.

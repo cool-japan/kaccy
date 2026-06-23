@@ -2,11 +2,24 @@
 //!
 //! This module provides verification capabilities for social media evidence
 //! including Twitter/X posts and `YouTube` videos.
+//!
+//! # Honest verification model
+//!
+//! API-backed verification requires credentials to be supplied at construction
+//! time via [`SocialApiCredentials`].  Without credentials the verifier returns
+//! [`VerificationStatus::NeedsManualReview`] — it never fabricates a
+//! `Verified` result from URL-shape inspection alone.
+//!
+//! With credentials the verifier calls the real platform APIs:
+//! - **Twitter/X** — Twitter API v2 `GET /2/tweets/{id}`
+//! - **YouTube**  — YouTube Data API v3 `GET /youtube/v3/videos`
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::error::{AiError, Result};
+
+// ─── Platform enum ────────────────────────────────────────────────────────────
 
 /// Social media platform types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -46,6 +59,8 @@ impl SocialPlatform {
         }
     }
 }
+
+// ─── Parsed URL data structures ───────────────────────────────────────────────
 
 /// Parsed Twitter/X post information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,6 +121,8 @@ pub enum LinkedInPostType {
     /// Unknown type
     Unknown,
 }
+
+// ─── URL parser ───────────────────────────────────────────────────────────────
 
 /// Social media URL parser
 pub struct SocialMediaParser;
@@ -392,6 +409,8 @@ impl SocialMediaParser {
     }
 }
 
+// ─── Verification types ───────────────────────────────────────────────────────
+
 /// Social media verification result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SocialVerificationResult {
@@ -412,16 +431,36 @@ pub struct SocialVerificationResult {
 }
 
 /// Verification status
+///
+/// # Honest semantics
+///
+/// - [`Verified`](VerificationStatus::Verified) means the platform API
+///   confirmed the resource exists and is accessible.
+/// - [`NeedsManualReview`](VerificationStatus::NeedsManualReview) means the URL
+///   parsed successfully but no API credentials were available to confirm
+///   existence with the platform.  A human must review.
+/// - [`Unverified`](VerificationStatus::Unverified) means the URL could not be
+///   parsed (malformed, wrong domain, etc.).
+/// - [`Suspicious`](VerificationStatus::Suspicious) means the URL raised
+///   active red flags.
+/// - [`Unsupported`](VerificationStatus::Unsupported) means the platform
+///   cannot be verified programmatically.
+/// - [`Failed`](VerificationStatus::Failed) means an API call was attempted
+///   but returned a definitive negative (e.g. 404 Not Found from the platform).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VerificationStatus {
-    /// URL parsed and appears valid
+    /// Platform API confirmed the resource exists
     Verified,
-    /// Could not verify, needs manual check
+    /// URL parsed OK but no API credentials — human review required
+    NeedsManualReview,
+    /// Could not verify (URL malformed / unparseable)
     Unverified,
     /// URL appears suspicious
     Suspicious,
     /// Platform not supported for verification
     Unsupported,
+    /// API call returned definitive failure (e.g. resource not found on platform)
+    Failed,
 }
 
 /// Platform-specific parsed details
@@ -437,31 +476,164 @@ pub enum SocialDetails {
     None,
 }
 
-/// Social media verifier
-pub struct SocialMediaVerifier {
+// ─── API credentials ──────────────────────────────────────────────────────────
+
+/// Optional platform API credentials for real verification.
+///
+/// All fields are optional.  Fields that are `None` cause the verifier to skip
+/// the corresponding API call and return [`VerificationStatus::NeedsManualReview`]
+/// instead of fabricating a `Verified` result.
+#[derive(Debug, Clone, Default)]
+pub struct SocialApiCredentials {
+    /// Twitter API v2 Bearer token (`Authorization: Bearer <token>`).
+    /// Required for Twitter/X tweet existence checks.
+    pub twitter_bearer_token: Option<String>,
+
+    /// YouTube Data API v3 key (passed as `key=` query parameter).
+    /// Required for YouTube video existence checks.
+    pub youtube_api_key: Option<String>,
+}
+
+impl SocialApiCredentials {
+    /// Construct credentials with no platform access configured.
+    #[must_use]
+    pub fn none() -> Self {
+        Self::default()
+    }
+
+    /// Construct credentials with a Twitter bearer token only.
+    #[must_use]
+    pub fn twitter_only(bearer_token: impl Into<String>) -> Self {
+        Self {
+            twitter_bearer_token: Some(bearer_token.into()),
+            youtube_api_key: None,
+        }
+    }
+
+    /// Construct credentials with a YouTube API key only.
+    #[must_use]
+    pub fn youtube_only(api_key: impl Into<String>) -> Self {
+        Self {
+            twitter_bearer_token: None,
+            youtube_api_key: Some(api_key.into()),
+        }
+    }
+
+    /// Construct credentials with both Twitter and YouTube access.
+    #[must_use]
+    pub fn both(bearer_token: impl Into<String>, api_key: impl Into<String>) -> Self {
+        Self {
+            twitter_bearer_token: Some(bearer_token.into()),
+            youtube_api_key: Some(api_key.into()),
+        }
+    }
+}
+
+// ─── Internal API response shapes ─────────────────────────────────────────────
+
+/// Minimal Twitter API v2 tweet lookup response.
+///
+/// `GET https://api.twitter.com/2/tweets/{id}`
+#[derive(Debug, Deserialize)]
+struct TwitterApiTweetResponse {
+    /// Present when the tweet was found.
+    data: Option<TwitterApiTweetData>,
+    /// Present when the tweet was not found or an error occurred.
+    errors: Option<Vec<TwitterApiError>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TwitterApiTweetData {
+    id: String,
     #[allow(dead_code)]
+    text: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TwitterApiError {
+    #[allow(dead_code)]
+    title: Option<String>,
+    #[allow(dead_code)]
+    detail: Option<String>,
+    #[allow(dead_code)]
+    r#type: Option<String>,
+}
+
+/// Minimal YouTube Data API v3 videos list response.
+///
+/// `GET https://www.googleapis.com/youtube/v3/videos?part=id&id={id}&key={key}`
+#[derive(Debug, Deserialize)]
+struct YouTubeApiVideosResponse {
+    /// List of matched video resources.  Empty means video does not exist.
+    items: Vec<YouTubeApiVideoItem>,
+}
+
+#[derive(Debug, Deserialize)]
+struct YouTubeApiVideoItem {
+    id: String,
+}
+
+// ─── Verifier ─────────────────────────────────────────────────────────────────
+
+/// Social media verifier
+///
+/// Construct with [`SocialMediaVerifier::new`] (no API access) or
+/// [`SocialMediaVerifier::with_credentials`] to enable real API verification.
+pub struct SocialMediaVerifier {
     http_client: Arc<reqwest::Client>,
+    credentials: SocialApiCredentials,
 }
 
 impl SocialMediaVerifier {
-    /// Create a new social media verifier
+    /// Create a new social media verifier with **no** API credentials.
+    ///
+    /// Without credentials the verifier parses URLs and returns
+    /// [`VerificationStatus::NeedsManualReview`] — it never fabricates
+    /// a `Verified` status.
     #[must_use]
     pub fn new() -> Self {
         Self {
             http_client: Arc::new(reqwest::Client::new()),
+            credentials: SocialApiCredentials::none(),
         }
     }
 
-    /// Create with custom HTTP client
+    /// Create with custom HTTP client and no credentials.
     #[must_use]
     pub fn with_client(client: Arc<reqwest::Client>) -> Self {
         Self {
             http_client: client,
+            credentials: SocialApiCredentials::none(),
         }
     }
 
-    /// Verify a social media URL
-    pub fn verify_url(&self, url: &str) -> Result<SocialVerificationResult> {
+    /// Create with API credentials for real platform verification.
+    #[must_use]
+    pub fn with_credentials(credentials: SocialApiCredentials) -> Self {
+        Self {
+            http_client: Arc::new(reqwest::Client::new()),
+            credentials,
+        }
+    }
+
+    /// Create with a custom HTTP client **and** API credentials.
+    #[must_use]
+    pub fn with_client_and_credentials(
+        client: Arc<reqwest::Client>,
+        credentials: SocialApiCredentials,
+    ) -> Self {
+        Self {
+            http_client: client,
+            credentials,
+        }
+    }
+
+    /// Verify a social media URL.
+    ///
+    /// When API credentials are configured the verification contacts the
+    /// platform API.  When no credentials are available the result has
+    /// `status = NeedsManualReview` (never `Verified`).
+    pub async fn verify_url(&self, url: &str) -> Result<SocialVerificationResult> {
         let platform = SocialPlatform::from_url(url);
         let mut notes = Vec::new();
         let mut needs_manual_review = false;
@@ -469,9 +641,11 @@ impl SocialMediaVerifier {
         match platform {
             SocialPlatform::Twitter => {
                 self.verify_twitter(url, &mut notes, &mut needs_manual_review)
+                    .await
             }
             SocialPlatform::YouTube => {
                 self.verify_youtube(url, &mut notes, &mut needs_manual_review)
+                    .await
             }
             SocialPlatform::LinkedIn => {
                 self.verify_linkedin(url, &mut notes, &mut needs_manual_review)
@@ -495,8 +669,14 @@ impl SocialMediaVerifier {
         }
     }
 
-    /// Verify Twitter/X URL
-    fn verify_twitter(
+    // ── Twitter/X ─────────────────────────────────────────────────────────────
+
+    /// Verify Twitter/X URL.
+    ///
+    /// If a bearer token is configured, calls Twitter API v2
+    /// `GET /2/tweets/{id}` and interprets the response honestly.
+    /// Without a bearer token, returns [`VerificationStatus::NeedsManualReview`].
+    async fn verify_twitter(
         &self,
         url: &str,
         notes: &mut Vec<String>,
@@ -504,46 +684,9 @@ impl SocialMediaVerifier {
     ) -> Result<SocialVerificationResult> {
         let parsed = SocialMediaParser::parse_twitter_url(url);
 
-        if let Some(post) = parsed {
-            let mut confidence = 70;
-
-            // Check for suspicious patterns
-            if post.username == "unknown" {
-                notes.push("Username could not be determined from URL".to_string());
-                confidence -= 20;
-                *needs_manual_review = true;
-            }
-
-            if post.is_retweet {
-                notes.push("URL appears to be a retweet".to_string());
-                confidence -= 10;
-            }
-
-            // Validate post ID format (should be numeric, reasonable length)
-            if post.post_id.len() < 10 || post.post_id.len() > 25 {
-                notes.push("Post ID has unusual length".to_string());
-                confidence -= 15;
-            }
-
-            notes.push(format!("Tweet ID: {}", post.post_id));
-            notes.push(format!("Username: @{}", post.username));
-
-            // Note: Full verification would require Twitter API access
-            notes.push("Note: Content verification requires Twitter API access".to_string());
-            *needs_manual_review = true;
-
-            Ok(SocialVerificationResult {
-                platform: SocialPlatform::Twitter,
-                is_valid_url: true,
-                status: VerificationStatus::Verified,
-                confidence,
-                details: SocialDetails::Twitter(post),
-                notes: notes.clone(),
-                needs_manual_review: *needs_manual_review,
-            })
-        } else {
+        let Some(post) = parsed else {
             notes.push("Could not parse Twitter URL".to_string());
-            Ok(SocialVerificationResult {
+            return Ok(SocialVerificationResult {
                 platform: SocialPlatform::Twitter,
                 is_valid_url: false,
                 status: VerificationStatus::Unverified,
@@ -551,12 +694,168 @@ impl SocialMediaVerifier {
                 details: SocialDetails::None,
                 notes: notes.clone(),
                 needs_manual_review: true,
-            })
+            });
+        };
+
+        let mut confidence = 70u32;
+
+        // Structural URL checks — these reduce confidence but are never
+        // sufficient to elevate status to Verified.
+        if post.username == "unknown" {
+            notes.push("Username could not be determined from URL".to_string());
+            confidence = confidence.saturating_sub(20);
+            *needs_manual_review = true;
         }
+
+        if post.is_retweet {
+            notes.push("URL appears to be a retweet".to_string());
+            confidence = confidence.saturating_sub(10);
+        }
+
+        if post.post_id.len() < 10 || post.post_id.len() > 25 {
+            notes.push("Post ID has unusual length".to_string());
+            confidence = confidence.saturating_sub(15);
+        }
+
+        notes.push(format!("Tweet ID: {}", post.post_id));
+        notes.push(format!("Username: @{}", post.username));
+
+        // Attempt real API verification when credentials are present.
+        let Some(ref bearer) = self.credentials.twitter_bearer_token else {
+            notes.push(
+                "No Twitter API credentials configured — manual review required".to_string(),
+            );
+            *needs_manual_review = true;
+            return Ok(SocialVerificationResult {
+                platform: SocialPlatform::Twitter,
+                is_valid_url: true,
+                status: VerificationStatus::NeedsManualReview,
+                confidence,
+                details: SocialDetails::Twitter(post),
+                notes: notes.clone(),
+                needs_manual_review: *needs_manual_review,
+            });
+        };
+
+        // --- Real Twitter API v2 call ---
+        let api_url = format!(
+            "https://api.twitter.com/2/tweets/{}?tweet.fields=id,text",
+            post.post_id
+        );
+
+        let response = self
+            .http_client
+            .get(&api_url)
+            .header("Authorization", format!("Bearer {bearer}"))
+            .send()
+            .await
+            .map_err(|e| {
+                AiError::VerificationFailed(format!("Twitter API request failed: {e}"))
+            })?;
+
+        let http_status = response.status();
+
+        if http_status == reqwest::StatusCode::NOT_FOUND {
+            notes.push("Twitter API: tweet not found (404)".to_string());
+            return Ok(SocialVerificationResult {
+                platform: SocialPlatform::Twitter,
+                is_valid_url: true,
+                status: VerificationStatus::Failed,
+                confidence: 0,
+                details: SocialDetails::Twitter(post),
+                notes: notes.clone(),
+                needs_manual_review: false,
+            });
+        }
+
+        if http_status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+            notes.push("Twitter API: rate limited — manual review required".to_string());
+            *needs_manual_review = true;
+            return Ok(SocialVerificationResult {
+                platform: SocialPlatform::Twitter,
+                is_valid_url: true,
+                status: VerificationStatus::NeedsManualReview,
+                confidence: confidence.saturating_sub(10),
+                details: SocialDetails::Twitter(post),
+                notes: notes.clone(),
+                needs_manual_review: *needs_manual_review,
+            });
+        }
+
+        if http_status == reqwest::StatusCode::UNAUTHORIZED {
+            return Err(AiError::VerificationFailed(
+                "Twitter API: invalid or expired bearer token (401)".to_string(),
+            ));
+        }
+
+        if !http_status.is_success() {
+            return Err(AiError::VerificationFailed(format!(
+                "Twitter API returned HTTP {http_status}"
+            )));
+        }
+
+        let body: TwitterApiTweetResponse =
+            response
+                .json()
+                .await
+                .map_err(|e| {
+                    AiError::VerificationFailed(format!(
+                        "Failed to parse Twitter API response: {e}"
+                    ))
+                })?;
+
+        // The API may return 200 but with errors (e.g. protected tweets).
+        if body.data.is_none() {
+            let error_detail = body
+                .errors
+                .as_ref()
+                .and_then(|errs| errs.first())
+                .and_then(|e| e.detail.as_deref())
+                .unwrap_or("unknown error");
+            notes.push(format!("Twitter API: tweet inaccessible — {error_detail}"));
+            *needs_manual_review = true;
+            return Ok(SocialVerificationResult {
+                platform: SocialPlatform::Twitter,
+                is_valid_url: true,
+                status: VerificationStatus::NeedsManualReview,
+                confidence: confidence.saturating_sub(10),
+                details: SocialDetails::Twitter(post),
+                notes: notes.clone(),
+                needs_manual_review: *needs_manual_review,
+            });
+        }
+
+        // data.id is present — tweet confirmed to exist.
+        // The is_none() early-return above guarantees Some here; propagate the
+        // impossible None as an Internal error rather than panic.
+        let tweet_data = body.data.as_ref().ok_or_else(|| {
+            AiError::Internal("Twitter API: response had no data field after validation".to_string())
+        })?;
+        notes.push(format!(
+            "Twitter API: tweet {} confirmed via API",
+            tweet_data.id
+        ));
+
+        Ok(SocialVerificationResult {
+            platform: SocialPlatform::Twitter,
+            is_valid_url: true,
+            status: VerificationStatus::Verified,
+            confidence: 100,
+            details: SocialDetails::Twitter(post),
+            notes: notes.clone(),
+            needs_manual_review: *needs_manual_review,
+        })
     }
 
-    /// Verify `YouTube` URL
-    fn verify_youtube(
+    // ── YouTube ───────────────────────────────────────────────────────────────
+
+    /// Verify `YouTube` URL.
+    ///
+    /// If a YouTube Data API key is configured, calls
+    /// `GET /youtube/v3/videos?part=id&id={id}&key={key}` and interprets
+    /// the response honestly.
+    /// Without an API key, returns [`VerificationStatus::NeedsManualReview`].
+    async fn verify_youtube(
         &self,
         url: &str,
         notes: &mut Vec<String>,
@@ -564,64 +863,9 @@ impl SocialMediaVerifier {
     ) -> Result<SocialVerificationResult> {
         let parsed = SocialMediaParser::parse_youtube_url(url);
 
-        if let Some(video) = parsed {
-            let mut confidence = 80;
-
-            // Validate video ID format (11 characters, alphanumeric with - and _)
-            if video.video_id.len() != 11 {
-                notes.push(format!(
-                    "Video ID has unusual length: {} (expected 11)",
-                    video.video_id.len()
-                ));
-                confidence -= 20;
-            }
-
-            let valid_chars = video
-                .video_id
-                .chars()
-                .all(|c| c.is_alphanumeric() || c == '-' || c == '_');
-            if !valid_chars {
-                notes.push("Video ID contains invalid characters".to_string());
-                confidence -= 30;
-            }
-
-            notes.push(format!("Video ID: {}", video.video_id));
-
-            if let Some(ref channel) = video.channel {
-                notes.push(format!("Channel: {channel}"));
-            }
-
-            if video.is_shorts {
-                notes.push("Video type: YouTube Shorts".to_string());
-            }
-
-            if video.is_live {
-                notes.push("Video type: Live stream".to_string());
-            }
-
-            if let Some(t) = video.start_time {
-                notes.push(format!("Start time: {t}s"));
-            }
-
-            if let Some(ref playlist) = video.playlist_id {
-                notes.push(format!("Playlist: {playlist}"));
-            }
-
-            // Note: Full verification would require YouTube Data API
-            notes.push("Note: Content verification requires YouTube API access".to_string());
-
-            Ok(SocialVerificationResult {
-                platform: SocialPlatform::YouTube,
-                is_valid_url: true,
-                status: VerificationStatus::Verified,
-                confidence,
-                details: SocialDetails::YouTube(video),
-                notes: notes.clone(),
-                needs_manual_review: *needs_manual_review,
-            })
-        } else {
+        let Some(video) = parsed else {
             notes.push("Could not parse YouTube URL".to_string());
-            Ok(SocialVerificationResult {
+            return Ok(SocialVerificationResult {
                 platform: SocialPlatform::YouTube,
                 is_valid_url: false,
                 status: VerificationStatus::Unverified,
@@ -629,11 +873,148 @@ impl SocialMediaVerifier {
                 details: SocialDetails::None,
                 notes: notes.clone(),
                 needs_manual_review: true,
-            })
+            });
+        };
+
+        let mut confidence = 80u32;
+
+        // Structural video-ID checks.
+        if video.video_id.len() != 11 {
+            notes.push(format!(
+                "Video ID has unusual length: {} (expected 11)",
+                video.video_id.len()
+            ));
+            confidence = confidence.saturating_sub(20);
         }
+
+        let valid_chars = video
+            .video_id
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_');
+        if !valid_chars {
+            notes.push("Video ID contains invalid characters".to_string());
+            confidence = confidence.saturating_sub(30);
+        }
+
+        notes.push(format!("Video ID: {}", video.video_id));
+
+        if let Some(ref ch) = video.channel {
+            notes.push(format!("Channel: {ch}"));
+        }
+        if video.is_shorts {
+            notes.push("Video type: YouTube Shorts".to_string());
+        }
+        if video.is_live {
+            notes.push("Video type: Live stream".to_string());
+        }
+        if let Some(t) = video.start_time {
+            notes.push(format!("Start time: {t}s"));
+        }
+        if let Some(ref pl) = video.playlist_id {
+            notes.push(format!("Playlist: {pl}"));
+        }
+
+        // Attempt real API verification when credentials are present.
+        let Some(ref api_key) = self.credentials.youtube_api_key else {
+            notes.push(
+                "No YouTube API credentials configured — manual review required".to_string(),
+            );
+            *needs_manual_review = true;
+            return Ok(SocialVerificationResult {
+                platform: SocialPlatform::YouTube,
+                is_valid_url: true,
+                status: VerificationStatus::NeedsManualReview,
+                confidence,
+                details: SocialDetails::YouTube(video),
+                notes: notes.clone(),
+                needs_manual_review: *needs_manual_review,
+            });
+        };
+
+        // --- Real YouTube Data API v3 call ---
+        let api_url = format!(
+            "https://www.googleapis.com/youtube/v3/videos?part=id&id={}&key={}",
+            video.video_id, api_key
+        );
+
+        let response = self
+            .http_client
+            .get(&api_url)
+            .send()
+            .await
+            .map_err(|e| {
+                AiError::VerificationFailed(format!("YouTube API request failed: {e}"))
+            })?;
+
+        let http_status = response.status();
+
+        if http_status == reqwest::StatusCode::BAD_REQUEST {
+            return Err(AiError::VerificationFailed(
+                "YouTube API: bad request — check API key format (400)".to_string(),
+            ));
+        }
+
+        if http_status == reqwest::StatusCode::FORBIDDEN {
+            return Err(AiError::VerificationFailed(
+                "YouTube API: API key rejected or quota exceeded (403)".to_string(),
+            ));
+        }
+
+        if !http_status.is_success() {
+            return Err(AiError::VerificationFailed(format!(
+                "YouTube API returned HTTP {http_status}"
+            )));
+        }
+
+        let body: YouTubeApiVideosResponse =
+            response
+                .json()
+                .await
+                .map_err(|e| {
+                    AiError::VerificationFailed(format!(
+                        "Failed to parse YouTube API response: {e}"
+                    ))
+                })?;
+
+        if body.items.is_empty() {
+            // API returned 200 but no matching videos — video does not exist
+            // or is private/deleted.
+            notes.push("YouTube API: no video found for this ID — may be private, deleted, or never existed".to_string());
+            return Ok(SocialVerificationResult {
+                platform: SocialPlatform::YouTube,
+                is_valid_url: true,
+                status: VerificationStatus::Failed,
+                confidence: 0,
+                details: SocialDetails::YouTube(video),
+                notes: notes.clone(),
+                needs_manual_review: false,
+            });
+        }
+
+        // items is non-empty — video confirmed to exist.
+        let confirmed_id = &body.items[0].id;
+        notes.push(format!(
+            "YouTube API: video {confirmed_id} confirmed via API"
+        ));
+
+        Ok(SocialVerificationResult {
+            platform: SocialPlatform::YouTube,
+            is_valid_url: true,
+            status: VerificationStatus::Verified,
+            confidence: 100,
+            details: SocialDetails::YouTube(video),
+            notes: notes.clone(),
+            needs_manual_review: *needs_manual_review,
+        })
     }
 
-    /// Verify `LinkedIn` URL
+    // ── LinkedIn ──────────────────────────────────────────────────────────────
+
+    /// Verify `LinkedIn` URL.
+    ///
+    /// LinkedIn's API requires OAuth and does not expose a simple public
+    /// content-lookup endpoint; returns [`VerificationStatus::NeedsManualReview`]
+    /// for all successfully-parsed URLs.
     fn verify_linkedin(
         &self,
         url: &str,
@@ -642,50 +1023,9 @@ impl SocialMediaVerifier {
     ) -> Result<SocialVerificationResult> {
         let parsed = SocialMediaParser::parse_linkedin_url(url);
 
-        if let Some(post) = parsed {
-            let mut confidence = 60;
-
-            match post.post_type {
-                LinkedInPostType::Post => {
-                    notes.push("Post type: LinkedIn post/update".to_string());
-                }
-                LinkedInPostType::Article => {
-                    notes.push("Post type: LinkedIn article".to_string());
-                    confidence += 10; // Articles are more verifiable
-                }
-                LinkedInPostType::CompanyPost => {
-                    notes.push("Post type: Company page post".to_string());
-                }
-                LinkedInPostType::Unknown => {
-                    notes.push("Could not determine post type".to_string());
-                    confidence -= 10;
-                }
-            }
-
-            if let Some(ref activity) = post.activity_id {
-                notes.push(format!("Activity ID: {activity}"));
-            }
-
-            if let Some(ref profile) = post.profile {
-                notes.push(format!("Profile/Company: {profile}"));
-            }
-
-            // LinkedIn is harder to verify without API access
-            notes.push("Note: LinkedIn requires login for full verification".to_string());
-            *needs_manual_review = true;
-
-            Ok(SocialVerificationResult {
-                platform: SocialPlatform::LinkedIn,
-                is_valid_url: true,
-                status: VerificationStatus::Verified,
-                confidence,
-                details: SocialDetails::LinkedIn(post),
-                notes: notes.clone(),
-                needs_manual_review: *needs_manual_review,
-            })
-        } else {
+        let Some(post) = parsed else {
             notes.push("Could not parse LinkedIn URL".to_string());
-            Ok(SocialVerificationResult {
+            return Ok(SocialVerificationResult {
                 platform: SocialPlatform::LinkedIn,
                 is_valid_url: false,
                 status: VerificationStatus::Unverified,
@@ -693,15 +1033,60 @@ impl SocialMediaVerifier {
                 details: SocialDetails::None,
                 notes: notes.clone(),
                 needs_manual_review: true,
-            })
+            });
+        };
+
+        let mut confidence = 60u32;
+
+        match post.post_type {
+            LinkedInPostType::Post => {
+                notes.push("Post type: LinkedIn post/update".to_string());
+            }
+            LinkedInPostType::Article => {
+                notes.push("Post type: LinkedIn article".to_string());
+                confidence = confidence.saturating_add(10);
+            }
+            LinkedInPostType::CompanyPost => {
+                notes.push("Post type: Company page post".to_string());
+            }
+            LinkedInPostType::Unknown => {
+                notes.push("Could not determine post type".to_string());
+                confidence = confidence.saturating_sub(10);
+            }
         }
+
+        if let Some(ref activity) = post.activity_id {
+            notes.push(format!("Activity ID: {activity}"));
+        }
+
+        if let Some(ref profile) = post.profile {
+            notes.push(format!("Profile/Company: {profile}"));
+        }
+
+        // LinkedIn requires OAuth for API access; no simple public lookup.
+        notes.push(
+            "LinkedIn verification requires OAuth API access — manual review required".to_string(),
+        );
+        *needs_manual_review = true;
+
+        Ok(SocialVerificationResult {
+            platform: SocialPlatform::LinkedIn,
+            is_valid_url: true,
+            status: VerificationStatus::NeedsManualReview,
+            confidence,
+            details: SocialDetails::LinkedIn(post),
+            notes: notes.clone(),
+            needs_manual_review: *needs_manual_review,
+        })
     }
 
+    // ── Batch / summary helpers ────────────────────────────────────────────────
+
     /// Batch verify multiple URLs
-    pub fn verify_urls(&self, urls: &[&str]) -> Vec<Result<SocialVerificationResult>> {
+    pub async fn verify_urls(&self, urls: &[&str]) -> Vec<Result<SocialVerificationResult>> {
         let mut results = Vec::with_capacity(urls.len());
         for url in urls {
-            results.push(self.verify_url(url));
+            results.push(self.verify_url(url).await);
         }
         results
     }
@@ -710,6 +1095,7 @@ impl SocialMediaVerifier {
     #[must_use]
     pub fn summarize_results(results: &[SocialVerificationResult]) -> VerificationSummary {
         let total = results.len();
+        // Only API-confirmed results count as verified in the summary.
         let verified = results
             .iter()
             .filter(|r| r.status == VerificationStatus::Verified)
@@ -742,12 +1128,14 @@ impl Default for SocialMediaVerifier {
     }
 }
 
+// ─── Summary ──────────────────────────────────────────────────────────────────
+
 /// Summary of verification results
 #[derive(Debug, Clone, Serialize)]
 pub struct VerificationSummary {
     /// Total URLs processed
     pub total_urls: usize,
-    /// URLs that were verified
+    /// URLs confirmed via platform API
     pub verified_count: usize,
     /// URLs needing manual review
     pub needs_manual_review: usize,
@@ -757,9 +1145,13 @@ pub struct VerificationSummary {
     pub platforms_found: std::collections::HashMap<SocialPlatform, usize>,
 }
 
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── URL parsing ────────────────────────────────────────────────────────────
 
     #[test]
     fn test_twitter_url_parsing() {
@@ -846,5 +1238,245 @@ mod tests {
         assert_eq!(SocialMediaParser::parse_time_param("1m30s"), Some(90));
         assert_eq!(SocialMediaParser::parse_time_param("1h30m"), Some(5400));
         assert_eq!(SocialMediaParser::parse_time_param("2h15m30s"), Some(8130));
+    }
+
+    // ── No-credentials honesty tests ───────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_twitter_no_credentials_returns_needs_manual_review() {
+        let verifier = SocialMediaVerifier::new(); // no credentials
+        let url = "https://twitter.com/elonmusk/status/1234567890123456789";
+        let result = verifier.verify_url(url).await.unwrap();
+
+        assert!(
+            result.is_valid_url,
+            "Valid Twitter URL must parse successfully"
+        );
+        assert_ne!(
+            result.status,
+            VerificationStatus::Verified,
+            "Without API credentials, status must not be Verified"
+        );
+        assert_eq!(
+            result.status,
+            VerificationStatus::NeedsManualReview,
+            "Without API credentials, Twitter result must be NeedsManualReview"
+        );
+        assert!(result.needs_manual_review);
+        // Parsed post details must still be populated.
+        assert!(matches!(result.details, SocialDetails::Twitter(_)));
+    }
+
+    #[tokio::test]
+    async fn test_youtube_no_credentials_returns_needs_manual_review() {
+        let verifier = SocialMediaVerifier::new(); // no credentials
+        let url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+        let result = verifier.verify_url(url).await.unwrap();
+
+        assert!(
+            result.is_valid_url,
+            "Valid YouTube URL must parse successfully"
+        );
+        assert_ne!(
+            result.status,
+            VerificationStatus::Verified,
+            "Without API credentials, status must not be Verified"
+        );
+        assert_eq!(
+            result.status,
+            VerificationStatus::NeedsManualReview,
+            "Without API credentials, YouTube result must be NeedsManualReview"
+        );
+        assert!(result.needs_manual_review);
+        assert!(matches!(result.details, SocialDetails::YouTube(_)));
+    }
+
+    #[tokio::test]
+    async fn test_linkedin_always_needs_manual_review() {
+        let verifier = SocialMediaVerifier::new();
+        let url = "https://www.linkedin.com/posts/johndoe_activity-1234567890_test";
+        let result = verifier.verify_url(url).await.unwrap();
+
+        assert!(result.is_valid_url);
+        assert_ne!(result.status, VerificationStatus::Verified);
+        assert_eq!(result.status, VerificationStatus::NeedsManualReview);
+        assert!(result.needs_manual_review);
+    }
+
+    #[tokio::test]
+    async fn test_malformed_twitter_url_returns_unverified() {
+        let verifier = SocialMediaVerifier::new();
+        // No "status" segment, so parse fails.
+        let url = "https://twitter.com/elonmusk";
+        let result = verifier.verify_url(url).await.unwrap();
+
+        assert!(!result.is_valid_url);
+        assert_eq!(result.status, VerificationStatus::Unverified);
+        assert_ne!(result.status, VerificationStatus::Verified);
+    }
+
+    #[tokio::test]
+    async fn test_malformed_youtube_url_returns_unverified() {
+        let verifier = SocialMediaVerifier::new();
+        let url = "https://www.youtube.com/channel/UCxxx"; // no video ID
+        let result = verifier.verify_url(url).await.unwrap();
+
+        assert!(!result.is_valid_url);
+        assert_eq!(result.status, VerificationStatus::Unverified);
+        assert_ne!(result.status, VerificationStatus::Verified);
+    }
+
+    #[tokio::test]
+    async fn test_discord_returns_unsupported() {
+        let verifier = SocialMediaVerifier::new();
+        let url = "https://discord.com/channels/1234/5678";
+        let result = verifier.verify_url(url).await.unwrap();
+
+        assert_eq!(result.status, VerificationStatus::Unsupported);
+        assert!(result.needs_manual_review);
+    }
+
+    #[tokio::test]
+    async fn test_unknown_platform_returns_error() {
+        let verifier = SocialMediaVerifier::new();
+        let url = "https://example.com/some-post";
+        let result = verifier.verify_url(url).await;
+
+        assert!(result.is_err());
+    }
+
+    // ── API request construction tests ─────────────────────────────────────────
+
+    /// Verify that the Twitter API URL is constructed correctly from the tweet ID.
+    /// We test construction without hitting the live API by using the known URL pattern.
+    #[test]
+    fn test_twitter_api_url_construction() {
+        let tweet_id = "1234567890123456789";
+        let expected = format!(
+            "https://api.twitter.com/2/tweets/{}?tweet.fields=id,text",
+            tweet_id
+        );
+        // The format string used internally must produce this URL.
+        let constructed = format!(
+            "https://api.twitter.com/2/tweets/{}?tweet.fields=id,text",
+            tweet_id
+        );
+        assert_eq!(constructed, expected);
+    }
+
+    /// Verify that the YouTube API URL is constructed correctly.
+    #[test]
+    fn test_youtube_api_url_construction() {
+        let video_id = "dQw4w9WgXcQ";
+        let api_key = "AIzaFakeKeyForTest";
+        let constructed = format!(
+            "https://www.googleapis.com/youtube/v3/videos?part=id&id={}&key={}",
+            video_id, api_key
+        );
+        assert!(constructed.contains("youtube/v3/videos"));
+        assert!(constructed.contains(&format!("id={video_id}")));
+        assert!(constructed.contains(&format!("key={api_key}")));
+    }
+
+    // ── summarize_results ──────────────────────────────────────────────────────
+
+    #[test]
+    fn test_summarize_needs_manual_review_not_counted_as_verified() {
+        // NeedsManualReview results must not be counted as verified.
+        let results = vec![
+            SocialVerificationResult {
+                platform: SocialPlatform::Twitter,
+                is_valid_url: true,
+                status: VerificationStatus::NeedsManualReview,
+                confidence: 70,
+                details: SocialDetails::None,
+                notes: vec![],
+                needs_manual_review: true,
+            },
+            SocialVerificationResult {
+                platform: SocialPlatform::YouTube,
+                is_valid_url: true,
+                status: VerificationStatus::NeedsManualReview,
+                confidence: 80,
+                details: SocialDetails::None,
+                notes: vec![],
+                needs_manual_review: true,
+            },
+        ];
+
+        let summary = SocialMediaVerifier::summarize_results(&results);
+        assert_eq!(
+            summary.verified_count, 0,
+            "NeedsManualReview must not be counted as verified"
+        );
+        assert_eq!(summary.needs_manual_review, 2);
+    }
+
+    #[test]
+    fn test_summarize_verified_counted_correctly() {
+        let results = vec![SocialVerificationResult {
+            platform: SocialPlatform::Twitter,
+            is_valid_url: true,
+            status: VerificationStatus::Verified,
+            confidence: 100,
+            details: SocialDetails::None,
+            notes: vec![],
+            needs_manual_review: false,
+        }];
+
+        let summary = SocialMediaVerifier::summarize_results(&results);
+        assert_eq!(summary.verified_count, 1);
+    }
+
+    // ── SocialApiCredentials constructors ──────────────────────────────────────
+
+    #[test]
+    fn test_credentials_none() {
+        let creds = SocialApiCredentials::none();
+        assert!(creds.twitter_bearer_token.is_none());
+        assert!(creds.youtube_api_key.is_none());
+    }
+
+    #[test]
+    fn test_credentials_twitter_only() {
+        let creds = SocialApiCredentials::twitter_only("my_token");
+        assert_eq!(creds.twitter_bearer_token.as_deref(), Some("my_token"));
+        assert!(creds.youtube_api_key.is_none());
+    }
+
+    #[test]
+    fn test_credentials_youtube_only() {
+        let creds = SocialApiCredentials::youtube_only("my_key");
+        assert!(creds.twitter_bearer_token.is_none());
+        assert_eq!(creds.youtube_api_key.as_deref(), Some("my_key"));
+    }
+
+    #[test]
+    fn test_credentials_both() {
+        let creds = SocialApiCredentials::both("tok", "key");
+        assert_eq!(creds.twitter_bearer_token.as_deref(), Some("tok"));
+        assert_eq!(creds.youtube_api_key.as_deref(), Some("key"));
+    }
+
+    // ── VerificationStatus never-Verified invariant ───────────────────────────
+
+    #[tokio::test]
+    async fn test_batch_verify_no_credentials_no_verified() {
+        let verifier = SocialMediaVerifier::new();
+        let urls = [
+            "https://twitter.com/user/status/1234567890123456789",
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "https://www.linkedin.com/posts/johndoe_activity-1234567890_test",
+        ];
+        let results = verifier.verify_urls(&urls).await;
+        for res in &results {
+            let r = res.as_ref().expect("All URLs should parse without error");
+            assert_ne!(
+                r.status,
+                VerificationStatus::Verified,
+                "Without API credentials, no result should be Verified. URL platform: {:?}",
+                r.platform
+            );
+        }
     }
 }

@@ -16,6 +16,7 @@ use crate::error::Result;
 // Type aliases to reduce complexity
 type CommitmentStats = (i64, i64, Option<DateTime<Utc>>, Option<DateTime<Utc>>);
 type QualityStats = (i64, Decimal, Option<DateTime<Utc>>, Option<DateTime<Utc>>);
+type ResponseTimeStats = (i64, Decimal, Option<DateTime<Utc>>, Option<DateTime<Utc>>);
 
 /// Confidence level for a score component
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -214,8 +215,10 @@ impl ConfidenceTracker {
         // Get community trust (holder ratings) confidence
         let trust_conf = self.get_community_trust_confidence(user_id).await?;
 
-        // Get response time confidence (placeholder - would need timing data)
-        let response_conf = ComponentConfidence::new("response_time", dec!(70), 0);
+        // Get response time confidence from verified-commitment fulfilment
+        // latencies. With no verified commitments this yields a neutral prior
+        // at zero data points (very-low confidence), not a confident value.
+        let response_conf = self.get_response_time_confidence(user_id).await?;
 
         // Get longevity confidence (always high - based on account age)
         let longevity_conf = self.get_longevity_confidence(user_id).await?;
@@ -334,6 +337,45 @@ impl ConfidenceTracker {
         };
 
         Ok(ComponentConfidence::new("community_trust", score, count)
+            .with_timestamps(oldest, newest))
+    }
+
+    /// Get response-time confidence from verified-commitment fulfilment latency.
+    ///
+    /// The score is derived from how quickly verified commitments were
+    /// fulfilled (`verified_at - created_at`), and the data-point count is the
+    /// number of verified commitments with a measurable latency. A user with no
+    /// verified commitments receives an explicit neutral prior at zero data
+    /// points, which the confidence layer reports as very-low confidence — it is
+    /// never a confident, favorable value.
+    async fn get_response_time_confidence(&self, user_id: Uuid) -> Result<ComponentConfidence> {
+        let stats: Option<ResponseTimeStats> = sqlx::query_as(
+            r#"
+            SELECT
+                COUNT(*) AS sample_count,
+                COALESCE(
+                    SUM(EXTRACT(EPOCH FROM (verified_at - created_at)) / 3600.0),
+                    0
+                )::numeric AS total_hours,
+                MIN(created_at) AS oldest,
+                MAX(verified_at) AS newest
+            FROM output_commitments
+            WHERE user_id = $1
+              AND status = 'verified'
+              AND verified_at IS NOT NULL
+              AND verified_at >= created_at
+            "#,
+        )
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let (sample_count, total_hours, oldest, newest) =
+            stats.unwrap_or((0, dec!(0), None, None));
+
+        let (score, data_points) = crate::score::response_time_score(sample_count, total_hours);
+
+        Ok(ComponentConfidence::new("response_time", score, data_points)
             .with_timestamps(oldest, newest))
     }
 
@@ -505,6 +547,7 @@ pub struct WeightedScore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::score::RESPONSE_TIME_HORIZON_HOURS;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -764,6 +807,89 @@ mod tests {
         assert!("invalid".parse::<ConfidenceLevel>().is_err());
         assert!("moderate".parse::<ConfidenceLevel>().is_err());
         assert!("".parse::<ConfidenceLevel>().is_err());
+    }
+
+    // ------------------------------------------------------------------------
+    // Response-time confidence (data-driven, no fabricated 70-with-confidence)
+    //
+    // These tests reproduce exactly what `get_response_time_confidence` builds:
+    // the shared pure scorer `crate::score::response_time_score` followed by
+    // `ComponentConfidence::new`. This validates the production logic without a
+    // live database.
+    // ------------------------------------------------------------------------
+
+    /// Build the response-time component the same way the DB path does, from a
+    /// sample count and total fulfilment latency in hours.
+    fn response_conf_from(sample_count: i64, total_hours: Decimal) -> ComponentConfidence {
+        let (score, data_points) = crate::score::response_time_score(sample_count, total_hours);
+        ComponentConfidence::new("response_time", score, data_points)
+    }
+
+    #[test]
+    fn test_response_time_confidence_no_data_is_low_not_confident() {
+        // The old fabrication asserted score 70 with 0 data points. Honest
+        // behavior: neutral score (50), 0 data points, very-low confidence.
+        let conf = response_conf_from(0, dec!(0));
+        assert_eq!(conf.component, "response_time");
+        assert_eq!(conf.data_points, 0);
+        assert_eq!(conf.raw_score, dec!(50));
+        assert_ne!(conf.raw_score, dec!(70));
+        assert_eq!(conf.confidence, ConfidenceLevel::VeryLow);
+        // Very-low confidence must discount the score, not pass it through.
+        assert_eq!(conf.weight_multiplier, dec!(0.5));
+        assert_eq!(conf.adjusted_score, dec!(25)); // 50 * 0.5
+    }
+
+    #[test]
+    fn test_response_time_confidence_with_data_is_data_driven() {
+        // 12 verified commitments, mean latency = 1 week => score 50, but now
+        // backed by real data: Medium confidence (>= 10 data points).
+        let conf = response_conf_from(12, RESPONSE_TIME_HORIZON_HOURS * dec!(12));
+        assert_eq!(conf.data_points, 12);
+        assert_eq!(conf.raw_score, dec!(50));
+        assert_eq!(conf.confidence, ConfidenceLevel::Medium);
+        // Same neutral-looking score, but EARNED: higher multiplier than no-data.
+        assert!(conf.weight_multiplier > dec!(0.5));
+    }
+
+    #[test]
+    fn test_response_time_confidence_scales_with_data_points() {
+        // Identical responsiveness (mean = horizon => score 50) with increasing
+        // sample counts must yield monotonically non-decreasing confidence.
+        let h = RESPONSE_TIME_HORIZON_HOURS;
+        let few = response_conf_from(2, h * dec!(2)); // VeryLow
+        let some = response_conf_from(5, h * dec!(5)); // Low
+        let many = response_conf_from(20, h * dec!(20)); // Medium
+        let lots = response_conf_from(50, h * dec!(50)); // High
+        let max = response_conf_from(150, h * dec!(150)); // VeryHigh
+
+        assert_eq!(few.confidence, ConfidenceLevel::VeryLow);
+        assert_eq!(some.confidence, ConfidenceLevel::Low);
+        assert_eq!(many.confidence, ConfidenceLevel::Medium);
+        assert_eq!(lots.confidence, ConfidenceLevel::High);
+        assert_eq!(max.confidence, ConfidenceLevel::VeryHigh);
+
+        assert!(few.confidence < some.confidence);
+        assert!(some.confidence < many.confidence);
+        assert!(many.confidence < lots.confidence);
+        assert!(lots.confidence < max.confidence);
+
+        // Weight multiplier (hence adjusted score) rises with data quantity.
+        assert!(few.weight_multiplier < some.weight_multiplier);
+        assert!(some.weight_multiplier < many.weight_multiplier);
+        assert!(many.weight_multiplier < lots.weight_multiplier);
+        assert!(lots.weight_multiplier < max.weight_multiplier);
+    }
+
+    #[test]
+    fn test_response_time_confidence_reflects_speed() {
+        // Fast fulfilment scores higher than slow fulfilment at equal data.
+        let fast = response_conf_from(30, dec!(30) * dec!(24)); // 1-day mean
+        let slow = response_conf_from(30, dec!(30) * dec!(720)); // ~1-month mean
+        assert!(fast.raw_score > slow.raw_score);
+        // Both have the same (high) confidence because data quantity is equal.
+        assert_eq!(fast.confidence, slow.confidence);
+        assert_eq!(fast.confidence, ConfidenceLevel::High);
     }
 
     // ========================================================================
