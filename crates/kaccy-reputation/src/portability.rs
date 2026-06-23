@@ -4,11 +4,22 @@
 //! (GitHub, LinkedIn, etc.) and export verifiable credentials for use elsewhere.
 
 use chrono::{DateTime, Utc};
+use secp256k1::ecdsa::Signature;
+use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::error::ReputationError;
+
+/// Signature scheme used for credential proofs.
+///
+/// The proof is an ECDSA signature over the SHA-256 digest of the credential's
+/// canonical byte serialization (see [`canonical_credential_bytes`]) on the
+/// secp256k1 curve, following the W3C `EcdsaSecp256k1Signature2019` suite
+/// conventions.
+const PROOF_TYPE_SECP256K1: &str = "EcdsaSecp256k1Signature2019";
 
 /// External reputation source
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -155,14 +166,21 @@ pub struct CredentialSubject {
 /// Cryptographic proof for the credential
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CredentialProof {
-    /// Proof type (e.g. `"Ed25519Signature2020"`).
+    /// Proof type (e.g. `"EcdsaSecp256k1Signature2019"`).
     #[serde(rename = "type")]
     pub proof_type: String,
     /// Timestamp when the proof was created.
     pub created: DateTime<Utc>,
     /// Identifier of the key used to create the proof.
+    ///
+    /// For [`PROOF_TYPE_SECP256K1`] proofs this is a self-describing
+    /// `did:key:secp256k1:<hex-compressed-public-key>#key-1` URI, so verifiers
+    /// can recover the signer's public key without an external key registry.
     pub verification_method: String,
-    /// Base64-encoded proof value.
+    /// Encoded proof value.
+    ///
+    /// For [`PROOF_TYPE_SECP256K1`] proofs this is the lowercase-hex DER encoding
+    /// of the ECDSA signature over the credential's canonical digest.
     pub proof_value: String,
 }
 
@@ -177,6 +195,16 @@ pub struct ImportReputationRequest {
     pub platform_user_id: String,
     /// OAuth access token for accessing the platform's API, if required.
     pub access_token: Option<String>,
+    /// Real, caller-supplied reputation data for the platform.
+    ///
+    /// This crate ships without an HTTP client, so it never fetches reputation
+    /// from external services on its own. The caller is responsible for
+    /// obtaining the data (e.g. via a platform API in an upstream service) and
+    /// injecting it here. When this is `None`,
+    /// [`PortabilityService::import_reputation`] returns
+    /// [`ReputationError::ExternalDataUnavailable`] instead of inventing data.
+    #[serde(default)]
+    pub reputation_data: Option<serde_json::Value>,
 }
 
 /// Request to export reputation
@@ -214,21 +242,32 @@ impl PortabilityService {
         Self { pool }
     }
 
-    /// Import reputation from an external platform
+    /// Import reputation from an external platform.
+    ///
+    /// Reputation data must be supplied explicitly via
+    /// [`ImportReputationRequest::reputation_data`]; this crate has no HTTP
+    /// client and never fetches or fabricates data on its own. When no data is
+    /// provided the call fails with [`ReputationError::ExternalDataUnavailable`].
     pub async fn import_reputation(
         &self,
         request: ImportReputationRequest,
     ) -> Result<ImportResult, ReputationError> {
         let platform_str = request.platform.to_string();
 
-        // Fetch reputation data from platform
-        let reputation_data = self
-            .fetch_platform_data(
-                &request.platform,
-                &request.platform_user_id,
-                request.access_token,
-            )
-            .await?;
+        // Use caller-supplied real reputation data. This crate has no HTTP
+        // client, so it never invents data: when none is provided, surface an
+        // honest typed error describing how to obtain it.
+        let reputation_data = match request.reputation_data {
+            Some(data) => data,
+            None => {
+                self.fetch_platform_data(
+                    &request.platform,
+                    &request.platform_user_id,
+                    request.access_token,
+                )
+                .await?
+            }
+        };
 
         // Calculate imported score based on platform data
         let imported_score = self.calculate_imported_score(&request.platform, &reputation_data);
@@ -281,10 +320,20 @@ impl PortabilityService {
         Ok(())
     }
 
-    /// Export reputation as a verifiable credential
+    /// Export reputation as a verifiable credential.
+    ///
+    /// When `request.include_proof` is set, the returned credential carries a
+    /// real ECDSA (secp256k1) signature over the SHA-256 digest of its canonical
+    /// byte serialization, produced with the caller-supplied `signing_key`. The
+    /// resulting proof can be checked with [`PortabilityService::verify_proof`]
+    /// or the free function [`verify_credential`].
+    ///
+    /// The signing secret key is never generated or stored by this service; it
+    /// is supplied by the caller so that key custody stays with the issuer.
     pub async fn export_reputation(
         &self,
         request: ExportReputationRequest,
+        signing_key: &SecretKey,
     ) -> Result<VerifiableCredential, ReputationError> {
         // Get user's current reputation
         let score = sqlx::query_as::<_, (i32, String)>(
@@ -313,7 +362,10 @@ impl PortabilityService {
             .expiration_days
             .map(|days| now + chrono::Duration::days(days as i64));
 
-        let credential = VerifiableCredential {
+        // Build the credential body first with an unsigned (empty) proof; the
+        // real signature is computed over the canonical serialization of
+        // everything except the proof, then written back in.
+        let mut credential = VerifiableCredential {
             context: vec![
                 "https://www.w3.org/2018/credentials/v1".to_string(),
                 "https://kaccy.io/credentials/v1".to_string(),
@@ -334,17 +386,17 @@ impl PortabilityService {
                 verified: true,
                 as_of_date: now,
             },
-            proof: if request.include_proof {
-                self.generate_proof(&credential_id, &request.user_id, total_score, now)
-            } else {
-                CredentialProof {
-                    proof_type: "Ed25519Signature2020".to_string(),
-                    created: now,
-                    verification_method: "https://kaccy.io/keys/1".to_string(),
-                    proof_value: "placeholder".to_string(),
-                }
+            proof: CredentialProof {
+                proof_type: PROOF_TYPE_SECP256K1.to_string(),
+                created: now,
+                verification_method: String::new(),
+                proof_value: String::new(),
             },
         };
+
+        if request.include_proof {
+            credential.proof = Self::generate_proof(&credential, signing_key, now)?;
+        }
 
         // Store export record
         self.store_export_record(request.user_id, &credential)
@@ -400,45 +452,28 @@ impl PortabilityService {
 
     // Helper methods
 
+    /// Fallback used by [`Self::import_reputation`] when the caller did not
+    /// supply real reputation data.
+    ///
+    /// This crate intentionally has no HTTP client, so it cannot — and must not
+    /// — fetch reputation from external platforms on its own. Rather than
+    /// fabricate plausible-looking data, this always returns a typed
+    /// [`ReputationError::ExternalDataUnavailable`] error so that callers are
+    /// forced to inject genuine data via
+    /// [`ImportReputationRequest::reputation_data`].
     async fn fetch_platform_data(
         &self,
         platform: &Platform,
         _platform_user_id: &str,
         _access_token: Option<String>,
     ) -> Result<serde_json::Value, ReputationError> {
-        // In a real implementation, this would call external APIs
-        // For now, return placeholder data
-        match platform {
-            Platform::GitHub => Ok(serde_json::json!({
-                "username": "example",
-                "followers": 100,
-                "public_repos": 50,
-                "total_stars": 500,
-                "total_forks": 100,
-                "contributions_last_year": 1000,
-                "account_age_days": 1000,
-                "top_languages": ["Rust", "TypeScript"]
-            })),
-            Platform::LinkedIn => Ok(serde_json::json!({
-                "profile_id": "example",
-                "connections": 500,
-                "endorsements": 50,
-                "recommendations": 10,
-                "years_experience": 5,
-                "skills": ["Software Development", "Leadership"]
-            })),
-            Platform::StackOverflow => Ok(serde_json::json!({
-                "user_id": 12345,
-                "reputation": 5000,
-                "gold_badges": 2,
-                "silver_badges": 10,
-                "bronze_badges": 50,
-                "answers": 200,
-                "questions": 50,
-                "top_tags": ["rust", "typescript", "javascript"]
-            })),
-            _ => Ok(serde_json::json!({})),
-        }
+        Err(ReputationError::ExternalDataUnavailable {
+            platform: platform.to_string(),
+            reason: "no real data source is configured; this crate has no HTTP \
+                     client, so reputation data must be supplied via \
+                     `ImportReputationRequest::reputation_data`"
+                .to_string(),
+        })
     }
 
     fn calculate_imported_score(&self, platform: &Platform, data: &serde_json::Value) -> i32 {
@@ -477,20 +512,49 @@ impl PortabilityService {
         }
     }
 
+    /// Produce a real cryptographic proof for `credential`.
+    ///
+    /// The proof is an ECDSA signature on the secp256k1 curve over the SHA-256
+    /// digest of the credential's canonical byte serialization (see
+    /// [`canonical_credential_bytes`]). The canonical form deliberately excludes
+    /// the proof itself, so the value being signed is fully determined by the
+    /// credential's claims. The signer's compressed public key is recorded in
+    /// [`CredentialProof::verification_method`] and the DER-encoded signature is
+    /// recorded as a hex string in [`CredentialProof::proof_value`], which makes
+    /// the proof independently verifiable via [`verify_credential`].
     fn generate_proof(
-        &self,
-        _credential_id: &Uuid,
-        _user_id: &Uuid,
-        _score: i32,
+        credential: &VerifiableCredential,
+        signing_key: &SecretKey,
         created: DateTime<Utc>,
-    ) -> CredentialProof {
-        // In a real implementation, this would use cryptographic signing
-        CredentialProof {
-            proof_type: "Ed25519Signature2020".to_string(),
+    ) -> Result<CredentialProof, ReputationError> {
+        let secp = Secp256k1::new();
+        let public_key = signing_key.public_key(&secp);
+
+        let digest = credential_digest(credential)?;
+        let message = Message::from_digest(digest);
+        let signature = secp.sign_ecdsa(message, signing_key);
+
+        Ok(CredentialProof {
+            proof_type: PROOF_TYPE_SECP256K1.to_string(),
             created,
-            verification_method: "https://kaccy.io/keys/1".to_string(),
-            proof_value: "simulated_signature_placeholder".to_string(),
-        }
+            // `did:key`-style verification method carrying the compressed
+            // secp256k1 public key in hex so the proof is self-describing.
+            verification_method: format!("did:key:secp256k1:{public_key}#key-1"),
+            proof_value: signature.to_string(),
+        })
+    }
+
+    /// Verify the cryptographic proof attached to `credential`.
+    ///
+    /// Returns `Ok(true)` when the signature in the proof was produced over the
+    /// credential's canonical serialization by the key advertised in the proof's
+    /// verification method, and `Ok(false)` when the signature does not match
+    /// (e.g. because any credential field was tampered with). A malformed proof
+    /// (unparseable key or signature, or an unsupported proof type) yields a
+    /// typed [`ReputationError::Cryptographic`] error rather than a silent
+    /// `false`.
+    pub fn verify_proof(credential: &VerifiableCredential) -> Result<bool, ReputationError> {
+        verify_credential(credential)
     }
 
     async fn store_export_record(
@@ -499,7 +563,7 @@ impl PortabilityService {
         credential: &VerifiableCredential,
     ) -> Result<(), ReputationError> {
         let credential_json = serde_json::to_value(credential).map_err(|e| {
-            ReputationError::Validation(format!("Failed to serialize credential: {}", e))
+            ReputationError::Validation(format!("Failed to serialize credential: {e}"))
         })?;
 
         sqlx::query(
@@ -519,6 +583,104 @@ impl PortabilityService {
     }
 }
 
+/// Build the canonical byte serialization of a credential for signing/verifying.
+///
+/// The canonical form is the JSON serialization of the credential with its
+/// `proof` member removed. Object keys are emitted in sorted order because this
+/// crate's `serde_json` is built without the `preserve_order` feature, so its
+/// object map is a `BTreeMap`; this makes the encoding deterministic and
+/// independent of struct field declaration order. Two credentials with the same
+/// claims therefore always produce identical canonical bytes, while changing any
+/// claim changes the bytes (and hence the digest and signature).
+pub fn canonical_credential_bytes(
+    credential: &VerifiableCredential,
+) -> Result<Vec<u8>, ReputationError> {
+    let mut value = serde_json::to_value(credential).map_err(|e| {
+        ReputationError::Cryptographic(format!("failed to serialize credential: {e}"))
+    })?;
+
+    if let Some(object) = value.as_object_mut() {
+        object.remove("proof");
+    }
+
+    serde_json::to_vec(&value).map_err(|e| {
+        ReputationError::Cryptographic(format!("failed to encode canonical credential: {e}"))
+    })
+}
+
+/// Compute the SHA-256 digest of a credential's canonical serialization.
+fn credential_digest(credential: &VerifiableCredential) -> Result<[u8; 32], ReputationError> {
+    let bytes = canonical_credential_bytes(credential)?;
+    let mut hasher = Sha256::new();
+    hasher.update(&bytes);
+    Ok(hasher.finalize().into())
+}
+
+/// Extract the compressed secp256k1 public key from a proof's verification
+/// method of the form `did:key:secp256k1:<hex>#key-1`.
+fn extract_public_key(verification_method: &str) -> Result<PublicKey, ReputationError> {
+    let after_prefix = verification_method
+        .strip_prefix("did:key:secp256k1:")
+        .ok_or_else(|| {
+            ReputationError::Cryptographic(format!(
+                "unsupported verification method: {verification_method}"
+            ))
+        })?;
+
+    let hex_key = after_prefix
+        .split('#')
+        .next()
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| {
+            ReputationError::Cryptographic(
+                "verification method is missing a public key".to_string(),
+            )
+        })?;
+
+    hex_key.parse::<PublicKey>().map_err(|e| {
+        ReputationError::Cryptographic(format!("invalid public key in verification method: {e}"))
+    })
+}
+
+/// Verify the cryptographic proof attached to a credential.
+///
+/// Returns `Ok(true)` when the proof's signature validates against the
+/// credential's canonical digest using the public key advertised in the proof's
+/// verification method, and `Ok(false)` when verification fails because the
+/// signature does not correspond to the (possibly tampered) credential content.
+/// Structural problems with the proof — an unsupported proof type, a missing or
+/// unparseable key, or a malformed signature — return a typed
+/// [`ReputationError::Cryptographic`] error so that an unsigned or corrupt
+/// credential is never mistaken for a validly-signed one.
+pub fn verify_credential(credential: &VerifiableCredential) -> Result<bool, ReputationError> {
+    if credential.proof.proof_type != PROOF_TYPE_SECP256K1 {
+        return Err(ReputationError::Cryptographic(format!(
+            "unsupported proof type: {}",
+            credential.proof.proof_type
+        )));
+    }
+
+    if credential.proof.proof_value.is_empty() {
+        return Err(ReputationError::Cryptographic(
+            "credential has no proof value (it is unsigned)".to_string(),
+        ));
+    }
+
+    let public_key = extract_public_key(&credential.proof.verification_method)?;
+
+    let signature = credential
+        .proof
+        .proof_value
+        .parse::<Signature>()
+        .map_err(|e| ReputationError::Cryptographic(format!("invalid signature: {e}")))?;
+
+    let digest = credential_digest(credential)?;
+    let message = Message::from_digest(digest);
+
+    let secp = Secp256k1::new();
+    Ok(secp.verify_ecdsa(message, &signature, &public_key).is_ok())
+}
+
 impl std::fmt::Display for Platform {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -527,7 +689,7 @@ impl std::fmt::Display for Platform {
             Platform::StackOverflow => write!(f, "stackoverflow"),
             Platform::Twitter => write!(f, "twitter"),
             Platform::Discord => write!(f, "discord"),
-            Platform::Custom(name) => write!(f, "{}", name),
+            Platform::Custom(name) => write!(f, "{name}"),
         }
     }
 }
@@ -605,5 +767,285 @@ mod tests {
             "reddit".parse::<Platform>().unwrap(),
             Platform::Custom("reddit".to_string())
         );
+    }
+
+    // --- Portability cryptography / data-injection tests ---
+
+    /// A fixed, valid secp256k1 secret key used only as a deterministic test
+    /// fixture. This is NOT a production key: real callers supply their own key
+    /// to [`PortabilityService::export_reputation`].
+    fn test_signing_key() -> SecretKey {
+        // 32 non-zero bytes that form a valid secp256k1 scalar.
+        let bytes: [u8; 32] = [
+            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee,
+            0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
+            0x0e, 0x0f, 0x10, 0x20,
+        ];
+        SecretKey::from_byte_array(bytes).expect("fixture bytes must be a valid secret key")
+    }
+
+    /// Build a sample credential whose proof is signed with `signing_key`.
+    fn signed_sample_credential(signing_key: &SecretKey) -> VerifiableCredential {
+        let now = Utc::now();
+        let mut credential = VerifiableCredential {
+            context: vec![
+                "https://www.w3.org/2018/credentials/v1".to_string(),
+                "https://kaccy.io/credentials/v1".to_string(),
+            ],
+            credential_type: vec![
+                "VerifiableCredential".to_string(),
+                "ReputationCredential".to_string(),
+            ],
+            id: format!("https://kaccy.io/credentials/{}", Uuid::new_v4()),
+            issuer: "did:kaccy:issuer".to_string(),
+            issuance_date: now,
+            expiration_date: None,
+            credential_subject: CredentialSubject {
+                id: format!("did:kaccy:user:{}", Uuid::new_v4()),
+                reputation_score: 742,
+                reputation_tier: "Gold".to_string(),
+                platform: "Kaccy Protocol".to_string(),
+                verified: true,
+                as_of_date: now,
+            },
+            proof: CredentialProof {
+                proof_type: PROOF_TYPE_SECP256K1.to_string(),
+                created: now,
+                verification_method: String::new(),
+                proof_value: String::new(),
+            },
+        };
+        credential.proof = PortabilityService::generate_proof(&credential, signing_key, now)
+            .expect("signing the sample credential must succeed");
+        credential
+    }
+
+    #[test]
+    fn test_proof_sign_verify_round_trip() {
+        let key = test_signing_key();
+        let credential = signed_sample_credential(&key);
+
+        // The proof must carry a real (non-placeholder) signature and a
+        // self-describing verification method holding the signer's public key.
+        assert_eq!(credential.proof.proof_type, PROOF_TYPE_SECP256K1);
+        assert!(!credential.proof.proof_value.is_empty());
+        assert_ne!(
+            credential.proof.proof_value,
+            "simulated_signature_placeholder"
+        );
+        assert_ne!(credential.proof.proof_value, "placeholder");
+        assert!(credential
+            .proof
+            .verification_method
+            .starts_with("did:key:secp256k1:"));
+
+        // A freshly signed credential must verify true through both entry points.
+        assert!(verify_credential(&credential).expect("verification must not error"));
+        assert!(
+            PortabilityService::verify_proof(&credential).expect("verification must not error")
+        );
+
+        // The recorded verification method must match the signing key's public key.
+        let secp = Secp256k1::new();
+        let expected_pk = key.public_key(&secp);
+        assert_eq!(
+            credential.proof.verification_method,
+            format!("did:key:secp256k1:{expected_pk}#key-1")
+        );
+    }
+
+    #[test]
+    fn test_proof_tamper_detection_score() {
+        let key = test_signing_key();
+        let mut credential = signed_sample_credential(&key);
+
+        // Tampering with a signed claim (the score) must make verification fail.
+        credential.credential_subject.reputation_score += 1;
+        assert!(
+            !verify_credential(&credential).expect("verification must not error"),
+            "tampered score must not verify"
+        );
+    }
+
+    #[test]
+    fn test_proof_tamper_detection_subject_and_tier() {
+        let key = test_signing_key();
+
+        // Tamper with the subject identifier.
+        let mut credential = signed_sample_credential(&key);
+        credential.credential_subject.id = "did:kaccy:user:attacker".to_string();
+        assert!(
+            !verify_credential(&credential).expect("verification must not error"),
+            "tampered subject id must not verify"
+        );
+
+        // Tamper with the tier string.
+        let mut credential = signed_sample_credential(&key);
+        credential.credential_subject.reputation_tier = "Platinum".to_string();
+        assert!(
+            !verify_credential(&credential).expect("verification must not error"),
+            "tampered tier must not verify"
+        );
+
+        // Tamper with the issuer.
+        let mut credential = signed_sample_credential(&key);
+        credential.issuer = "did:kaccy:rogue".to_string();
+        assert!(
+            !verify_credential(&credential).expect("verification must not error"),
+            "tampered issuer must not verify"
+        );
+    }
+
+    #[test]
+    fn test_proof_wrong_key_fails() {
+        let key = test_signing_key();
+        let credential = signed_sample_credential(&key);
+
+        // Re-point the verification method at a different (valid) public key.
+        let other_bytes: [u8; 32] = [0x42; 32];
+        let other_key =
+            SecretKey::from_byte_array(other_bytes).expect("other fixture key must be valid");
+        let secp = Secp256k1::new();
+        let other_pk = other_key.public_key(&secp);
+
+        let mut tampered = credential;
+        tampered.proof.verification_method = format!("did:key:secp256k1:{other_pk}#key-1");
+
+        assert!(
+            !verify_credential(&tampered).expect("verification must not error"),
+            "signature must not verify under a different public key"
+        );
+    }
+
+    #[test]
+    fn test_verify_unsigned_credential_errors() {
+        let key = test_signing_key();
+        let mut credential = signed_sample_credential(&key);
+
+        // An empty proof value (an unsigned credential) is a structural error,
+        // never a silent `false` that could be mistaken for "checked".
+        credential.proof.proof_value = String::new();
+        let err = verify_credential(&credential).expect_err("unsigned credential must error");
+        assert!(matches!(err, ReputationError::Cryptographic(_)));
+    }
+
+    #[test]
+    fn test_verify_malformed_signature_errors() {
+        let key = test_signing_key();
+        let mut credential = signed_sample_credential(&key);
+
+        credential.proof.proof_value = "not-a-valid-hex-signature".to_string();
+        let err = verify_credential(&credential).expect_err("malformed signature must error");
+        assert!(matches!(err, ReputationError::Cryptographic(_)));
+    }
+
+    #[test]
+    fn test_canonical_bytes_exclude_proof_and_are_deterministic() {
+        let key = test_signing_key();
+        let credential = signed_sample_credential(&key);
+
+        let bytes_a =
+            canonical_credential_bytes(&credential).expect("canonicalization must succeed");
+        let bytes_b =
+            canonical_credential_bytes(&credential).expect("canonicalization must succeed");
+        assert_eq!(bytes_a, bytes_b, "canonical bytes must be deterministic");
+
+        // The canonical form must not contain the proof at all, so re-signing or
+        // changing the proof value cannot alter what is signed.
+        let text = String::from_utf8(bytes_a).expect("canonical bytes are valid UTF-8 JSON");
+        assert!(!text.contains("\"proof\""));
+        assert!(!text.contains(&credential.proof.proof_value));
+    }
+
+    #[tokio::test]
+    async fn test_fetch_platform_data_unconfigured_returns_honest_error() {
+        // A lazily-connected pool never opens a socket here because
+        // `fetch_platform_data` does not touch the database before returning.
+        let pool = PgPool::connect_lazy("postgres://localhost/kaccy_test_unused")
+            .expect("lazy pool construction must succeed");
+        let service = PortabilityService::new(pool);
+
+        let result = service
+            .fetch_platform_data(&Platform::GitHub, "octocat", None)
+            .await;
+
+        match result {
+            Err(ReputationError::ExternalDataUnavailable { platform, .. }) => {
+                assert_eq!(platform, "github");
+            }
+            other => panic!("expected ExternalDataUnavailable, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_import_score_from_explicit_real_data() {
+        // `calculate_imported_score` is the scoring core used by
+        // `import_reputation`; here we feed it explicitly-provided real platform
+        // data and check it derives a deterministic, non-trivial score.
+        // `connect_lazy` needs a Tokio context (it spawns a maintenance task)
+        // but never opens a socket, and `calculate_imported_score` never touches
+        // the pool, so no database is required.
+        let pool = PgPool::connect_lazy("postgres://localhost/kaccy_test_unused")
+            .expect("lazy pool construction must succeed");
+        let service = PortabilityService::new(pool);
+
+        let github_data = serde_json::json!({
+            "username": "octocat",
+            "followers": 120,
+            "public_repos": 40,
+            "total_stars": 800,
+            "total_forks": 150,
+            "contributions_last_year": 1200,
+            "account_age_days": 2000,
+            "top_languages": ["Rust", "Go"]
+        });
+
+        // stars: min(800/10,100)=80; repos: min(40*2,50)=50;
+        // contrib: min(1200/10,100)=100; followers: min(120/2,50)=50 => 280.
+        let score = service.calculate_imported_score(&Platform::GitHub, &github_data);
+        assert_eq!(score, 280);
+
+        let so_data = serde_json::json!({
+            "user_id": 42,
+            "reputation": 5000,
+            "gold_badges": 3,
+            "silver_badges": 12,
+            "bronze_badges": 40,
+            "answers": 210,
+            "questions": 30,
+            "top_tags": ["rust"]
+        });
+        // min(5000/10, 300) = 300.
+        assert_eq!(
+            service.calculate_imported_score(&Platform::StackOverflow, &so_data),
+            300
+        );
+    }
+
+    #[test]
+    fn test_import_request_round_trips_with_injected_data() {
+        // The request type must be able to carry caller-supplied real data so
+        // that data is injected, not invented.
+        let request = ImportReputationRequest {
+            user_id: Uuid::new_v4(),
+            platform: Platform::GitHub,
+            platform_user_id: "octocat".to_string(),
+            access_token: None,
+            reputation_data: Some(serde_json::json!({ "followers": 10 })),
+        };
+        let encoded = serde_json::to_string(&request).expect("request must serialize");
+        let decoded: ImportReputationRequest =
+            serde_json::from_str(&encoded).expect("request must deserialize");
+        assert_eq!(decoded.reputation_data, request.reputation_data);
+
+        // Backward compatibility: a payload without the new field decodes with
+        // `reputation_data == None` (the `#[serde(default)]`), which is exactly
+        // the case that triggers the honest unavailable-data error. The
+        // `Platform` enum uses snake_case, so `GitHub` is encoded as `git_hub`.
+        let legacy = r#"{"user_id":"00000000-0000-0000-0000-000000000000","platform":"git_hub","platform_user_id":"octocat","access_token":null}"#;
+        let decoded_legacy: ImportReputationRequest =
+            serde_json::from_str(legacy).expect("legacy request must deserialize");
+        assert!(decoded_legacy.reputation_data.is_none());
+        assert_eq!(decoded_legacy.platform, Platform::GitHub);
     }
 }

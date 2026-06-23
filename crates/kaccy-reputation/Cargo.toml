@@ -26,6 +26,8 @@ rust_decimal_macros.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 async-trait.workspace = true
+secp256k1.workspace = true
+sha2.workspace = true
 
 [dev-dependencies]
 tokio-test.workspace = true

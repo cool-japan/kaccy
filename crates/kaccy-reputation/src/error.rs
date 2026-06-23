@@ -151,6 +151,22 @@ pub enum ReputationError {
     /// SBT has not yet been minted for this user.
     #[error("SBT not yet minted for user: {0}")]
     SBTNotMinted(String),
+
+    // Portability errors
+    /// External reputation data is unavailable because no real data source is
+    /// configured for the platform (this crate ships without an HTTP client, so
+    /// reputation data must be supplied explicitly by the caller).
+    #[error("External reputation data unavailable for platform '{platform}': {reason}")]
+    ExternalDataUnavailable {
+        /// The platform for which data was requested.
+        platform: String,
+        /// Human-readable explanation of why data is unavailable.
+        reason: String,
+    },
+
+    /// A cryptographic operation (credential signing or proof verification) failed.
+    #[error("Cryptographic error: {0}")]
+    Cryptographic(String),
 }
 
 /// Convenience alias for `std::result::Result<T, ReputationError>`.
