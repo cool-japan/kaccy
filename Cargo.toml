@@ -119,7 +119,10 @@ hkdf = "0.13"
 ml-dsa = "0.1"
 ml-kem = { version = "0.3", features = ["getrandom"] }
 # Bitcoin output-descriptor / miniscript policy compilation
-miniscript = "13.1"
+# NOTE: pinned to 12.x because this workspace targets `bitcoin 0.32`;
+# miniscript 13.x targets a newer `bitcoin` release and is incompatible.
+# The `compiler` feature enables `Concrete::compile`, the real policy compiler.
+miniscript = { version = "12.3", features = ["compiler"] }
 
 # Metrics
 prometheus = { version = "0.14", features = ["process"] }

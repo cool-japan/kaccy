@@ -7,7 +7,13 @@
 //! This implementation provides basic CoinJoin coordination and participation.
 
 use crate::error::BitcoinError;
-use bitcoin::{Address, Amount, OutPoint, Transaction, TxIn, TxOut};
+use bitcoin::ecdsa;
+use bitcoin::hashes::Hash;
+use bitcoin::secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
+use bitcoin::sighash::{EcdsaSighashType, SighashCache};
+use bitcoin::{
+    Address, Amount, CompressedPublicKey, OutPoint, ScriptBuf, Transaction, TxIn, TxOut, Witness,
+};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -113,6 +119,30 @@ pub struct ParticipantInput {
     pub value: u64,
     /// Script pubkey
     pub script_pubkey: Vec<u8>,
+}
+
+impl ParticipantInput {
+    /// Parse the raw `script_pubkey` bytes into a typed [`ScriptBuf`].
+    pub fn script_buf(&self) -> ScriptBuf {
+        ScriptBuf::from_bytes(self.script_pubkey.clone())
+    }
+
+    /// Return the input's scriptPubKey, erroring unless it is a BIP141 P2WPKH
+    /// (`OP_0 <20-byte-key-hash>`) program.
+    ///
+    /// CoinJoin signing in this module is implemented for native segwit v0
+    /// P2WPKH inputs; non-P2WPKH inputs are rejected with an honest error
+    /// rather than silently mis-signed.
+    pub fn p2wpkh_script_pubkey(&self) -> Result<ScriptBuf, BitcoinError> {
+        let script = self.script_buf();
+        if !script.is_p2wpkh() {
+            return Err(BitcoinError::InvalidInput(format!(
+                "CoinJoin signing requires a P2WPKH input, got script {}",
+                script.to_hex_string()
+            )));
+        }
+        Ok(script)
+    }
 }
 
 /// CoinJoin session
@@ -268,7 +298,100 @@ impl CoinJoinSession {
         Ok(())
     }
 
-    /// Add a signature from a participant
+    /// Locate a participant and its input index within the transaction.
+    ///
+    /// In [`build_transaction`](Self::build_transaction) inputs are appended in
+    /// participant order, so the input index equals the participant's position
+    /// in [`participants`](Self::participants).
+    fn participant_input_index(&self, participant_id: Uuid) -> Result<usize, BitcoinError> {
+        self.participants
+            .iter()
+            .position(|p| p.id == participant_id)
+            .ok_or_else(|| BitcoinError::Validation("Participant not found".to_string()))
+    }
+
+    /// Compute the BIP143 segwit-v0 P2WPKH sighash (SIGHASH_ALL) that the
+    /// participant at `participant_id` must sign for their own input.
+    ///
+    /// The transaction must already have been assembled via
+    /// [`build_transaction`](Self::build_transaction). Each participant signs
+    /// only their own input, committing (via SIGHASH_ALL) to the full set of
+    /// CoinJoin inputs and outputs.
+    pub fn participant_sighash(&self, participant_id: Uuid) -> Result<[u8; 32], BitcoinError> {
+        let input_index = self.participant_input_index(participant_id)?;
+        let transaction = self.transaction.as_ref().ok_or_else(|| {
+            BitcoinError::Validation("Transaction has not been built yet".to_string())
+        })?;
+        let participant = &self.participants[input_index];
+        let script_pubkey = participant.input.p2wpkh_script_pubkey()?;
+        let value = Amount::from_sat(participant.input.value);
+
+        let mut cache = SighashCache::new(transaction);
+        let sighash = cache
+            .p2wpkh_signature_hash(input_index, &script_pubkey, value, EcdsaSighashType::All)
+            .map_err(|e| {
+                BitcoinError::Validation(format!("Failed to compute P2WPKH sighash: {e}"))
+            })?;
+
+        Ok(sighash.to_byte_array())
+    }
+
+    /// Produce a real signature/witness for a participant's own P2WPKH input.
+    ///
+    /// This computes the correct BIP143 sighash (SIGHASH_ALL), signs it with the
+    /// participant's `secp256k1` secret key, and returns the consensus-encoded
+    /// P2WPKH witness stack `[<DER signature || SIGHASH_ALL>, <compressed pubkey>]`.
+    ///
+    /// The secret key must control the input's scriptPubKey: the derived public
+    /// key's witness-program hash is checked against `OP_0 <hash>`, so signing a
+    /// foreign input fails loudly instead of yielding a bogus witness.
+    ///
+    /// The returned bytes are exactly what [`add_signature`](Self::add_signature)
+    /// validates and stores.
+    pub fn sign_input(
+        &self,
+        participant_id: Uuid,
+        secret_key: &SecretKey,
+    ) -> Result<Vec<u8>, BitcoinError> {
+        let input_index = self.participant_input_index(participant_id)?;
+        let participant = &self.participants[input_index];
+        let script_pubkey = participant.input.p2wpkh_script_pubkey()?;
+
+        let secp = Secp256k1::new();
+        let public_key = PublicKey::from_secret_key(&secp, secret_key);
+        let compressed = CompressedPublicKey(public_key);
+
+        // The signing key must actually control this input.
+        let expected = ScriptBuf::new_p2wpkh(&compressed.wpubkey_hash());
+        if expected != script_pubkey {
+            return Err(BitcoinError::Validation(
+                "Secret key does not control this participant's input (key-hash mismatch)"
+                    .to_string(),
+            ));
+        }
+
+        let sighash = self.participant_sighash(participant_id)?;
+        let message = Message::from_digest(sighash);
+        let signature = secp.sign_ecdsa(&message, secret_key);
+        let ecdsa_sig = ecdsa::Signature::sighash_all(signature);
+
+        let witness = Witness::p2wpkh(&ecdsa_sig, &public_key);
+        Ok(bitcoin::consensus::encode::serialize(&witness))
+    }
+
+    /// Validate and store a participant's signature.
+    ///
+    /// `signature` must be the consensus-encoded P2WPKH witness stack
+    /// `[<DER signature || sighash flag>, <compressed pubkey>]` (exactly what
+    /// [`sign_input`](Self::sign_input) returns). Before storing, this method:
+    ///
+    /// 1. recomputes the participant's own BIP143 sighash;
+    /// 2. checks the supplied pubkey's witness-program hash matches the input's
+    ///    `OP_0 <hash>` scriptPubKey; and
+    /// 3. verifies the ECDSA signature against the sighash and pubkey.
+    ///
+    /// Invalid or mismatched signatures are rejected and never stored, so the
+    /// session can never advance to broadcasting with a bogus witness.
     pub fn add_signature(
         &mut self,
         participant_id: Uuid,
@@ -280,14 +403,16 @@ impl CoinJoinSession {
             ));
         }
 
-        // Find participant
-        let participant = self
+        // Validate the witness against this participant's input *before* storing.
+        self.verify_participant_witness(participant_id, &signature)?;
+
+        if let Some(participant) = self
             .participants
             .iter_mut()
             .find(|p| p.id == participant_id)
-            .ok_or_else(|| BitcoinError::Validation("Participant not found".to_string()))?;
-
-        participant.has_signed = true;
+        {
+            participant.has_signed = true;
+        }
         self.signatures.insert(participant_id, signature);
 
         // Check if all participants have signed
@@ -296,6 +421,112 @@ impl CoinJoinSession {
         }
 
         Ok(())
+    }
+
+    /// Decode and cryptographically verify a P2WPKH witness for `participant_id`.
+    ///
+    /// Returns the parsed `(signature, public_key)` on success and an honest
+    /// error on any malformed, mismatched, or invalid witness.
+    fn verify_participant_witness(
+        &self,
+        participant_id: Uuid,
+        witness_bytes: &[u8],
+    ) -> Result<(ecdsa::Signature, PublicKey), BitcoinError> {
+        let input_index = self.participant_input_index(participant_id)?;
+        let participant = &self.participants[input_index];
+        let script_pubkey = participant.input.p2wpkh_script_pubkey()?;
+
+        let witness: Witness = bitcoin::consensus::encode::deserialize(witness_bytes)
+            .map_err(|e| BitcoinError::Validation(format!("Malformed witness encoding: {e}")))?;
+        if witness.len() != 2 {
+            return Err(BitcoinError::Validation(format!(
+                "P2WPKH witness must have 2 elements, found {}",
+                witness.len()
+            )));
+        }
+
+        let sig_bytes = witness
+            .nth(0)
+            .ok_or_else(|| BitcoinError::Validation("Missing signature element".to_string()))?;
+        let pubkey_bytes = witness
+            .nth(1)
+            .ok_or_else(|| BitcoinError::Validation("Missing pubkey element".to_string()))?;
+
+        let ecdsa_sig = ecdsa::Signature::from_slice(sig_bytes)
+            .map_err(|e| BitcoinError::Validation(format!("Invalid ECDSA signature: {e}")))?;
+        if ecdsa_sig.sighash_type != EcdsaSighashType::All {
+            return Err(BitcoinError::Validation(format!(
+                "Unexpected sighash type {:?}; CoinJoin requires SIGHASH_ALL",
+                ecdsa_sig.sighash_type
+            )));
+        }
+
+        let compressed = CompressedPublicKey::from_slice(pubkey_bytes)
+            .map_err(|e| BitcoinError::Validation(format!("Invalid public key: {e}")))?;
+
+        // The pubkey must hash to the input's witness program.
+        let expected = ScriptBuf::new_p2wpkh(&compressed.wpubkey_hash());
+        if expected != script_pubkey {
+            return Err(BitcoinError::Validation(
+                "Public key does not match this participant's input (key-hash mismatch)"
+                    .to_string(),
+            ));
+        }
+
+        // Verify the signature against the recomputed sighash.
+        let sighash = self.participant_sighash(participant_id)?;
+        let message = Message::from_digest(sighash);
+        let secp = Secp256k1::verification_only();
+        secp.verify_ecdsa(&message, &ecdsa_sig.signature, &compressed.0)
+            .map_err(|e| {
+                BitcoinError::Validation(format!("Signature verification failed: {e}"))
+            })?;
+
+        Ok((ecdsa_sig, compressed.0))
+    }
+
+    /// Finalize the CoinJoin: assemble every participant's verified witness into
+    /// the transaction and return the fully-signed, broadcastable result.
+    ///
+    /// Every input is re-verified against its participant's sighash and pubkey
+    /// while the witness is installed, so a transaction is only ever returned
+    /// when *all* inputs carry a valid signature. If any required signature is
+    /// missing this returns an honest error — it never emits an
+    /// unsigned-but-claimed-complete transaction.
+    pub fn finalize(&self) -> Result<Transaction, BitcoinError> {
+        let base_tx = self.transaction.as_ref().ok_or_else(|| {
+            BitcoinError::Validation("Transaction has not been built yet".to_string())
+        })?;
+
+        if base_tx.input.len() != self.participants.len() {
+            return Err(BitcoinError::Validation(format!(
+                "Transaction input count {} does not match participant count {}",
+                base_tx.input.len(),
+                self.participants.len()
+            )));
+        }
+
+        let mut tx = base_tx.clone();
+
+        for (input_index, participant) in self.participants.iter().enumerate() {
+            let witness_bytes = self.signatures.get(&participant.id).ok_or_else(|| {
+                BitcoinError::Validation(format!(
+                    "Missing signature for participant {} (input {input_index})",
+                    participant.id
+                ))
+            })?;
+
+            // Re-verify before installing the witness, then decode the canonical
+            // witness stack to attach to the transaction.
+            self.verify_participant_witness(participant.id, witness_bytes)?;
+            let witness: Witness = bitcoin::consensus::encode::deserialize(witness_bytes)
+                .map_err(|e| {
+                    BitcoinError::Validation(format!("Malformed stored witness: {e}"))
+                })?;
+            tx.input[input_index].witness = witness;
+        }
+
+        Ok(tx)
     }
 
     /// Get the number of signatures collected
@@ -581,5 +812,256 @@ mod tests {
 
         let result = client.register(&mut coordinator, session_id, input, address, None);
         assert!(result.is_ok());
+    }
+
+    // ---- Real signing / finalization tests ----
+
+    use bitcoin::Network;
+    use bitcoin::secp256k1::SecretKey;
+
+    /// Deterministic 32-byte secret key from a single seed byte (non-zero).
+    fn secret_key_from_seed(seed: u8) -> SecretKey {
+        let mut bytes = [seed; 32];
+        // Guarantee a valid, non-zero scalar below the curve order.
+        bytes[0] = 0x01;
+        SecretKey::from_slice(&bytes).expect("valid secret key")
+    }
+
+    /// Build a P2WPKH (input scriptPubKey, receiving address) controlled by `sk`.
+    fn p2wpkh_for(sk: &SecretKey) -> (ScriptBuf, Address) {
+        let secp = Secp256k1::new();
+        let pk = PublicKey::from_secret_key(&secp, sk);
+        let compressed = CompressedPublicKey(pk);
+        let script_pubkey = ScriptBuf::new_p2wpkh(&compressed.wpubkey_hash());
+        let address = Address::p2wpkh(&compressed, Network::Regtest);
+        (script_pubkey, address)
+    }
+
+    /// Construct a 2-participant session already advanced to the signing phase,
+    /// returning the session plus each participant's id and secret key.
+    fn signing_ready_session() -> (CoinJoinSession, [(Uuid, SecretKey); 2]) {
+        let config = SessionConfig {
+            min_participants: 2,
+            max_participants: 2,
+            denomination: 100_000,
+            coordinator_fee: 1000,
+            mining_fee_per_participant: 500,
+            ..Default::default()
+        };
+        let mut session = CoinJoinSession::new(config);
+
+        let sk_a = secret_key_from_seed(0x11);
+        let sk_b = secret_key_from_seed(0x22);
+        let (spk_a, addr_a) = p2wpkh_for(&sk_a);
+        let (spk_b, addr_b) = p2wpkh_for(&sk_b);
+
+        let input_a = ParticipantInput {
+            outpoint: OutPoint {
+                txid: Txid::all_zeros(),
+                vout: 0,
+            },
+            value: 200_000,
+            script_pubkey: spk_a.to_bytes(),
+        };
+        let input_b = ParticipantInput {
+            outpoint: OutPoint {
+                txid: Txid::all_zeros(),
+                vout: 1,
+            },
+            value: 200_000,
+            script_pubkey: spk_b.to_bytes(),
+        };
+
+        let id_a = session.add_participant(input_a, addr_a, None).unwrap();
+        let id_b = session.add_participant(input_b, addr_b, None).unwrap();
+        assert_eq!(session.state, SessionState::InputCollection);
+
+        session.build_transaction().unwrap();
+        assert_eq!(session.state, SessionState::Signing);
+
+        (session, [(id_a, sk_a), (id_b, sk_b)])
+    }
+
+    /// Independently re-verify a finalized transaction: each input must carry a
+    /// 2-element P2WPKH witness whose signature validates against the recomputed
+    /// BIP143 sighash and whose pubkey matches the prevout's witness program.
+    fn assert_all_inputs_signed(session: &CoinJoinSession, tx: &Transaction) {
+        let secp = Secp256k1::verification_only();
+        assert_eq!(tx.input.len(), session.participants.len());
+
+        for (index, participant) in session.participants.iter().enumerate() {
+            let witness = &tx.input[index].witness;
+            assert_eq!(witness.len(), 2, "input {index} must have a P2WPKH witness");
+
+            let sig_bytes = witness.nth(0).unwrap();
+            let pubkey_bytes = witness.nth(1).unwrap();
+            let ecdsa_sig = ecdsa::Signature::from_slice(sig_bytes).unwrap();
+            assert_eq!(ecdsa_sig.sighash_type, EcdsaSighashType::All);
+            let compressed = CompressedPublicKey::from_slice(pubkey_bytes).unwrap();
+
+            // Pubkey must match the input's witness program.
+            let expected = ScriptBuf::new_p2wpkh(&compressed.wpubkey_hash());
+            assert_eq!(expected, participant.input.p2wpkh_script_pubkey().unwrap());
+
+            // Recompute the sighash from the finalized tx and verify the signature.
+            let value = Amount::from_sat(participant.input.value);
+            let mut cache = SighashCache::new(tx);
+            let sighash = cache
+                .p2wpkh_signature_hash(
+                    index,
+                    &participant.input.p2wpkh_script_pubkey().unwrap(),
+                    value,
+                    EcdsaSighashType::All,
+                )
+                .unwrap();
+            let message = Message::from_digest(sighash.to_byte_array());
+            secp.verify_ecdsa(&message, &ecdsa_sig.signature, &compressed.0)
+                .expect("each finalized input signature must verify");
+        }
+    }
+
+    #[test]
+    fn test_real_two_party_coinjoin_signs_and_finalizes() {
+        let (mut session, parties) = signing_ready_session();
+
+        // Each participant signs only their own input and submits the witness.
+        for (id, sk) in &parties {
+            let witness = session.sign_input(*id, sk).unwrap();
+            session.add_signature(*id, witness).unwrap();
+        }
+
+        // All signatures collected -> ready to broadcast.
+        assert_eq!(session.state, SessionState::Broadcasting);
+        assert!(session.is_ready_to_broadcast());
+        assert_eq!(session.signature_count(), 2);
+
+        // Finalize and independently verify every input.
+        let tx = session.finalize().unwrap();
+        assert_all_inputs_signed(&session, &tx);
+
+        // A finalized P2WPKH tx must report a non-trivial weight/vsize.
+        assert!(tx.weight().to_wu() > 0);
+    }
+
+    #[test]
+    fn test_sign_input_rejects_foreign_key() {
+        let (session, parties) = signing_ready_session();
+        let (id_a, _sk_a) = &parties[0];
+        let (_id_b, sk_b) = &parties[1];
+
+        // Signing participant A's input with participant B's key must fail.
+        let result = session.sign_input(*id_a, sk_b);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_add_signature_rejects_invalid_witness() {
+        let (mut session, parties) = signing_ready_session();
+        let (id_a, _sk_a) = &parties[0];
+
+        // Garbage bytes are not a valid witness.
+        let bad = session.add_signature(*id_a, vec![0u8; 8]);
+        assert!(bad.is_err());
+        assert!(!session.participants[0].has_signed);
+        assert_eq!(session.signature_count(), 0);
+        assert_eq!(session.state, SessionState::Signing);
+    }
+
+    #[test]
+    fn test_add_signature_rejects_wrong_key_signature() {
+        let (mut session, parties) = signing_ready_session();
+        let (id_a, _sk_a) = &parties[0];
+        let (_id_b, sk_b) = &parties[1];
+
+        // A structurally valid witness signed by the *wrong* key (B's key over
+        // A's sighash) must be rejected: pubkey-hash mismatch with A's input.
+        let secp = Secp256k1::new();
+        let pk_b = PublicKey::from_secret_key(&secp, sk_b);
+        let sighash = session.participant_sighash(*id_a).unwrap();
+        let message = Message::from_digest(sighash);
+        let sig = secp.sign_ecdsa(&message, sk_b);
+        let ecdsa_sig = ecdsa::Signature::sighash_all(sig);
+        let forged = bitcoin::consensus::encode::serialize(&Witness::p2wpkh(&ecdsa_sig, &pk_b));
+
+        let result = session.add_signature(*id_a, forged);
+        assert!(result.is_err());
+        assert!(!session.participants[0].has_signed);
+    }
+
+    #[test]
+    fn test_finalize_fails_with_missing_signature() {
+        let (mut session, parties) = signing_ready_session();
+        let (id_a, sk_a) = &parties[0];
+
+        // Only participant A signs; B's signature is missing.
+        let witness_a = session.sign_input(*id_a, sk_a).unwrap();
+        session.add_signature(*id_a, witness_a).unwrap();
+
+        // Session has NOT advanced to broadcasting (B still unsigned).
+        assert_eq!(session.state, SessionState::Signing);
+
+        // Finalizing must return an honest error, never a partial tx.
+        let result = session.finalize();
+        assert!(result.is_err());
+        let msg = result.unwrap_err().to_string();
+        assert!(msg.contains("Missing signature"), "unexpected error: {msg}");
+    }
+
+    #[test]
+    fn test_add_signature_rejected_outside_signing_state() {
+        let (session, parties) = signing_ready_session();
+        // Fresh session still in registration.
+        let mut fresh = CoinJoinSession::new(SessionConfig {
+            min_participants: 2,
+            ..Default::default()
+        });
+        let (id_a, sk_a) = &parties[0];
+        let witness = session.sign_input(*id_a, sk_a).unwrap();
+
+        let result = fresh.add_signature(*id_a, witness);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_non_p2wpkh_input_signing_errors() {
+        let mut session = CoinJoinSession::new(SessionConfig {
+            min_participants: 2,
+            max_participants: 2,
+            ..Default::default()
+        });
+        let sk_a = secret_key_from_seed(0x33);
+        let sk_b = secret_key_from_seed(0x44);
+        let (_spk_a, addr_a) = p2wpkh_for(&sk_a);
+        let (spk_b, addr_b) = p2wpkh_for(&sk_b);
+
+        // Participant A's input uses a non-P2WPKH (P2PKH) scriptPubKey.
+        let secp = Secp256k1::new();
+        let pk_a = PublicKey::from_secret_key(&secp, &sk_a);
+        let p2pkh = ScriptBuf::new_p2pkh(&CompressedPublicKey(pk_a).pubkey_hash());
+
+        let input_a = ParticipantInput {
+            outpoint: OutPoint {
+                txid: Txid::all_zeros(),
+                vout: 0,
+            },
+            value: 200_000,
+            script_pubkey: p2pkh.to_bytes(),
+        };
+        let input_b = ParticipantInput {
+            outpoint: OutPoint {
+                txid: Txid::all_zeros(),
+                vout: 1,
+            },
+            value: 200_000,
+            script_pubkey: spk_b.to_bytes(),
+        };
+
+        let id_a = session.add_participant(input_a, addr_a, None).unwrap();
+        let _id_b = session.add_participant(input_b, addr_b, None).unwrap();
+        session.build_transaction().unwrap();
+
+        // Signing the non-P2WPKH input must produce an honest error.
+        let result = session.sign_input(id_a, &sk_a);
+        assert!(result.is_err());
     }
 }

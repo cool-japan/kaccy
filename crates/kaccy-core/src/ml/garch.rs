@@ -122,6 +122,12 @@ pub struct GarchModel {
     params: GarchParams,
     fitted: bool,
     conditional_variance: Vec<Decimal>,
+    /// Last observed squared residual (epsilon_t^2) at the forecast origin.
+    ///
+    /// Stored at fit time so the one-step-ahead forecast can use the real
+    /// `h_{t+1} = omega + alpha * epsilon_t^2 + beta * h_t` recursion instead
+    /// of falling back to the unconditional `omega + (alpha + beta) * h_t` form.
+    last_shock_sq: Decimal,
 }
 
 impl GarchModel {
@@ -132,6 +138,7 @@ impl GarchModel {
             params,
             fitted: false,
             conditional_variance: Vec::new(),
+            last_shock_sq: dec!(0),
         })
     }
 
@@ -169,13 +176,29 @@ impl GarchModel {
             variance.push(h_t.max(dec!(0.000001))); // Ensure positive variance
         }
 
+        // Record the squared residual at the forecast origin so that the
+        // one-step-ahead forecast can apply the exact GARCH recursion.
+        let last_return = returns[returns.len() - 1];
+        self.last_shock_sq = last_return * last_return;
+
         self.conditional_variance = variance;
         self.fitted = true;
 
         Ok(())
     }
 
-    /// Forecast volatility for next n periods
+    /// Forecast conditional variance for the next `steps` periods.
+    ///
+    /// Implements the exact GARCH(1,1) multi-step variance recursion:
+    ///
+    /// - one-step ahead: `h_{t+1} = omega + alpha * epsilon_t^2 + beta * h_t`
+    /// - k-step ahead (`k >= 2`): `h_{t+k} = omega + (alpha + beta) * h_{t+k-1}`
+    ///
+    /// because `E[epsilon_{t+k-1}^2] = h_{t+k-1}` once we forecast past the
+    /// last observed residual. The recursion converges geometrically (with
+    /// rate equal to the persistence `alpha + beta`) toward the long-run
+    /// variance `omega / (1 - (alpha + beta))`. Returns the forecast
+    /// variances (volatility squared), not standard deviations.
     pub fn forecast(&self, steps: usize) -> Result<Vec<Decimal>, CoreError> {
         if !self.fitted {
             return Err(CoreError::Validation("Model not fitted".to_string()));
@@ -188,16 +211,21 @@ impl GarchModel {
         let mut forecasts = Vec::with_capacity(steps);
         let last_variance = self.conditional_variance[self.conditional_variance.len() - 1];
 
-        // Multi-step ahead volatility forecast
-        // h_{t+k} = omega + (alpha + beta) * h_{t+k-1}
+        // Persistence of the GARCH(1,1) process; drives both the speed of
+        // mean reversion and the long-run variance.
         let persistence = self.params.alpha + self.params.beta;
-        let long_run_var = self.params.omega / (dec!(1) - persistence).max(dec!(0.001));
 
         let mut h = last_variance;
-        for _ in 0..steps {
-            h = self.params.omega + persistence * h;
-            // Converges to long-run variance
-            h = h * dec!(0.95) + long_run_var * dec!(0.05);
+        for step in 0..steps {
+            h = if step == 0 {
+                // One-step ahead uses the last *observed* squared shock.
+                self.params.omega + self.params.alpha * self.last_shock_sq + self.params.beta * h
+            } else {
+                // For k >= 2, E[epsilon^2] = h, collapsing alpha and beta onto
+                // the persistence term and letting the recursion converge to
+                // the long-run variance.
+                self.params.omega + persistence * h
+            };
             forecasts.push(h);
         }
 
@@ -299,6 +327,13 @@ pub struct GjrGarchModel {
     params: GjrGarchParams,
     fitted: bool,
     conditional_variance: Vec<Decimal>,
+    /// Last observed squared residual (epsilon_t^2) at the forecast origin.
+    last_shock_sq: Decimal,
+    /// Leverage indicator for the last observed residual: `1` if the last
+    /// return was negative (bad news), else `0`. Used so the one-step-ahead
+    /// forecast applies the realised asymmetric impact rather than its
+    /// expectation.
+    last_leverage: Decimal,
 }
 
 impl GjrGarchModel {
@@ -309,6 +344,8 @@ impl GjrGarchModel {
             params,
             fitted: false,
             conditional_variance: Vec::new(),
+            last_shock_sq: dec!(0),
+            last_leverage: dec!(0),
         })
     }
 
@@ -354,32 +391,68 @@ impl GjrGarchModel {
             variance.push(h_t.max(dec!(0.000001)));
         }
 
+        // Record the squared residual and its leverage indicator at the
+        // forecast origin so the one-step-ahead forecast uses the realised
+        // asymmetric shock rather than its symmetric expectation.
+        let last_return = returns[returns.len() - 1];
+        self.last_shock_sq = last_return * last_return;
+        self.last_leverage = if last_return < dec!(0) {
+            dec!(1)
+        } else {
+            dec!(0)
+        };
+
         self.conditional_variance = variance;
         self.fitted = true;
 
         Ok(())
     }
 
-    /// Forecast volatility
+    /// Forecast conditional variance for the next `steps` periods.
+    ///
+    /// Implements the exact GJR-GARCH(1,1) multi-step variance recursion:
+    ///
+    /// - one-step ahead:
+    ///   `h_{t+1} = omega + (alpha + gamma * I_t) * epsilon_t^2 + beta * h_t`,
+    ///   where `I_t = 1` if the last observed return was negative.
+    /// - k-step ahead (`k >= 2`): `h_{t+k} = omega + p * h_{t+k-1}` with the
+    ///   asymmetric persistence `p = alpha + gamma / 2 + beta`, because under
+    ///   symmetry `E[I(epsilon < 0)] = 1/2` and `E[epsilon^2] = h`.
+    ///
+    /// The recursion converges geometrically (rate `p`) toward the long-run
+    /// variance `omega / (1 - p)`. Returns forecast variances, not
+    /// standard deviations.
     pub fn forecast(&self, steps: usize) -> Result<Vec<Decimal>, CoreError> {
         if !self.fitted {
             return Err(CoreError::Validation("Model not fitted".to_string()));
         }
 
+        if self.conditional_variance.is_empty() {
+            return Err(CoreError::Validation("No variance history".to_string()));
+        }
+
         let mut forecasts = Vec::with_capacity(steps);
         let last_variance = self.conditional_variance[self.conditional_variance.len() - 1];
 
-        // Simplified multi-step forecast (assumes average leverage effect)
-        let avg_leverage = dec!(0.5); // Assume 50% chance of negative return
+        // Asymmetric persistence: under symmetry the leverage term contributes
+        // gamma * E[I(epsilon < 0)] = gamma / 2. Halving is exact in Decimal.
         let persistence =
-            self.params.garch.alpha + self.params.gamma * avg_leverage + self.params.garch.beta;
-
-        let long_run_var = self.params.garch.omega / (dec!(1) - persistence).max(dec!(0.001));
+            self.params.garch.alpha + self.params.gamma / dec!(2) + self.params.garch.beta;
 
         let mut h = last_variance;
-        for _ in 0..steps {
-            h = self.params.garch.omega + persistence * h;
-            h = h * dec!(0.95) + long_run_var * dec!(0.05);
+        for step in 0..steps {
+            h = if step == 0 {
+                // One-step ahead uses the realised squared shock and the
+                // realised leverage indicator.
+                self.params.garch.omega
+                    + (self.params.garch.alpha + self.params.gamma * self.last_leverage)
+                        * self.last_shock_sq
+                    + self.params.garch.beta * h
+            } else {
+                // For k >= 2 the shock and leverage collapse to their
+                // expectations, leaving the asymmetric persistence term.
+                self.params.garch.omega + persistence * h
+            };
             forecasts.push(h);
         }
 
@@ -501,6 +574,152 @@ mod tests {
         assert!(forecast[0] > dec!(0));
     }
 
+    /// The multi-step forecast must follow the exact GARCH(1,1) recursion:
+    /// the first step uses the realised squared shock, subsequent steps use
+    /// the persistence form. We reproduce the recursion by hand from the
+    /// fitted origin state and require bit-exact equality (Decimal is exact
+    /// for these operations).
+    #[test]
+    fn test_garch_forecast_follows_recursion_exactly() {
+        let returns: Vec<Decimal> = (0..60)
+            .map(|i| if i % 3 == 0 { dec!(0.02) } else { dec!(-0.012) })
+            .collect();
+
+        let params = GarchParams::new(dec!(0.00002), dec!(0.12), dec!(0.80));
+        let mut model = GarchModel::new(params).unwrap();
+        model.fit(&returns).unwrap();
+
+        // Forecast origin state recorded at fit time.
+        let h_t = *model.conditional_variance.last().unwrap();
+        let eps_sq = model.last_shock_sq;
+        let omega = params.omega;
+        let alpha = params.alpha;
+        let beta = params.beta;
+        let persistence = alpha + beta;
+
+        let steps = 6;
+        let forecast = model.forecast(steps).unwrap();
+        assert_eq!(forecast.len(), steps);
+
+        // Hand-rolled reference recursion.
+        let mut expected = Vec::with_capacity(steps);
+        let mut h = h_t;
+        for step in 0..steps {
+            h = if step == 0 {
+                omega + alpha * eps_sq + beta * h
+            } else {
+                omega + persistence * h
+            };
+            expected.push(h);
+        }
+
+        for (got, want) in forecast.iter().zip(expected.iter()) {
+            assert_eq!(got, want, "forecast must match GARCH recursion exactly");
+        }
+
+        // Explicitly confirm the first step differs from the naive
+        // persistence-only step (i.e. the realised shock is genuinely used).
+        let naive_first = omega + persistence * h_t;
+        assert_ne!(
+            forecast[0], naive_first,
+            "one-step forecast must use the realised squared shock"
+        );
+    }
+
+    /// As the horizon grows, the GARCH forecast must converge monotonically
+    /// (after the first step) toward the long-run variance
+    /// `omega / (1 - (alpha + beta))`, with no artificial damping blend.
+    #[test]
+    fn test_garch_forecast_converges_to_long_run_variance() {
+        let returns: Vec<Decimal> = (0..120)
+            .map(|i| if i % 7 < 3 { dec!(0.03) } else { dec!(-0.018) })
+            .collect();
+
+        let params = GarchParams::new(dec!(0.00003), dec!(0.10), dec!(0.85));
+        let mut model = GarchModel::new(params).unwrap();
+        model.fit(&returns).unwrap();
+
+        let persistence = params.alpha + params.beta;
+        let long_run_var = params.omega / (dec!(1) - persistence);
+
+        let steps = 400;
+        let forecast = model.forecast(steps).unwrap();
+
+        // The far-horizon forecast should sit extremely close to the long-run
+        // variance. With persistence 0.95 over ~400 steps the residual gap is
+        // negligible.
+        let tail = forecast[steps - 1];
+        let gap = (tail - long_run_var).abs();
+        assert!(
+            gap < dec!(0.0000001),
+            "forecast must converge to long-run variance: tail={tail}, lrv={long_run_var}, gap={gap}"
+        );
+
+        // The gap to the long-run variance must shrink each step from k>=2
+        // onward (geometric decay at rate = persistence).
+        let mut prev_gap = (forecast[1] - long_run_var).abs();
+        for f in forecast.iter().take(50).skip(2) {
+            let g = (*f - long_run_var).abs();
+            assert!(
+                g <= prev_gap,
+                "gap to long-run variance must be non-increasing: {g} > {prev_gap}"
+            );
+            prev_gap = g;
+        }
+    }
+
+    /// High persistence must decay slowly toward the long-run variance, low
+    /// persistence must decay quickly. We measure the fraction of the initial
+    /// gap that remains after a fixed number of steps.
+    #[test]
+    fn test_garch_persistence_controls_decay_speed() {
+        // Same returns for both so only the parameters differ.
+        let returns: Vec<Decimal> = (0..120)
+            .map(|i| if i % 5 < 2 { dec!(0.025) } else { dec!(-0.02) })
+            .collect();
+
+        // High persistence: alpha + beta = 0.98.
+        let high = GarchParams::new(dec!(0.00002), dec!(0.08), dec!(0.90));
+        // Low persistence: alpha + beta = 0.40.
+        let low = GarchParams::new(dec!(0.00002), dec!(0.10), dec!(0.30));
+
+        let mut model_high = GarchModel::new(high).unwrap();
+        let mut model_low = GarchModel::new(low).unwrap();
+        model_high.fit(&returns).unwrap();
+        model_low.fit(&returns).unwrap();
+
+        let steps = 20;
+        let fc_high = model_high.forecast(steps).unwrap();
+        let fc_low = model_low.forecast(steps).unwrap();
+
+        let lrv_high = high.omega / (dec!(1) - (high.alpha + high.beta));
+        let lrv_low = low.omega / (dec!(1) - (low.alpha + low.beta));
+
+        // Remaining fraction of the gap after `steps`, measured from step 1.
+        let gap0_high = (fc_high[1] - lrv_high).abs();
+        let gapn_high = (fc_high[steps - 1] - lrv_high).abs();
+        let frac_high = gapn_high / gap0_high;
+
+        let gap0_low = (fc_low[1] - lrv_low).abs();
+        let gapn_low = (fc_low[steps - 1] - lrv_low).abs();
+        let frac_low = gapn_low / gap0_low.max(dec!(0.0000000001));
+
+        // Low persistence collapses the gap almost entirely; high persistence
+        // retains most of it.
+        assert!(
+            frac_low < dec!(0.01),
+            "low-persistence forecast must decay quickly: frac_low={frac_low}"
+        );
+        assert!(
+            frac_high > dec!(0.5),
+            "high-persistence forecast must decay slowly: frac_high={frac_high}"
+        );
+        assert!(
+            frac_high > frac_low,
+            "higher persistence must retain a larger gap: high={frac_high}, low={frac_low}"
+        );
+    }
+
     #[test]
     fn test_volatility_clustering_detection() {
         let returns: Vec<Decimal> = (0..100)
@@ -534,6 +753,78 @@ mod tests {
 
         let volatility = model.conditional_volatility();
         assert_eq!(volatility.len(), returns.len());
+    }
+
+    /// The GJR-GARCH multi-step forecast must follow the asymmetric recursion
+    /// exactly: the first step uses the realised leverage indicator and shock,
+    /// subsequent steps use persistence `alpha + gamma / 2 + beta`.
+    #[test]
+    fn test_gjr_garch_forecast_follows_recursion_exactly() {
+        // Final return is negative so the leverage indicator is 1.
+        let mut returns: Vec<Decimal> = (0..49)
+            .map(|i| if i % 2 == 0 { dec!(0.011) } else { dec!(-0.016) })
+            .collect();
+        returns.push(dec!(-0.021));
+
+        let params = GjrGarchParams::new(dec!(0.000015), dec!(0.06), dec!(0.82), dec!(0.08));
+        let mut model = GjrGarchModel::new(params).unwrap();
+        model.fit(&returns).unwrap();
+
+        // Last return was negative -> realised leverage indicator must be 1.
+        assert_eq!(model.last_leverage, dec!(1));
+
+        let h_t = *model.conditional_variance.last().unwrap();
+        let eps_sq = model.last_shock_sq;
+        let omega = params.garch.omega;
+        let alpha = params.garch.alpha;
+        let beta = params.garch.beta;
+        let gamma = params.gamma;
+        let lev = model.last_leverage;
+        let persistence = alpha + gamma / dec!(2) + beta;
+
+        let steps = 5;
+        let forecast = model.forecast(steps).unwrap();
+        assert_eq!(forecast.len(), steps);
+
+        let mut expected = Vec::with_capacity(steps);
+        let mut h = h_t;
+        for step in 0..steps {
+            h = if step == 0 {
+                omega + (alpha + gamma * lev) * eps_sq + beta * h
+            } else {
+                omega + persistence * h
+            };
+            expected.push(h);
+        }
+
+        for (got, want) in forecast.iter().zip(expected.iter()) {
+            assert_eq!(got, want, "GJR forecast must match asymmetric recursion");
+        }
+    }
+
+    /// GJR-GARCH forecast converges toward its asymmetric long-run variance
+    /// `omega / (1 - (alpha + gamma/2 + beta))` with no damping blend.
+    #[test]
+    fn test_gjr_garch_forecast_converges_to_long_run_variance() {
+        let returns: Vec<Decimal> = (0..120)
+            .map(|i| if i % 4 < 2 { dec!(0.02) } else { dec!(-0.025) })
+            .collect();
+
+        let params = GjrGarchParams::new(dec!(0.00002), dec!(0.05), dec!(0.85), dec!(0.06));
+        let mut model = GjrGarchModel::new(params).unwrap();
+        model.fit(&returns).unwrap();
+
+        let persistence =
+            params.garch.alpha + params.gamma / dec!(2) + params.garch.beta;
+        let long_run_var = params.garch.omega / (dec!(1) - persistence);
+
+        let forecast = model.forecast(500).unwrap();
+        let tail = *forecast.last().unwrap();
+        let gap = (tail - long_run_var).abs();
+        assert!(
+            gap < dec!(0.0000001),
+            "GJR forecast must converge to long-run variance: tail={tail}, lrv={long_run_var}, gap={gap}"
+        );
     }
 
     #[test]

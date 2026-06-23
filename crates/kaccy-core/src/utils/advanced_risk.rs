@@ -4,10 +4,27 @@
 //! Expected Shortfall (ES/CVaR), Stress VaR, and Incremental Risk Charge.
 
 use crate::error::{CoreError, Result};
+use rand::SeedableRng;
+use rand::rngs::StdRng;
+use rand_distr::{Distribution, Normal};
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+/// Default number of paths drawn by the Monte Carlo Expected Shortfall engine.
+///
+/// 100_000 samples keeps the standard error of the tail estimate small enough
+/// that the empirical ES converges to the analytic value within a few basis
+/// points for a normal return distribution.
+const DEFAULT_MONTE_CARLO_SAMPLES: usize = 100_000;
+
+/// Fixed seed used so Monte Carlo Expected Shortfall is reproducible.
+///
+/// Risk numbers feed audit trails and downstream limits, so a deterministic
+/// stream is preferable to a fresh entropy draw on every call. A different
+/// stream can still be requested through [`ExpectedShortfallCalculator::calculate_monte_carlo_with`].
+const DEFAULT_MONTE_CARLO_SEED: u64 = 0x5249_534B_5F4D_4321; // "RISK_M!" packed
 
 /// Expected Shortfall (ES) calculator, also known as Conditional Value at Risk (CVaR)
 ///
@@ -138,27 +155,127 @@ impl ExpectedShortfallCalculator {
     }
 
     fn calculate_monte_carlo(&self, returns: &[Decimal]) -> Result<ESResult> {
-        // For now, use historical method with bootstrap
-        // In a full implementation, would use Monte Carlo simulation
-        self.calculate_historical(returns)
+        self.calculate_monte_carlo_with(returns, DEFAULT_MONTE_CARLO_SAMPLES, DEFAULT_MONTE_CARLO_SEED)
+    }
+
+    /// Calculate Expected Shortfall via Monte Carlo simulation with explicit
+    /// control over the number of simulated paths and the RNG seed.
+    ///
+    /// The return distribution is modelled as a Gaussian whose mean and
+    /// (sample) standard deviation are estimated from `returns`. `num_samples`
+    /// paths are drawn from that distribution, converted into losses
+    /// (`loss = -return`), and the empirical VaR/ES are read off the simulated
+    /// loss distribution at the configured tail probability `alpha = 1 - confidence`.
+    ///
+    /// Expected Shortfall is the average loss conditional on the loss being at
+    /// least as severe as the VaR threshold.
+    ///
+    /// # Arguments
+    /// * `returns` - Historical returns used to estimate the distribution.
+    /// * `num_samples` - Number of Monte Carlo paths (must be non-zero).
+    /// * `seed` - RNG seed for reproducible results.
+    pub fn calculate_monte_carlo_with(
+        &self,
+        returns: &[Decimal],
+        num_samples: usize,
+        seed: u64,
+    ) -> Result<ESResult> {
+        if returns.is_empty() {
+            return Err(CoreError::Validation(
+                "Returns data cannot be empty".to_string(),
+            ));
+        }
+        if num_samples == 0 {
+            return Err(CoreError::Validation(
+                "Monte Carlo sample count must be greater than zero".to_string(),
+            ));
+        }
+
+        // Estimate the return distribution parameters in f64 for the simulation.
+        let n = returns.len() as f64;
+        let mean: f64 = returns
+            .iter()
+            .map(|r| r.to_f64().unwrap_or(0.0))
+            .sum::<f64>()
+            / n;
+
+        // Sample variance (unbiased, Bessel-corrected) when we have more than
+        // one observation; fall back to the population formula for a single point.
+        let denom = if returns.len() > 1 { n - 1.0 } else { n };
+        let variance: f64 = returns
+            .iter()
+            .map(|r| {
+                let x = r.to_f64().unwrap_or(0.0) - mean;
+                x * x
+            })
+            .sum::<f64>()
+            / denom;
+        let std_dev = variance.sqrt();
+
+        if !mean.is_finite() || !std_dev.is_finite() {
+            return Err(CoreError::Calculation(
+                "Failed to estimate return distribution parameters".to_string(),
+            ));
+        }
+
+        // Draw the simulated loss distribution. `Normal::new` rejects a
+        // non-finite std dev; a zero std dev is valid and yields a degenerate
+        // (constant) distribution, which is the correct behaviour for a
+        // riskless series.
+        let normal = Normal::new(mean, std_dev).map_err(|e| {
+            CoreError::Calculation(format!("Invalid Monte Carlo distribution: {e}"))
+        })?;
+        let mut rng = StdRng::seed_from_u64(seed);
+
+        let mut losses: Vec<f64> = Vec::with_capacity(num_samples);
+        for _ in 0..num_samples {
+            let simulated_return = normal.sample(&mut rng);
+            // Loss is the negative of the return: large losses are large positive numbers.
+            losses.push(-simulated_return);
+        }
+
+        // Sort ascending so the worst losses sit at the tail (largest values).
+        losses.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        let alpha = (Decimal::ONE - self.confidence_level)
+            .to_f64()
+            .ok_or_else(|| CoreError::Calculation("Failed to convert alpha".to_string()))?;
+
+        // The VaR threshold sits at the (1 - alpha) quantile of the loss
+        // distribution. We index from the worst-loss end so that the tail beyond
+        // VaR contains the worst `alpha` fraction of the simulated paths.
+        let tail_count = ((num_samples as f64) * alpha).ceil() as usize;
+        let tail_count = tail_count.clamp(1, num_samples);
+        let var_index = num_samples - tail_count;
+        let var_loss = losses[var_index];
+
+        // Expected Shortfall: mean loss over the tail (losses at or beyond VaR).
+        let tail_slice = &losses[var_index..];
+        let es_loss = tail_slice.iter().sum::<f64>() / (tail_slice.len() as f64);
+
+        let var = Decimal::from_f64(var_loss)
+            .ok_or_else(|| CoreError::Calculation("Failed to convert VaR".to_string()))?;
+        let expected_shortfall = Decimal::from_f64(es_loss)
+            .ok_or_else(|| CoreError::Calculation("Failed to convert ES".to_string()))?;
+
+        Ok(ESResult {
+            expected_shortfall: expected_shortfall.max(Decimal::ZERO),
+            var: var.max(Decimal::ZERO),
+            confidence_level: self.confidence_level,
+            method: ESMethod::MonteCarlo,
+            tail_observations: tail_slice.len(),
+        })
     }
 
     fn get_z_score(&self, alpha: Decimal) -> Result<Decimal> {
-        // Approximate z-scores for common alpha values
-        // This is a simplified approximation; a full implementation would use
-        // proper inverse normal CDF
-        let alpha_f64 = alpha.to_f64().unwrap_or(0.05);
+        // Real inverse standard-normal CDF (quantile). `alpha` is the lower-tail
+        // probability, so the result is the (negative) z-score for the VaR/ES
+        // tail at the configured confidence level.
+        let alpha_f64 = alpha
+            .to_f64()
+            .ok_or_else(|| CoreError::Calculation("Failed to convert alpha".to_string()))?;
 
-        let z = match () {
-            _ if (alpha_f64 - 0.01).abs() < 0.001 => -2.326, // 99% confidence
-            _ if (alpha_f64 - 0.025).abs() < 0.001 => -1.960, // 97.5% confidence
-            _ if (alpha_f64 - 0.05).abs() < 0.001 => -1.645, // 95% confidence
-            _ if (alpha_f64 - 0.10).abs() < 0.001 => -1.282, // 90% confidence
-            _ => {
-                // Rough approximation for other values
-                -((2.0 * std::f64::consts::PI).ln().sqrt() * alpha_f64.ln())
-            }
-        };
+        let z = inverse_normal_cdf(alpha_f64)?;
 
         Decimal::from_f64(z)
             .ok_or_else(|| CoreError::Calculation("Failed to convert z-score".to_string()))
@@ -169,6 +286,171 @@ impl ExpectedShortfallCalculator {
         let pdf = (1.0 / (2.0 * std::f64::consts::PI).sqrt()) * (-0.5 * z_f64 * z_f64).exp();
         Decimal::from_f64(pdf).unwrap_or(Decimal::ZERO)
     }
+}
+
+/// Error function `erf(x)` via its Maclaurin series.
+///
+/// `erf(x) = (2/√π) · Σ_{n≥0} (-1)^n · x^(2n+1) / (n!·(2n+1))`.
+///
+/// The series converges to f64 machine precision rapidly for moderate `|x|`
+/// (it is used only for `|x| < 2`, where well under 30 terms suffice); the tail
+/// is handled by [`erfc_continued_fraction`].
+fn erf_series(x: f64) -> f64 {
+    let x_squared = x * x;
+    let mut term = x; // n = 0 term: x / (0! · 1).
+    let mut sum = term;
+    let mut n = 1.0_f64;
+    loop {
+        // term_n / term_{n-1} = -x² · (2n-1) / (n · (2n+1)).
+        term *= -x_squared * (2.0 * n - 1.0) / (n * (2.0 * n + 1.0));
+        sum += term;
+        if term.abs() <= f64::EPSILON * sum.abs() {
+            break;
+        }
+        n += 1.0;
+        if n > 200.0 {
+            break;
+        }
+    }
+    std::f64::consts::FRAC_2_SQRT_PI * sum
+}
+
+/// Complementary error function `erfc(x) = 1 - erf(x)` for `x > 0` via the
+/// classic continued-fraction expansion evaluated with the modified Lentz
+/// algorithm. Accurate to f64 machine precision and numerically stable in the
+/// tail where `1 - erf(x)` would otherwise suffer catastrophic cancellation.
+fn erfc_continued_fraction(x: f64) -> f64 {
+    const TINY: f64 = 1e-300;
+    let mut c = 1.0 / TINY;
+    let mut d = 1.0 / x;
+    let mut h = d;
+    let mut i = 1.0_f64;
+    loop {
+        let a = i / 2.0;
+        d = a * d + x;
+        if d.abs() < TINY {
+            d = TINY;
+        }
+        c = x + a / c;
+        if c.abs() < TINY {
+            c = TINY;
+        }
+        d = 1.0 / d;
+        let delta = c * d;
+        h *= delta;
+        if (delta - 1.0).abs() < f64::EPSILON {
+            break;
+        }
+        i += 1.0;
+        if i > 400.0 {
+            break;
+        }
+    }
+    (-x * x).exp() / std::f64::consts::PI.sqrt() * h
+}
+
+/// Complementary error function `erfc(x) = 1 - erf(x)` for all finite `x`,
+/// accurate to f64 machine precision.
+fn erfc(x: f64) -> f64 {
+    let ax = x.abs();
+    let result = if ax < 2.0 {
+        1.0 - erf_series(ax)
+    } else {
+        erfc_continued_fraction(ax)
+    };
+    if x < 0.0 { 2.0 - result } else { result }
+}
+
+/// Standard normal cumulative distribution function `Φ(x) = ½·erfc(-x/√2)`.
+///
+/// Uses the machine-precision [`erfc`] implementation so the Halley refinement
+/// step inside [`inverse_normal_cdf`] genuinely converges to near machine
+/// precision.
+fn standard_normal_cdf(x: f64) -> f64 {
+    0.5 * erfc(-x / std::f64::consts::SQRT_2)
+}
+
+/// Inverse of the standard normal cumulative distribution function (the
+/// probit / quantile function): returns the value `z` such that `Φ(z) = p`.
+///
+/// Uses Peter Acklam's rational approximation for the bulk of the distribution,
+/// followed by a single Halley refinement step that lifts the accuracy to near
+/// machine precision (relative error < 1e-15 for `p` away from the extremes).
+///
+/// # Arguments
+/// * `p` - A probability in the open interval `(0, 1)`.
+///
+/// # Errors
+/// Returns [`CoreError::Validation`] if `p` is not strictly between 0 and 1.
+fn inverse_normal_cdf(p: f64) -> Result<f64> {
+    if !(p > 0.0 && p < 1.0) {
+        return Err(CoreError::Validation(
+            "Probability for inverse normal CDF must be in the open interval (0, 1)".to_string(),
+        ));
+    }
+
+    // Coefficients for Acklam's rational approximation.
+    const A: [f64; 6] = [
+        -3.969_683_028_665_376e1,
+        2.209_460_984_245_205e2,
+        -2.759_285_104_469_687e2,
+        1.383_577_518_672_69e2,
+        -3.066_479_806_614_716e1,
+        2.506_628_277_459_239e0,
+    ];
+    const B: [f64; 5] = [
+        -5.447_609_879_822_406e1,
+        1.615_858_368_580_409e2,
+        -1.556_989_798_598_866e2,
+        6.680_131_188_771_972e1,
+        -1.328_068_155_288_572e1,
+    ];
+    const C: [f64; 6] = [
+        -7.784_894_002_430_293e-3,
+        -3.223_964_580_411_365e-1,
+        -2.400_758_277_161_838e0,
+        -2.549_732_539_343_734e0,
+        4.374_664_141_464_968e0,
+        2.938_163_982_698_783e0,
+    ];
+    const D: [f64; 4] = [
+        7.784_695_709_041_462e-3,
+        3.224_671_290_700_398e-1,
+        2.445_134_137_142_996e0,
+        3.754_408_661_907_416e0,
+    ];
+
+    // Break-points delimiting the lower tail, central, and upper tail regions.
+    const P_LOW: f64 = 0.024_25;
+    const P_HIGH: f64 = 1.0 - P_LOW;
+
+    let mut x = if p < P_LOW {
+        // Lower tail.
+        let q = (-2.0 * p.ln()).sqrt();
+        (((((C[0] * q + C[1]) * q + C[2]) * q + C[3]) * q + C[4]) * q + C[5])
+            / ((((D[0] * q + D[1]) * q + D[2]) * q + D[3]) * q + 1.0)
+    } else if p <= P_HIGH {
+        // Central region.
+        let q = p - 0.5;
+        let r = q * q;
+        (((((A[0] * r + A[1]) * r + A[2]) * r + A[3]) * r + A[4]) * r + A[5]) * q
+            / (((((B[0] * r + B[1]) * r + B[2]) * r + B[3]) * r + B[4]) * r + 1.0)
+    } else {
+        // Upper tail (mirror of the lower tail).
+        let q = (-2.0 * (1.0 - p).ln()).sqrt();
+        -(((((C[0] * q + C[1]) * q + C[2]) * q + C[3]) * q + C[4]) * q + C[5])
+            / ((((D[0] * q + D[1]) * q + D[2]) * q + D[3]) * q + 1.0)
+    };
+
+    // One Halley iteration to polish the approximation to ~machine precision.
+    let e = standard_normal_cdf(x) - p;
+    let pdf = (1.0 / (2.0 * std::f64::consts::PI).sqrt()) * (-0.5 * x * x).exp();
+    if pdf > 0.0 {
+        let u = e / pdf;
+        x -= u / (1.0 + 0.5 * x * u);
+    }
+
+    Ok(x)
 }
 
 /// Expected Shortfall calculation result
@@ -486,5 +768,180 @@ mod tests {
 
         assert_eq!(scenario.name, "test");
         assert_eq!(scenario.market_shocks.len(), 2);
+    }
+
+    /// Standard normal PDF helper for analytic comparisons in tests.
+    fn phi(z: f64) -> f64 {
+        (1.0 / (2.0 * std::f64::consts::PI).sqrt()) * (-0.5 * z * z).exp()
+    }
+
+    #[test]
+    fn test_inverse_normal_known_quantiles() {
+        // Median.
+        assert!(inverse_normal_cdf(0.5).unwrap().abs() < 1e-12);
+        // z_{0.975} ≈ 1.95996, z_{0.95} ≈ 1.64485.
+        assert!((inverse_normal_cdf(0.975).unwrap() - 1.959_963_984_540_054).abs() < 1e-9);
+        assert!((inverse_normal_cdf(0.95).unwrap() - 1.644_853_626_951_472).abs() < 1e-9);
+        assert!((inverse_normal_cdf(0.99).unwrap() - 2.326_347_874_040_841).abs() < 1e-9);
+        // Symmetry: lower-tail quantiles are the negatives of the upper-tail ones.
+        assert!((inverse_normal_cdf(0.05).unwrap() + 1.644_853_626_951_472).abs() < 1e-9);
+        assert!((inverse_normal_cdf(0.025).unwrap() + 1.959_963_984_540_054).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_inverse_normal_round_trip() {
+        // Φ(Φ⁻¹(p)) ≈ p across a spread of probabilities, including the tails.
+        for &p in &[0.001, 0.01, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 0.999] {
+            let z = inverse_normal_cdf(p).unwrap();
+            assert!(
+                (standard_normal_cdf(z) - p).abs() < 1e-6,
+                "round-trip failed for p={p}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_inverse_normal_rejects_out_of_range() {
+        assert!(inverse_normal_cdf(0.0).is_err());
+        assert!(inverse_normal_cdf(1.0).is_err());
+        assert!(inverse_normal_cdf(-0.1).is_err());
+        assert!(inverse_normal_cdf(1.5).is_err());
+    }
+
+    #[test]
+    fn test_parametric_es_uses_real_quantile() {
+        // The parametric path must feed the REAL inverse-normal quantile into the
+        // closed-form normal ES. We reconstruct the expected value with an
+        // independently-computed `z_alpha` and `phi(z_alpha)`; a hardcoded
+        // z-table would shift `phi(z_alpha)` enough to break the tight
+        // tolerance, so this also guards against regressing to the old table.
+        let returns = vec![dec!(-0.05), dec!(-0.03), dec!(0.01), dec!(0.02), dec!(0.03)];
+        let calculator =
+            ExpectedShortfallCalculator::new(dec!(0.95), ESMethod::Parametric).unwrap();
+        let result = calculator.calculate(&returns).unwrap();
+
+        let n = returns.len() as f64;
+        let mu: f64 = returns.iter().map(|r| r.to_f64().unwrap()).sum::<f64>() / n;
+        // The implementation uses the population standard deviation (÷n).
+        let var_pop: f64 = returns
+            .iter()
+            .map(|r| {
+                let x = r.to_f64().unwrap() - mu;
+                x * x
+            })
+            .sum::<f64>()
+            / n;
+        let sigma = var_pop.sqrt();
+        let alpha = 0.05;
+        // Real probit at the tail probability (negative); phi() of it drives ES.
+        let z_alpha = inverse_normal_cdf(alpha).unwrap();
+        assert!((z_alpha + 1.644_853_626_951_472).abs() < 1e-9);
+        let analytic_es = (mu + sigma * phi(z_alpha) / alpha).abs();
+
+        let es = result.expected_shortfall.to_f64().unwrap();
+        assert!(
+            (es - analytic_es).abs() < 1e-9,
+            "parametric ES {es} vs analytic {analytic_es}"
+        );
+        assert!(result.expected_shortfall >= result.var);
+    }
+
+    #[test]
+    fn test_monte_carlo_matches_analytic_normal_es() {
+        // Build a large, near-perfectly-normal sample so the estimated mu/sigma
+        // are well-defined, then check the simulated ES against the closed-form
+        // normal ES: ES = mu - sigma * phi(z_alpha) / alpha (in loss terms,
+        // reported as a positive magnitude).
+        let mu = 0.001_f64;
+        let sigma = 0.02_f64;
+        let n = 20_000_usize;
+
+        // Inverse-transform sampling on an even grid yields a deterministic,
+        // tightly-normal empirical sample (no RNG dependence for the inputs).
+        let mut returns: Vec<Decimal> = Vec::with_capacity(n);
+        for i in 0..n {
+            let u = (i as f64 + 0.5) / (n as f64);
+            let z = inverse_normal_cdf(u).unwrap();
+            returns.push(Decimal::from_f64(mu + sigma * z).unwrap());
+        }
+
+        let confidence = dec!(0.975);
+        let alpha = 0.025_f64;
+        let calculator =
+            ExpectedShortfallCalculator::new(confidence, ESMethod::MonteCarlo).unwrap();
+        let result = calculator
+            .calculate_monte_carlo_with(&returns, 200_000, 0xDEAD_BEEF)
+            .unwrap();
+
+        // Analytic normal ES (loss magnitude): -mu + sigma * phi(z_alpha)/alpha
+        // where z_alpha = Φ⁻¹(alpha) < 0.
+        let z_alpha = inverse_normal_cdf(alpha).unwrap();
+        let analytic_es_loss = -mu + sigma * phi(z_alpha) / alpha;
+        let analytic_var_loss = -(mu + sigma * z_alpha);
+
+        let es = result.expected_shortfall.to_f64().unwrap();
+        let var = result.var.to_f64().unwrap();
+
+        assert!(
+            (es - analytic_es_loss).abs() < 1e-3,
+            "MC ES {es} vs analytic {analytic_es_loss}"
+        );
+        assert!(
+            (var - analytic_var_loss).abs() < 1e-3,
+            "MC VaR {var} vs analytic {analytic_var_loss}"
+        );
+        // Fundamental coherence property: ES is never less severe than VaR.
+        assert!(result.expected_shortfall >= result.var);
+        assert!(result.tail_observations > 0);
+        assert_eq!(result.method, ESMethod::MonteCarlo);
+    }
+
+    #[test]
+    fn test_monte_carlo_is_reproducible() {
+        let returns = vec![
+            dec!(-0.05),
+            dec!(-0.03),
+            dec!(-0.02),
+            dec!(-0.01),
+            dec!(0.01),
+            dec!(0.02),
+            dec!(0.03),
+            dec!(0.04),
+        ];
+        let calculator =
+            ExpectedShortfallCalculator::new(dec!(0.95), ESMethod::MonteCarlo).unwrap();
+        let a = calculator
+            .calculate_monte_carlo_with(&returns, 50_000, 42)
+            .unwrap();
+        let b = calculator
+            .calculate_monte_carlo_with(&returns, 50_000, 42)
+            .unwrap();
+        assert_eq!(a.expected_shortfall, b.expected_shortfall);
+        assert_eq!(a.var, b.var);
+    }
+
+    #[test]
+    fn test_monte_carlo_via_calculate_dispatch() {
+        // The public `calculate` entry point must route MonteCarlo to the real
+        // simulation and produce a coherent ES >= VaR result.
+        let returns = vec![dec!(-0.04), dec!(-0.02), dec!(0.0), dec!(0.02), dec!(0.04)];
+        let calculator =
+            ExpectedShortfallCalculator::new(dec!(0.95), ESMethod::MonteCarlo).unwrap();
+        let result = calculator.calculate(&returns).unwrap();
+        assert_eq!(result.method, ESMethod::MonteCarlo);
+        assert!(result.expected_shortfall >= result.var);
+        assert!(result.expected_shortfall >= Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_monte_carlo_rejects_invalid_inputs() {
+        let calculator =
+            ExpectedShortfallCalculator::new(dec!(0.95), ESMethod::MonteCarlo).unwrap();
+        assert!(calculator.calculate_monte_carlo_with(&[], 1000, 1).is_err());
+        assert!(
+            calculator
+                .calculate_monte_carlo_with(&[dec!(0.01)], 0, 1)
+                .is_err()
+        );
     }
 }
