@@ -762,7 +762,13 @@ mod tests {
     fn test_gjr_garch_forecast_follows_recursion_exactly() {
         // Final return is negative so the leverage indicator is 1.
         let mut returns: Vec<Decimal> = (0..49)
-            .map(|i| if i % 2 == 0 { dec!(0.011) } else { dec!(-0.016) })
+            .map(|i| {
+                if i % 2 == 0 {
+                    dec!(0.011)
+                } else {
+                    dec!(-0.016)
+                }
+            })
             .collect();
         returns.push(dec!(-0.021));
 
@@ -814,8 +820,7 @@ mod tests {
         let mut model = GjrGarchModel::new(params).unwrap();
         model.fit(&returns).unwrap();
 
-        let persistence =
-            params.garch.alpha + params.gamma / dec!(2) + params.garch.beta;
+        let persistence = params.garch.alpha + params.gamma / dec!(2) + params.garch.beta;
         let long_run_var = params.garch.omega / (dec!(1) - persistence);
 
         let forecast = model.forecast(500).unwrap();

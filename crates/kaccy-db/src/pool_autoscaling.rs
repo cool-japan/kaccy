@@ -372,7 +372,11 @@ impl PoolAutoscaler {
         let size = pool.size();
         let num_idle = pool.num_idle();
         let max_connections = pool.options().get_max_connections();
-        Ok(Self::compute_utilization_metrics(size, num_idle, max_connections))
+        Ok(Self::compute_utilization_metrics(
+            size,
+            num_idle,
+            max_connections,
+        ))
     }
 
     /// Pure arithmetic helper: derive [`UtilizationMetrics`] from raw pool counters.
@@ -392,7 +396,11 @@ impl PoolAutoscaler {
     /// * `idle_connections`  is `min(num_idle as u32, size)` (guard against stale counters).
     /// * `active_connections` is `size.saturating_sub(idle_connections)`.
     /// * `utilization` is `active_connections / max_connections`; zero when max is 0.
-    fn compute_utilization_metrics(size: u32, num_idle: usize, max_connections: u32) -> UtilizationMetrics {
+    fn compute_utilization_metrics(
+        size: u32,
+        num_idle: usize,
+        max_connections: u32,
+    ) -> UtilizationMetrics {
         // Guard: num_idle should never exceed size, but saturate defensively.
         let idle = (num_idle as u32).min(size);
         let active = size.saturating_sub(idle);
@@ -780,7 +788,11 @@ mod tests {
         assert_eq!(m.total_connections, 10);
         assert_eq!(m.idle_connections, 3);
         assert_eq!(m.active_connections, 7);
-        assert!((m.utilization - 0.7).abs() < 1e-9, "utilization should be 0.7, got {}", m.utilization);
+        assert!(
+            (m.utilization - 0.7).abs() < 1e-9,
+            "utilization should be 0.7, got {}",
+            m.utilization
+        );
     }
 
     #[test]
@@ -800,7 +812,11 @@ mod tests {
         assert_eq!(m.total_connections, 15);
         assert_eq!(m.idle_connections, 0);
         assert_eq!(m.active_connections, 15);
-        assert!((m.utilization - 0.75).abs() < 1e-9, "utilization should be 0.75, got {}", m.utilization);
+        assert!(
+            (m.utilization - 0.75).abs() < 1e-9,
+            "utilization should be 0.75, got {}",
+            m.utilization
+        );
     }
 
     #[test]
@@ -810,7 +826,10 @@ mod tests {
         assert_eq!(m.total_connections, 5);
         assert_eq!(m.idle_connections, 2);
         assert_eq!(m.active_connections, 3);
-        assert_eq!(m.utilization, 0.0, "zero max_connections must yield utilization 0.0");
+        assert_eq!(
+            m.utilization, 0.0,
+            "zero max_connections must yield utilization 0.0"
+        );
     }
 
     #[test]
@@ -840,7 +859,10 @@ mod tests {
         assert_eq!(m.total_connections, 50);
         assert_eq!(m.active_connections, 50);
         assert_eq!(m.idle_connections, 0);
-        assert!((m.utilization - 1.0).abs() < 1e-9, "fully saturated pool should have utilization 1.0");
+        assert!(
+            (m.utilization - 1.0).abs() < 1e-9,
+            "fully saturated pool should have utilization 1.0"
+        );
     }
 
     #[test]
@@ -850,6 +872,10 @@ mod tests {
         assert_eq!(m.total_connections, 10);
         assert_eq!(m.idle_connections, 2);
         assert_eq!(m.active_connections, 8);
-        assert!((m.utilization - 0.2).abs() < 1e-9, "expected 0.2 utilization, got {}", m.utilization);
+        assert!(
+            (m.utilization - 0.2).abs() < 1e-9,
+            "expected 0.2 utilization, got {}",
+            m.utilization
+        );
     }
 }

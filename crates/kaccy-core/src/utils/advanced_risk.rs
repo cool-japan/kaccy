@@ -155,7 +155,11 @@ impl ExpectedShortfallCalculator {
     }
 
     fn calculate_monte_carlo(&self, returns: &[Decimal]) -> Result<ESResult> {
-        self.calculate_monte_carlo_with(returns, DEFAULT_MONTE_CARLO_SAMPLES, DEFAULT_MONTE_CARLO_SEED)
+        self.calculate_monte_carlo_with(
+            returns,
+            DEFAULT_MONTE_CARLO_SAMPLES,
+            DEFAULT_MONTE_CARLO_SEED,
+        )
     }
 
     /// Calculate Expected Shortfall via Monte Carlo simulation with explicit

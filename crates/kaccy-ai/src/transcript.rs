@@ -272,7 +272,6 @@ struct CaptionTrackEntry {
     kind: String,
 }
 
-
 // ---------------------------------------------------------------------------
 // YouTube provider
 // ---------------------------------------------------------------------------
@@ -423,10 +422,7 @@ impl YouTubeTranscriptProvider {
     /// along with its language code and whether it is auto-generated.
     ///
     /// Returns `Err(TranscriptUnavailable)` when no caption track is present.
-    fn extract_caption_track_info(
-        &self,
-        html: &str,
-    ) -> Result<(String, Option<String>, bool)> {
+    fn extract_caption_track_info(&self, html: &str) -> Result<(String, Option<String>, bool)> {
         // Strategy 1: parse the structured captionTracks JSON array that YouTube
         // embeds inside the serialised `ytInitialPlayerResponse` / `ytInitialData`.
         // We extract the raw JSON object for `captions` and deserialise it.
@@ -467,10 +463,8 @@ impl YouTubeTranscriptProvider {
 
         // Strategy 2: direct regex scan for a bare timedtext URL as a fallback.
         // This catches older page formats where the full JSON structure differs.
-        let re = regex::Regex::new(
-            r#""baseUrl":"(https://www\.youtube\.com/api/timedtext[^"]+)""#,
-        )
-        .map_err(|e| AiError::Internal(e.to_string()))?;
+        let re = regex::Regex::new(r#""baseUrl":"(https://www\.youtube\.com/api/timedtext[^"]+)""#)
+            .map_err(|e| AiError::Internal(e.to_string()))?;
 
         if let Some(caps) = re.captures(html) {
             let raw_url = caps
@@ -1190,7 +1184,10 @@ mod tests {
         );
         assert_eq!(lang.as_deref(), Some("en"));
         // The English track has kind="asr" → auto-generated.
-        assert!(is_auto, "English ASR track should be flagged as auto-generated");
+        assert!(
+            is_auto,
+            "English ASR track should be flagged as auto-generated"
+        );
     }
 
     /// A manual (non-ASR) caption track must be preferred over auto-generated.
@@ -1270,7 +1267,10 @@ mod tests {
         assert!(clean.contains("v=dQw4w9WgXcQ"), "Should have video id");
         assert!(clean.contains("lang=en"), "Should have language");
         assert!(clean.contains("fmt=xml3"), "Should have format");
-        assert!(!clean.contains("\\u0026"), "Should have no raw unicode escapes");
+        assert!(
+            !clean.contains("\\u0026"),
+            "Should have no raw unicode escapes"
+        );
     }
 
     // ---- assemble_result -------------------------------------------------

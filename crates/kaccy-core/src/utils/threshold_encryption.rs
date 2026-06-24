@@ -165,11 +165,7 @@ pub struct ShamirShare {
 ///
 /// Returns [`CoreError::Validation`] when `threshold == 0`,
 /// `threshold > total`, or `total` exceeds [`MAX_SHAMIR_SHARES`].
-pub fn shamir_split_secret(
-    secret: &[u8],
-    threshold: u32,
-    total: u32,
-) -> Result<Vec<ShamirShare>> {
+pub fn shamir_split_secret(secret: &[u8], threshold: u32, total: u32) -> Result<Vec<ShamirShare>> {
     if threshold == 0 {
         return Err(CoreError::Validation(
             "Shamir threshold must be at least 1".to_string(),
@@ -797,8 +793,7 @@ impl DKGSession {
         rng().fill_bytes(&mut master_secret);
 
         // Split it into one Shamir share per participant.
-        let shamir_shares =
-            shamir_split_secret(&master_secret, self.threshold, participant_count)?;
+        let shamir_shares = shamir_split_secret(&master_secret, self.threshold, participant_count)?;
 
         // Iterate participants in a deterministic order so share indices are
         // stable for a given participant set (HashMap iteration order is not).
@@ -1177,9 +1172,12 @@ mod tests {
         // Exactly 32 bytes.
         let secret32: Vec<u8> = (0u8..32).collect();
         let shares32 = shamir_split_secret(&secret32, 3, 5).unwrap();
-        let recovered32 =
-            shamir_reconstruct_secret(&[shares32[0].clone(), shares32[2].clone(), shares32[4].clone()])
-                .unwrap();
+        let recovered32 = shamir_reconstruct_secret(&[
+            shares32[0].clone(),
+            shares32[2].clone(),
+            shares32[4].clone(),
+        ])
+        .unwrap();
         assert_eq!(recovered32, secret32);
 
         // Exactly 64 bytes, including 0x00 and 0xff edge bytes.
@@ -1227,22 +1225,40 @@ mod tests {
 
         // Reconstruct from any two of those evaluations -> 0x53.
         let s12 = shamir_reconstruct_secret(&[
-            ShamirShare { x: 1, y: vec![0xcf] },
-            ShamirShare { x: 2, y: vec![0x70] },
+            ShamirShare {
+                x: 1,
+                y: vec![0xcf],
+            },
+            ShamirShare {
+                x: 2,
+                y: vec![0x70],
+            },
         ])
         .unwrap();
         assert_eq!(s12, vec![0x53]);
 
         let s13 = shamir_reconstruct_secret(&[
-            ShamirShare { x: 1, y: vec![0xcf] },
-            ShamirShare { x: 3, y: vec![0xec] },
+            ShamirShare {
+                x: 1,
+                y: vec![0xcf],
+            },
+            ShamirShare {
+                x: 3,
+                y: vec![0xec],
+            },
         ])
         .unwrap();
         assert_eq!(s13, vec![0x53]);
 
         let s23 = shamir_reconstruct_secret(&[
-            ShamirShare { x: 2, y: vec![0x70] },
-            ShamirShare { x: 3, y: vec![0xec] },
+            ShamirShare {
+                x: 2,
+                y: vec![0x70],
+            },
+            ShamirShare {
+                x: 3,
+                y: vec![0xec],
+            },
         ])
         .unwrap();
         assert_eq!(s23, vec![0x53]);
@@ -1251,7 +1267,10 @@ mod tests {
     #[test]
     fn test_shamir_invalid_parameters_are_rejected() {
         assert!(shamir_split_secret(b"x", 0, 3).is_err(), "threshold 0");
-        assert!(shamir_split_secret(b"x", 4, 3).is_err(), "threshold > total");
+        assert!(
+            shamir_split_secret(b"x", 4, 3).is_err(),
+            "threshold > total"
+        );
         assert!(
             shamir_split_secret(b"x", 1, MAX_SHAMIR_SHARES + 1).is_err(),
             "too many shares"
@@ -1273,7 +1292,10 @@ mod tests {
         );
         assert!(
             shamir_reconstruct_secret(&[
-                ShamirShare { x: 1, y: vec![1, 2] },
+                ShamirShare {
+                    x: 1,
+                    y: vec![1, 2]
+                },
                 ShamirShare { x: 2, y: vec![3] },
             ])
             .is_err(),
@@ -1413,7 +1435,10 @@ mod tests {
         ];
         let secret_a = session.reconstruct_secret(&subset_a).unwrap();
         let secret_b = session.reconstruct_secret(&subset_b).unwrap();
-        assert_eq!(secret_a, secret_b, "subsets must reconstruct the same secret");
+        assert_eq!(
+            secret_a, secret_b,
+            "subsets must reconstruct the same secret"
+        );
         assert_eq!(secret_a.len(), 32, "master secret is 32 bytes");
 
         // The recovered secret must reproduce the bound public key.
@@ -1453,11 +1478,17 @@ mod tests {
         let s2 = make_session("same-id");
 
         let secret1 = shamir_reconstruct_secret(
-            &s1.key_shares.iter().map(KeyShare::to_shamir_share).collect::<Vec<_>>(),
+            &s1.key_shares
+                .iter()
+                .map(KeyShare::to_shamir_share)
+                .collect::<Vec<_>>(),
         )
         .unwrap();
         let secret2 = shamir_reconstruct_secret(
-            &s2.key_shares.iter().map(KeyShare::to_shamir_share).collect::<Vec<_>>(),
+            &s2.key_shares
+                .iter()
+                .map(KeyShare::to_shamir_share)
+                .collect::<Vec<_>>(),
         )
         .unwrap();
         assert_ne!(

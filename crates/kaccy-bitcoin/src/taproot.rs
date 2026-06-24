@@ -292,23 +292,20 @@ impl TaprootManager {
         let _version = instructions
             .next()
             .transpose()
-            .map_err(|e| {
-                BitcoinError::InvalidAddress(format!("Malformed Taproot script: {}", e))
-            })?
-            .ok_or_else(|| {
-                BitcoinError::InvalidAddress("Empty Taproot script".to_string())
-            })?;
+            .map_err(|e| BitcoinError::InvalidAddress(format!("Malformed Taproot script: {}", e)))?
+            .ok_or_else(|| BitcoinError::InvalidAddress("Empty Taproot script".to_string()))?;
 
-        let program = match instructions.next().transpose().map_err(|e| {
-            BitcoinError::InvalidAddress(format!("Malformed Taproot script: {}", e))
-        })? {
-            Some(Instruction::PushBytes(bytes)) => bytes,
-            _ => {
-                return Err(BitcoinError::InvalidAddress(
-                    "Taproot script missing key push".to_string(),
-                ));
-            }
-        };
+        let program =
+            match instructions.next().transpose().map_err(|e| {
+                BitcoinError::InvalidAddress(format!("Malformed Taproot script: {}", e))
+            })? {
+                Some(Instruction::PushBytes(bytes)) => bytes,
+                _ => {
+                    return Err(BitcoinError::InvalidAddress(
+                        "Taproot script missing key push".to_string(),
+                    ));
+                }
+            };
 
         if program.len() != 32 {
             return Err(BitcoinError::InvalidAddress(format!(
@@ -341,12 +338,7 @@ pub struct TaprootSpendInput {
 impl TaprootSpendInput {
     /// Construct a spend input from a textual `txid:vout`, the previous output,
     /// and the signing secret key.
-    pub fn new(
-        txid: &str,
-        vout: u32,
-        prev_output: TxOut,
-        secret_key: SecretKey,
-    ) -> Result<Self> {
+    pub fn new(txid: &str, vout: u32, prev_output: TxOut, secret_key: SecretKey) -> Result<Self> {
         let txid = Txid::from_str(txid)
             .map_err(|e| BitcoinError::InvalidTransaction(format!("Invalid txid: {}", e)))?;
         Ok(Self {
@@ -369,7 +361,11 @@ impl TaprootTxBuilder {
     }
 
     /// Build the unsigned single-input/single-output skeleton transaction.
-    fn build_skeleton(spend: &TaprootSpendInput, destination: &Address, amount: Amount) -> Transaction {
+    fn build_skeleton(
+        spend: &TaprootSpendInput,
+        destination: &Address,
+        amount: Amount,
+    ) -> Transaction {
         let txin = TxIn {
             previous_output: spend.outpoint,
             script_sig: ScriptBuf::new(),
@@ -418,11 +414,7 @@ impl TaprootTxBuilder {
         let prevouts = [spend.prev_output.clone()];
         let mut sighash_cache = SighashCache::new(&tx);
         let sighash = sighash_cache
-            .taproot_key_spend_signature_hash(
-                0,
-                &Prevouts::All(&prevouts),
-                TapSighashType::Default,
-            )
+            .taproot_key_spend_signature_hash(0, &Prevouts::All(&prevouts), TapSighashType::Default)
             .map_err(|e| {
                 BitcoinError::Validation(format!("Taproot key-spend sighash failed: {}", e))
             })?;
@@ -634,7 +626,10 @@ mod tests {
         let sk = SecretKey::new(&mut OsRng);
         let pk = bitcoin::PublicKey::new(PublicKey::from_secret_key(&secp, &sk));
         let wpkh = pk.wpubkey_hash().expect("compressed key");
-        let address = Address::p2wpkh(&bitcoin::key::CompressedPublicKey(pk.inner), Network::Testnet);
+        let address = Address::p2wpkh(
+            &bitcoin::key::CompressedPublicKey(pk.inner),
+            Network::Testnet,
+        );
         let _ = wpkh; // hash computed to assert compression validity above
         let result = manager.extract_internal_key(&address);
         assert!(result.is_err());
@@ -663,8 +658,8 @@ mod tests {
             script_pubkey: taproot_address.address.script_pubkey(),
         };
         let txid = "0000000000000000000000000000000000000000000000000000000000000001";
-        let spend = TaprootSpendInput::new(txid, 0, prev_output.clone(), secret_key)
-            .expect("spend input");
+        let spend =
+            TaprootSpendInput::new(txid, 0, prev_output.clone(), secret_key).expect("spend input");
 
         // Destination: a fresh key-path address.
         let dest_kp = manager.generate_keypair().expect("dest keypair");
@@ -696,7 +691,10 @@ mod tests {
         let message = Message::from_digest(sighash.to_byte_array());
 
         // The signature must verify against the TWEAKED output key.
-        let output_key = taproot_address.spend_info.output_key().to_x_only_public_key();
+        let output_key = taproot_address
+            .spend_info
+            .output_key()
+            .to_x_only_public_key();
         let parsed_sig = SchnorrSignature::from_slice(sig_bytes).expect("parse schnorr sig");
         secp.verify_schnorr(&parsed_sig, &message, &output_key)
             .expect("key-path signature verifies against tweaked output key");
@@ -738,8 +736,8 @@ mod tests {
             script_pubkey: taproot_address.address.script_pubkey(),
         };
         let txid = "0000000000000000000000000000000000000000000000000000000000000002";
-        let spend = TaprootSpendInput::new(txid, 1, prev_output.clone(), secret_key)
-            .expect("spend input");
+        let spend =
+            TaprootSpendInput::new(txid, 1, prev_output.clone(), secret_key).expect("spend input");
 
         let dest_kp = manager.generate_keypair().expect("dest keypair");
         let dest = manager
@@ -764,7 +762,11 @@ mod tests {
         let cb_el = iter.next().expect("control block element");
 
         assert_eq!(sig_el.len(), 64, "default-sighash schnorr sig is 64 bytes");
-        assert_eq!(script_el, leaf0.as_bytes(), "second item is the spent script");
+        assert_eq!(
+            script_el,
+            leaf0.as_bytes(),
+            "second item is the spent script"
+        );
 
         // Control block must be well-formed (33 + 32*n bytes) and present a real
         // merkle path (one 32-byte branch element for a 2-leaf tree).

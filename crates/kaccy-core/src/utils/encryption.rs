@@ -239,9 +239,8 @@ fn aead_seal(
                 .map_err(|_| CoreError::Calculation("AES-256-GCM encryption failed".to_string()))
         }
         EncryptionAlgorithm::ChaCha20 => {
-            let cipher = ChaCha20Poly1305::new_from_slice(key).map_err(|e| {
-                CoreError::Configuration(format!("Invalid ChaCha20 key: {e}"))
-            })?;
+            let cipher = ChaCha20Poly1305::new_from_slice(key)
+                .map_err(|e| CoreError::Configuration(format!("Invalid ChaCha20 key: {e}")))?;
             cipher.encrypt(nonce, plaintext).map_err(|_| {
                 CoreError::Calculation("ChaCha20-Poly1305 encryption failed".to_string())
             })
@@ -269,9 +268,8 @@ fn aead_open(
             })
         }
         EncryptionAlgorithm::ChaCha20 => {
-            let cipher = ChaCha20Poly1305::new_from_slice(key).map_err(|e| {
-                CoreError::Configuration(format!("Invalid ChaCha20 key: {e}"))
-            })?;
+            let cipher = ChaCha20Poly1305::new_from_slice(key)
+                .map_err(|e| CoreError::Configuration(format!("Invalid ChaCha20 key: {e}")))?;
             cipher.decrypt(nonce, ciphertext_with_tag).map_err(|_| {
                 CoreError::Validation(
                     "ChaCha20-Poly1305 authentication failed (tampered data or wrong key)"
@@ -621,10 +619,7 @@ mod tests {
         let b = EncryptionKey::new(EncryptionAlgorithm::Aes256);
         // Two freshly generated keys must not collide.
         assert_ne!(a.key_hash(), b.key_hash());
-        assert_ne!(
-            a.secret_bytes().expect("a"),
-            b.secret_bytes().expect("b")
-        );
+        assert_ne!(a.secret_bytes().expect("a"), b.secret_bytes().expect("b"));
     }
 
     #[test]
@@ -815,8 +810,8 @@ If I could offer you only one tip for the future, sunscreen would be it.";
         // exactly. (The RFC's Poly1305 tag is computed over non-empty AAD and is
         // therefore intentionally not asserted here; the tag is exercised by the
         // authenticated round-trip and tamper checks below.)
-        let combined = aead_seal(EncryptionAlgorithm::ChaCha20, &key_bytes, &nonce, plaintext)
-            .expect("seal");
+        let combined =
+            aead_seal(EncryptionAlgorithm::ChaCha20, &key_bytes, &nonce, plaintext).expect("seal");
         assert_eq!(combined.len(), plaintext.len() + TAG_LEN);
         let ciphertext = &combined[..combined.len() - TAG_LEN];
         let expected_ct = "d31a8d34648e60db7b86afbc53ef7ec2a4aded51296e08fea9e2b5a736ee62d6\
@@ -833,9 +828,7 @@ If I could offer you only one tip for the future, sunscreen would be it.";
         let mut tampered = combined.clone();
         let last = tampered.len() - 1;
         tampered[last] ^= 0x01;
-        assert!(
-            aead_open(EncryptionAlgorithm::ChaCha20, &key_bytes, &nonce, &tampered).is_err()
-        );
+        assert!(aead_open(EncryptionAlgorithm::ChaCha20, &key_bytes, &nonce, &tampered).is_err());
     }
 
     #[test]
@@ -844,10 +837,7 @@ If I could offer you only one tip for the future, sunscreen would be it.";
 
         let key_id = manager.generate_key(EncryptionAlgorithm::Aes256);
         assert!(manager.get_active_key().is_some());
-        assert_eq!(
-            manager.get_active_key().expect("active key").id,
-            key_id
-        );
+        assert_eq!(manager.get_active_key().expect("active key").id, key_id);
     }
 
     #[test]
@@ -940,4 +930,3 @@ If I could offer you only one tip for the future, sunscreen would be it.";
         assert_eq!(decrypted, "test data");
     }
 }
-

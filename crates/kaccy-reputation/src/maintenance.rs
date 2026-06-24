@@ -266,11 +266,7 @@ impl MaintenanceService {
     async fn archive_old_audit_logs(&self, days: i32) -> Result<i32, ReputationError> {
         let cutoff_date = compute_cutoff_date(days as i64);
 
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .map_err(ReputationError::Database)?;
+        let mut tx = self.pool.begin().await.map_err(ReputationError::Database)?;
 
         // Step 1 — ensure archive table exists with identical structure and constraints.
         sqlx::query(
@@ -292,13 +288,11 @@ impl MaintenanceService {
         .map_err(ReputationError::Database)?;
 
         // Step 3 — remove those same rows from the live table.
-        let delete_result = sqlx::query(
-            "DELETE FROM audit_trail WHERE created_at < $1",
-        )
-        .bind(cutoff_date)
-        .execute(&mut *tx)
-        .await
-        .map_err(ReputationError::Database)?;
+        let delete_result = sqlx::query("DELETE FROM audit_trail WHERE created_at < $1")
+            .bind(cutoff_date)
+            .execute(&mut *tx)
+            .await
+            .map_err(ReputationError::Database)?;
 
         let rows_moved = delete_result.rows_affected() as i32;
 

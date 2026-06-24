@@ -190,10 +190,7 @@ fn compute_output_tweak(
 ) -> Result<Scalar, SilentPaymentError> {
     let hash = tagged_hash(
         TAG_SHARED_SECRET,
-        &[
-            &ecdh_shared_secret.serialize(),
-            &output_index.to_be_bytes(),
-        ],
+        &[&ecdh_shared_secret.serialize(), &output_index.to_be_bytes()],
     );
     scalar_from_be_bytes(hash, "output tweak t_k")
 }
@@ -739,7 +736,10 @@ impl SilentPaymentScanner {
                     .x_only_public_key()
                     .0;
 
-                if let Some(pos) = remaining.iter().position(|(_, xonly, _)| *xonly == expected) {
+                if let Some(pos) = remaining
+                    .iter()
+                    .position(|(_, xonly, _)| *xonly == expected)
+                {
                     let (vout, _, amount) = remaining.remove(pos);
                     let spend_privkey =
                         self.derive_output_privkey(&ecdh_shared_secret, output_index, label)?;
@@ -897,7 +897,10 @@ mod tests {
     fn test_invalid_address_prefix() {
         assert!(SilentPaymentAddress::from_string("invalid123").is_err());
         // A valid bech32m string with the wrong HRP must be rejected.
-        assert!(SilentPaymentAddress::from_string("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4").is_err());
+        assert!(
+            SilentPaymentAddress::from_string("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4")
+                .is_err()
+        );
     }
 
     #[test]
@@ -1101,12 +1104,10 @@ mod tests {
     fn test_bip352_official_vector_simple_send() {
         let secp = Secp256k1::new();
 
-        let priv1 = secret_key_from_hex(
-            "eadc78165ff1f8ea94ad7cfdc54990738a4c53f6e0507b42154201b8e5dff3b1",
-        );
-        let priv2 = secret_key_from_hex(
-            "93f5ed907ad5b2bdbbdcb5d9116ebc0a4e1f92f910d5260237fa45a9408aad16",
-        );
+        let priv1 =
+            secret_key_from_hex("eadc78165ff1f8ea94ad7cfdc54990738a4c53f6e0507b42154201b8e5dff3b1");
+        let priv2 =
+            secret_key_from_hex("93f5ed907ad5b2bdbbdcb5d9116ebc0a4e1f92f910d5260237fa45a9408aad16");
 
         let op1 = outpoint(
             "f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16",
@@ -1178,12 +1179,10 @@ mod tests {
     fn test_bip352_official_vector_receiver() {
         let secp = Secp256k1::new();
 
-        let scan_priv = secret_key_from_hex(
-            "0f694e068028a717f8af6b9411f9a133dd3565258714cc226594b34db90c1f2c",
-        );
-        let spend_priv = secret_key_from_hex(
-            "9d6ad855ce3417ef84e836892e5a56392bfba05fa5d97ccea30e266f540e08b3",
-        );
+        let scan_priv =
+            secret_key_from_hex("0f694e068028a717f8af6b9411f9a133dd3565258714cc226594b34db90c1f2c");
+        let spend_priv =
+            secret_key_from_hex("9d6ad855ce3417ef84e836892e5a56392bfba05fa5d97ccea30e266f540e08b3");
         let wallet = SilentPaymentWallet::from_keys(scan_priv, spend_priv, Network::Bitcoin);
 
         // Wallet derives the published recipient address.
@@ -1219,7 +1218,9 @@ mod tests {
         );
 
         // Spend private key = b_spend + t_0; its pubkey must match the output.
-        let ecdh = scanner.compute_shared_secret(&[pub1, pub2], &[op1, op2]).unwrap();
+        let ecdh = scanner
+            .compute_shared_secret(&[pub1, pub2], &[op1, op2])
+            .unwrap();
         let out_priv = scanner.derive_output_privkey(&ecdh, 0, None).unwrap();
         assert_eq!(
             PublicKey::from_secret_key(&secp, &out_priv)

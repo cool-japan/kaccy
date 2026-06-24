@@ -478,9 +478,7 @@ impl CoinJoinSession {
         let message = Message::from_digest(sighash);
         let secp = Secp256k1::verification_only();
         secp.verify_ecdsa(&message, &ecdsa_sig.signature, &compressed.0)
-            .map_err(|e| {
-                BitcoinError::Validation(format!("Signature verification failed: {e}"))
-            })?;
+            .map_err(|e| BitcoinError::Validation(format!("Signature verification failed: {e}")))?;
 
         Ok((ecdsa_sig, compressed.0))
     }
@@ -520,9 +518,7 @@ impl CoinJoinSession {
             // witness stack to attach to the transaction.
             self.verify_participant_witness(participant.id, witness_bytes)?;
             let witness: Witness = bitcoin::consensus::encode::deserialize(witness_bytes)
-                .map_err(|e| {
-                    BitcoinError::Validation(format!("Malformed stored witness: {e}"))
-                })?;
+                .map_err(|e| BitcoinError::Validation(format!("Malformed stored witness: {e}")))?;
             tx.input[input_index].witness = witness;
         }
 

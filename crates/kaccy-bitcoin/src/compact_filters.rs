@@ -74,11 +74,7 @@ impl CompactFilter {
     ///
     /// This produces a genuine GCS filter that round-trips through
     /// [`CompactFilter::matches_any`]; it is **not** a zero-filled placeholder.
-    pub fn build_basic(
-        block_hash: BlockHash,
-        height: u64,
-        scripts: &[ScriptBuf],
-    ) -> Result<Self> {
+    pub fn build_basic(block_hash: BlockHash, height: u64, scripts: &[ScriptBuf]) -> Result<Self> {
         let (k0, k1) = siphash_keys(&block_hash);
 
         let mut filter_data = Vec::new();
@@ -632,21 +628,25 @@ mod tests {
         let reader = GcsFilterReader::new(k0, k1, BIP158_M, BIP158_P);
         let member = tagged_script(3);
         let member_query = [member.as_bytes()];
-        assert!(reader
-            .match_any(
-                &mut filter.filter_data.as_slice(),
-                &mut member_query.iter().copied()
-            )
-            .expect("decode succeeds"));
+        assert!(
+            reader
+                .match_any(
+                    &mut filter.filter_data.as_slice(),
+                    &mut member_query.iter().copied()
+                )
+                .expect("decode succeeds")
+        );
 
         let outsider = tagged_script(200);
         let outsider_query = [outsider.as_bytes()];
-        assert!(!reader
-            .match_any(
-                &mut filter.filter_data.as_slice(),
-                &mut outsider_query.iter().copied()
-            )
-            .expect("decode succeeds"));
+        assert!(
+            !reader
+                .match_any(
+                    &mut filter.filter_data.as_slice(),
+                    &mut outsider_query.iter().copied()
+                )
+                .expect("decode succeeds")
+        );
     }
 
     #[test]

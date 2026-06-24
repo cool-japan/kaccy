@@ -370,13 +370,14 @@ impl ConfidenceTracker {
         .fetch_optional(&self.pool)
         .await?;
 
-        let (sample_count, total_hours, oldest, newest) =
-            stats.unwrap_or((0, dec!(0), None, None));
+        let (sample_count, total_hours, oldest, newest) = stats.unwrap_or((0, dec!(0), None, None));
 
         let (score, data_points) = crate::score::response_time_score(sample_count, total_hours);
 
-        Ok(ComponentConfidence::new("response_time", score, data_points)
-            .with_timestamps(oldest, newest))
+        Ok(
+            ComponentConfidence::new("response_time", score, data_points)
+                .with_timestamps(oldest, newest),
+        )
     }
 
     /// Get longevity confidence (based on account age)

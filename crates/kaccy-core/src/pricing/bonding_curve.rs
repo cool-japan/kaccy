@@ -1357,7 +1357,10 @@ mod tests {
             "buy must be >= amount*spot floor: buy={buy} spot={spot}"
         );
         // Spread keeps sell below buy but still positive.
-        assert!(sell < buy, "sell must stay below buy: sell={sell} buy={buy}");
+        assert!(
+            sell < buy,
+            "sell must stay below buy: sell={sell} buy={buy}"
+        );
 
         // Mid-supply sanity (non-saturated regime: the integral dominates and
         // the floor is inert). buy must exceed amount*spot due to price impact.

@@ -915,10 +915,7 @@ mod tests {
                     alignment: self.score,
                 },
                 confidence: self.confidence,
-                explanation: format!(
-                    "Mock AI evaluation for commitment {}",
-                    input.commitment_id
-                ),
+                explanation: format!("Mock AI evaluation for commitment {}", input.commitment_id),
                 flags: vec![],
             })
         }

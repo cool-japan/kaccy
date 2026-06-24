@@ -834,10 +834,12 @@ mod tests {
             "simulated_signature_placeholder"
         );
         assert_ne!(credential.proof.proof_value, "placeholder");
-        assert!(credential
-            .proof
-            .verification_method
-            .starts_with("did:key:secp256k1:"));
+        assert!(
+            credential
+                .proof
+                .verification_method
+                .starts_with("did:key:secp256k1:")
+        );
 
         // A freshly signed credential must verify true through both entry points.
         assert!(verify_credential(&credential).expect("verification must not error"));

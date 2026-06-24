@@ -1,5 +1,5 @@
 use super::types::{Notification, NotificationId, NotificationStatus, NotificationType};
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use hmac::{Hmac, KeyInit, Mac};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
@@ -242,7 +242,7 @@ async fn sns_publish(
     // -----------------------------------------------------------------------
     let now = chrono::Utc::now();
     let amz_date = now.format("%Y%m%dT%H%M%SZ").to_string(); // e.g. "20240101T120000Z"
-    let date_stamp = now.format("%Y%m%d").to_string();        // e.g. "20240101"
+    let date_stamp = now.format("%Y%m%d").to_string(); // e.g. "20240101"
 
     // -----------------------------------------------------------------------
     // Canonical URI / host
@@ -314,18 +314,25 @@ async fn sns_publish(
         .context("AWS SNS HTTP request failed")?;
 
     let status = response.status();
-    let response_text = response.text().await.context("Failed to read SNS response")?;
+    let response_text = response
+        .text()
+        .await
+        .context("Failed to read SNS response")?;
 
     if !status.is_success() {
         // AWS returns XML error bodies; extract the <Message> element if present.
-        let detail = extract_xml_element(&response_text, "Message")
-            .unwrap_or_else(|| response_text.clone());
+        let detail =
+            extract_xml_element(&response_text, "Message").unwrap_or_else(|| response_text.clone());
         bail!("AWS SNS error ({}): {}", status.as_u16(), detail);
     }
 
     // Parse MessageId from the successful XML response
-    extract_xml_element(&response_text, "MessageId")
-        .ok_or_else(|| anyhow!("AWS SNS response missing MessageId; body: {}", response_text))
+    extract_xml_element(&response_text, "MessageId").ok_or_else(|| {
+        anyhow!(
+            "AWS SNS response missing MessageId; body: {}",
+            response_text
+        )
+    })
 }
 
 /// Minimal XML element extractor — finds the first `<tag>value</tag>` pair.
@@ -384,8 +391,7 @@ impl SmsNotifier {
                 // Validate message length (most SMS providers have limits)
                 if message.len() > 1600 {
                     notification.status = NotificationStatus::Failed;
-                    notification.error =
-                        Some("Message too long (max 1600 characters)".to_string());
+                    notification.error = Some("Message too long (max 1600 characters)".to_string());
                     return Ok(notification.id);
                 }
 
@@ -397,12 +403,10 @@ impl SmsNotifier {
                 let result = match self.config.provider.as_str() {
                     "twilio" => self.send_via_twilio(&to, &message).await,
                     "aws_sns" => self.send_via_aws_sns(&to, &message).await,
-                    other => {
-                        Err(anyhow!(
-                            "Unsupported SMS provider '{}'. Supported: twilio, aws_sns",
-                            other
-                        ))
-                    }
+                    other => Err(anyhow!(
+                        "Unsupported SMS provider '{}'. Supported: twilio, aws_sns",
+                        other
+                    )),
                 };
 
                 match result {
@@ -546,7 +550,9 @@ mod tests {
     async fn capture_one_request(listener: &TcpListener, response: &str) -> Vec<u8> {
         let (mut socket, _) = listener.accept().await.unwrap();
         let mut buf = vec![0u8; 8192];
-        let n = tokio::io::AsyncReadExt::read(&mut socket, &mut buf).await.unwrap();
+        let n = tokio::io::AsyncReadExt::read(&mut socket, &mut buf)
+            .await
+            .unwrap();
         buf.truncate(n);
         socket.write_all(response.as_bytes()).await.unwrap();
         buf
@@ -599,14 +605,13 @@ mod tests {
     async fn twilio_unconfigured_returns_error_not_fake_id() {
         let config = SmsConfig {
             provider: "twilio".to_string(),
-            api_key: String::new(),     // empty → not configured
+            api_key: String::new(), // empty → not configured
             api_secret: String::new(),
             from_number: String::new(),
             enabled: true,
         };
         let notifier = SmsNotifier::new(config);
-        let notification =
-            Notification::sms("+12025551234".to_string(), "Hello".to_string());
+        let notification = Notification::sms("+12025551234".to_string(), "Hello".to_string());
         let result = notifier.send(notification).await;
         assert!(result.is_err(), "Expected error for unconfigured Twilio");
         let msg = result.unwrap_err().to_string();
@@ -631,8 +636,7 @@ mod tests {
             enabled: true,
         };
         let notifier = SmsNotifier::new(config);
-        let notification =
-            Notification::sms("+12025551234".to_string(), "Hello".to_string());
+        let notification = Notification::sms("+12025551234".to_string(), "Hello".to_string());
         let result = notifier.send(notification).await;
         assert!(result.is_err(), "Expected error for unconfigured AWS SNS");
         let msg = result.unwrap_err().to_string();
@@ -657,8 +661,7 @@ mod tests {
             enabled: true,
         };
         let notifier = SmsNotifier::new(config);
-        let notification =
-            Notification::sms("+12025551234".to_string(), "Hello".to_string());
+        let notification = Notification::sms("+12025551234".to_string(), "Hello".to_string());
         let result = notifier.send(notification).await;
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
@@ -713,7 +716,10 @@ mod tests {
         )
         .with_base_url(base_url.clone());
 
-        let sid = client.send("+12025551234", "Hello from test").await.unwrap();
+        let sid = client
+            .send("+12025551234", "Hello from test")
+            .await
+            .unwrap();
         assert_eq!(sid, "SM1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d");
 
         // Inspect what the server received
@@ -721,7 +727,8 @@ mod tests {
 
         // Correct URL path
         assert!(
-            raw_request.contains("/2010-04-01/Accounts/ACtest0000000000000000000000000000/Messages.json"),
+            raw_request
+                .contains("/2010-04-01/Accounts/ACtest0000000000000000000000000000/Messages.json"),
             "Request should target Twilio Messages endpoint; got:\n{}",
             raw_request
         );
@@ -746,8 +753,14 @@ mod tests {
             raw_request.contains("%2B12025551234") || raw_request.contains("+12025551234"),
             "Body should contain the 'to' number"
         );
-        assert!(raw_request.contains("From="), "Body should contain From= field");
-        assert!(raw_request.contains("Body="), "Body should contain Body= field");
+        assert!(
+            raw_request.contains("From="),
+            "Body should contain From= field"
+        );
+        assert!(
+            raw_request.contains("Body="),
+            "Body should contain Body= field"
+        );
     }
 
     /// Minimal base64 encoder (avoids pulling in a new dep just for tests).
@@ -756,8 +769,16 @@ mod tests {
         let mut out = String::new();
         for chunk in input.chunks(3) {
             let b0 = chunk[0] as usize;
-            let b1 = if chunk.len() > 1 { chunk[1] as usize } else { 0 };
-            let b2 = if chunk.len() > 2 { chunk[2] as usize } else { 0 };
+            let b1 = if chunk.len() > 1 {
+                chunk[1] as usize
+            } else {
+                0
+            };
+            let b2 = if chunk.len() > 2 {
+                chunk[2] as usize
+            } else {
+                0
+            };
             out.push(TABLE[b0 >> 2] as char);
             out.push(TABLE[((b0 & 3) << 4) | (b1 >> 4)] as char);
             if chunk.len() > 1 {
@@ -889,8 +910,18 @@ mod tests {
     #[test]
     fn sigv4_signing_key_deterministic() {
         // If the derivation is pure-function, same inputs → same output.
-        let k1 = sigv4_signing_key("wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", "20150830", "us-east-1", "iam");
-        let k2 = sigv4_signing_key("wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", "20150830", "us-east-1", "iam");
+        let k1 = sigv4_signing_key(
+            "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY",
+            "20150830",
+            "us-east-1",
+            "iam",
+        );
+        let k2 = sigv4_signing_key(
+            "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY",
+            "20150830",
+            "us-east-1",
+            "iam",
+        );
         assert_eq!(k1, k2);
         assert_eq!(k1.len(), 32); // SHA-256 output is 32 bytes
     }
@@ -912,7 +943,7 @@ mod tests {
 
     #[test]
     fn uri_encode_slash_behaviour() {
-        assert_eq!(uri_encode("a/b", false), "a/b");  // encode_slash=false keeps /
+        assert_eq!(uri_encode("a/b", false), "a/b"); // encode_slash=false keeps /
         assert_eq!(uri_encode("a/b", true), "a%2Fb"); // encode_slash=true encodes /
     }
 
@@ -990,7 +1021,8 @@ mod tests {
         // are sorted by key → Action comes first, then Message, PhoneNumber, Version)
         let phone = "+12025551234";
         let message = "Test SNS message";
-        let mut expected_params: std::collections::BTreeMap<&str, &str> = std::collections::BTreeMap::new();
+        let mut expected_params: std::collections::BTreeMap<&str, &str> =
+            std::collections::BTreeMap::new();
         expected_params.insert("Action", "Publish");
         expected_params.insert("Message", message);
         expected_params.insert("PhoneNumber", phone);
@@ -1002,8 +1034,14 @@ mod tests {
             .join("&");
 
         // The body must contain Action=Publish and PhoneNumber encoded correctly
-        assert!(expected_body.contains("Action=Publish"), "expected_body must contain Action=Publish");
-        assert!(expected_body.starts_with("Action=Publish&"), "Action should sort first");
+        assert!(
+            expected_body.contains("Action=Publish"),
+            "expected_body must contain Action=Publish"
+        );
+        assert!(
+            expected_body.starts_with("Action=Publish&"),
+            "Action should sort first"
+        );
 
         // Now send a real request to capture request details from server
         let http = reqwest::Client::new();

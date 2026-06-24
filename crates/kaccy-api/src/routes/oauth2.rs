@@ -91,9 +91,7 @@ impl<'a> OAuthStateStore for RedisOAuthStateStore<'a> {
             .await
             .map_err(|e| {
                 tracing::error!("Redis set failed for OAuth2 state: {:?}", e);
-                ApiError::InternalWithMessage(
-                    "Failed to persist OAuth2 state in Redis".to_string(),
-                )
+                ApiError::InternalWithMessage("Failed to persist OAuth2 state in Redis".to_string())
             })
     }
 
@@ -111,11 +109,7 @@ impl<'a> OAuthStateStore for RedisOAuthStateStore<'a> {
             // logged but we still return the state; the short TTL bounds the
             // exposure window even if deletion fails.
             if let Err(e) = self.cache.delete(&key).await {
-                tracing::error!(
-                    "Redis delete failed for OAuth2 state key {}: {:?}",
-                    key,
-                    e
-                );
+                tracing::error!("Redis delete failed for OAuth2 state key {}: {:?}", key, e);
             }
         }
 
@@ -323,20 +317,15 @@ pub async fn oauth2_callback(
     let store = RedisOAuthStateStore::new(redis_cache);
 
     // Consume the pending state — this is an atomic get + delete.
-    let oauth_state = store
-        .consume(&callback.state)
-        .await?
-        .ok_or_else(|| {
-            ApiError::Auth(
-                "OAuth2 state not found or expired — possible CSRF or replay attack".to_string(),
-            )
-        })?;
+    let oauth_state = store.consume(&callback.state).await?.ok_or_else(|| {
+        ApiError::Auth(
+            "OAuth2 state not found or expired — possible CSRF or replay attack".to_string(),
+        )
+    })?;
 
     // CSRF check: the `state` query param must match the stored token.
     if oauth_state.csrf_token != callback.state {
-        return Err(ApiError::Auth(
-            "OAuth2 CSRF token mismatch".to_string(),
-        ));
+        return Err(ApiError::Auth("OAuth2 CSRF token mismatch".to_string()));
     }
 
     let provider = get_provider(&oauth_state.provider)?;
@@ -391,12 +380,10 @@ pub async fn oauth2_callback(
 /// Validate the OAuth2 endpoint URLs for a provider, returning errors on
 /// malformed URLs so the caller can construct the client safely.
 fn validate_provider_urls(provider: &OAuth2Provider) -> Result<(AuthUrl, TokenUrl, RedirectUrl)> {
-    let auth_url = AuthUrl::new(provider.auth_url.clone()).map_err(|e| {
-        ApiError::InternalWithMessage(format!("Invalid OAuth2 auth URL: {}", e))
-    })?;
-    let token_url = TokenUrl::new(provider.token_url.clone()).map_err(|e| {
-        ApiError::InternalWithMessage(format!("Invalid OAuth2 token URL: {}", e))
-    })?;
+    let auth_url = AuthUrl::new(provider.auth_url.clone())
+        .map_err(|e| ApiError::InternalWithMessage(format!("Invalid OAuth2 auth URL: {}", e)))?;
+    let token_url = TokenUrl::new(provider.token_url.clone())
+        .map_err(|e| ApiError::InternalWithMessage(format!("Invalid OAuth2 token URL: {}", e)))?;
     let redirect_url = RedirectUrl::new(provider.redirect_uri.clone()).map_err(|e| {
         ApiError::InternalWithMessage(format!("Invalid OAuth2 redirect URI: {}", e))
     })?;
@@ -415,7 +402,11 @@ fn get_provider(name: &str) -> Result<OAuth2Provider> {
             })?;
             let redirect_uri = std::env::var("GOOGLE_REDIRECT_URI")
                 .unwrap_or_else(|_| "http://localhost:3000/api/oauth2/callback".to_string());
-            Ok(OAuth2Provider::google(client_id, client_secret, redirect_uri))
+            Ok(OAuth2Provider::google(
+                client_id,
+                client_secret,
+                redirect_uri,
+            ))
         }
         "github" => {
             let client_id = std::env::var("GITHUB_CLIENT_ID").map_err(|_| {
@@ -426,7 +417,11 @@ fn get_provider(name: &str) -> Result<OAuth2Provider> {
             })?;
             let redirect_uri = std::env::var("GITHUB_REDIRECT_URI")
                 .unwrap_or_else(|_| "http://localhost:3000/api/oauth2/callback".to_string());
-            Ok(OAuth2Provider::github(client_id, client_secret, redirect_uri))
+            Ok(OAuth2Provider::github(
+                client_id,
+                client_secret,
+                redirect_uri,
+            ))
         }
         _ => Err(ApiError::Validation(format!(
             "Unsupported OAuth2 provider: {}",
@@ -640,10 +635,7 @@ mod tests {
 
         // Second consume must fail — entry was deleted.
         let second = store.consume("tok-once").await.expect("second consume");
-        assert!(
-            second.is_none(),
-            "replay: second consume must return None"
-        );
+        assert!(second.is_none(), "replay: second consume must return None");
     }
 
     // ── Missing / never-stored state ───────────────────────────────────────────
@@ -781,7 +773,10 @@ mod tests {
         assert!(result.is_err());
         match result.unwrap_err() {
             ApiError::Validation(msg) => {
-                assert!(msg.contains("foobar"), "message must name the provider: {msg}");
+                assert!(
+                    msg.contains("foobar"),
+                    "message must name the provider: {msg}"
+                );
             }
             other => panic!("expected ApiError::Validation, got {:?}", other),
         }

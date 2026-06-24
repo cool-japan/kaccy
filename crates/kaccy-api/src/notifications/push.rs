@@ -1,5 +1,5 @@
 use super::types::{Notification, NotificationId, NotificationStatus, NotificationType};
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -254,13 +254,11 @@ impl PushNotifier {
                         self.send_via_apns(*user_id, title, body, data.as_deref())
                             .await
                     }
-                    other => {
-                        Err(anyhow!(
-                            "Unsupported push provider '{}': \
+                    other => Err(anyhow!(
+                        "Unsupported push provider '{}': \
                              configure provider as 'fcm' or 'apns'",
-                            other
-                        ))
-                    }
+                        other
+                    )),
                 };
 
                 match result {
@@ -331,8 +329,14 @@ impl PushNotifier {
                     .await
             }
             _ if !self.config.api_key.is_empty() => {
-                self.send_via_fcm_legacy(&self.config.api_key.clone(), device_token, title, body, data)
-                    .await
+                self.send_via_fcm_legacy(
+                    &self.config.api_key.clone(),
+                    device_token,
+                    title,
+                    body,
+                    data,
+                )
+                .await
             }
             _ => Err(anyhow!(
                 "FCM credentials not configured: \
@@ -495,7 +499,9 @@ impl PushNotifier {
             anyhow!("APNS credential missing: set PushConfig::apns_team_id (10-char Team ID)")
         })?;
         let bundle_id = self.config.apns_bundle_id.as_deref().ok_or_else(|| {
-            anyhow!("APNS credential missing: set PushConfig::apns_bundle_id (e.g. com.example.app)")
+            anyhow!(
+                "APNS credential missing: set PushConfig::apns_bundle_id (e.g. com.example.app)"
+            )
         })?;
         let private_key_pem = self.config.apns_private_key_pem.as_deref().ok_or_else(|| {
             anyhow!("APNS credential missing: set PushConfig::apns_private_key_pem (contents of .p8 file)")
@@ -690,11 +696,8 @@ mod tests {
         };
         let notifier = PushNotifier::new(config);
 
-        let notification = Notification::push(
-            Uuid::new_v4(),
-            "Test".to_string(),
-            "Body".to_string(),
-        );
+        let notification =
+            Notification::push(Uuid::new_v4(), "Test".to_string(), "Body".to_string());
         let result = notifier.send(notification).await;
         assert!(result.is_err(), "unsupported provider must return Err");
         let msg = result.unwrap_err().to_string();
@@ -720,11 +723,8 @@ mod tests {
         };
         let notifier = PushNotifier::new(config);
 
-        let notification = Notification::push(
-            Uuid::new_v4(),
-            "Hello".to_string(),
-            "World".to_string(),
-        );
+        let notification =
+            Notification::push(Uuid::new_v4(), "Hello".to_string(), "World".to_string());
         let result = notifier.send(notification).await;
         assert!(result.is_err(), "unconfigured FCM must return Err");
         let msg = result.unwrap_err().to_string();
@@ -747,11 +747,8 @@ mod tests {
         };
         let notifier = PushNotifier::new(config);
 
-        let notification = Notification::push(
-            Uuid::new_v4(),
-            "Hello".to_string(),
-            "World".to_string(),
-        );
+        let notification =
+            Notification::push(Uuid::new_v4(), "Hello".to_string(), "World".to_string());
         let result = notifier.send(notification).await;
         assert!(result.is_err(), "missing device token must return Err");
         let msg = result.unwrap_err().to_string();
@@ -774,11 +771,8 @@ mod tests {
         };
         let notifier = PushNotifier::new(config);
 
-        let notification = Notification::push(
-            Uuid::new_v4(),
-            "Hello".to_string(),
-            "World".to_string(),
-        );
+        let notification =
+            Notification::push(Uuid::new_v4(), "Hello".to_string(), "World".to_string());
         let result = notifier.send(notification).await;
         assert!(result.is_err(), "unconfigured APNS must return Err");
         let msg = result.unwrap_err().to_string();
@@ -804,11 +798,8 @@ mod tests {
         };
         let notifier = PushNotifier::new(config);
 
-        let notification = Notification::push(
-            Uuid::new_v4(),
-            "Hello".to_string(),
-            "World".to_string(),
-        );
+        let notification =
+            Notification::push(Uuid::new_v4(), "Hello".to_string(), "World".to_string());
         let result = notifier.send(notification).await;
         assert!(result.is_err(), "missing device token must return Err");
         let msg = result.unwrap_err().to_string();
@@ -995,17 +986,16 @@ mod tests {
         let notifier = PushNotifier::new(config);
 
         let long_title = "x".repeat(257);
-        let mut notification = Notification::push(
-            Uuid::new_v4(),
-            long_title,
-            "Body".to_string(),
-        );
+        let mut notification = Notification::push(Uuid::new_v4(), long_title, "Body".to_string());
         // Pre-set so we can detect the status was changed.
         notification.status = NotificationStatus::Pending;
 
         let result = notifier.send(notification.clone()).await;
         // send() returns Ok(id) even for validation failures.
-        assert!(result.is_ok(), "send must return Ok for validation failures");
+        assert!(
+            result.is_ok(),
+            "send must return Ok for validation failures"
+        );
         // Nothing should be logged as sent.
         assert!(notifier.get_sent().await.is_empty());
     }
@@ -1022,14 +1012,26 @@ mod tests {
     fn generate_test_ec_key() -> (String, String) {
         // Try to generate a fresh pair with the `openssl` CLI.
         if let Ok(output) = std::process::Command::new("openssl")
-            .args(["ecparam", "-genkey", "-name", "prime256v1", "-noout", "-text"])
+            .args([
+                "ecparam",
+                "-genkey",
+                "-name",
+                "prime256v1",
+                "-noout",
+                "-text",
+            ])
             .output()
         {
             if output.status.success() {
                 // Generate private key in PKCS#8 PEM.
                 let priv_out = std::process::Command::new("openssl")
-                    .args(["genpkey", "-algorithm", "EC",
-                           "-pkeyopt", "ec_paramgen_curve:P-256"])
+                    .args([
+                        "genpkey",
+                        "-algorithm",
+                        "EC",
+                        "-pkeyopt",
+                        "ec_paramgen_curve:P-256",
+                    ])
                     .output();
                 if let Ok(priv_out) = priv_out {
                     if priv_out.status.success() {
@@ -1048,8 +1050,7 @@ mod tests {
                         }
                         if let Ok(pub_out) = pub_cmd.wait_with_output() {
                             if pub_out.status.success() {
-                                let pub_pem =
-                                    String::from_utf8_lossy(&pub_out.stdout).to_string();
+                                let pub_pem = String::from_utf8_lossy(&pub_out.stdout).to_string();
                                 return (pub_pem, priv_pem);
                             }
                         }

@@ -612,8 +612,7 @@ mod tests {
     const KEY_B: &str = "0250863ad64a87ae8a2fe83c1af1a8403cb53f53e486d8511dad8a04887e5b2352";
     const KEY_C: &str = "03933884aaf1d6b108397e5efe5c86bcf2d8ca8d2f700eda99db9214fc2712b134";
     // A real 32-byte SHA256 digest (hex).
-    const SHA256_HEX: &str =
-        "6c60f404f8167a38fc70eaf8aa17ac351023bef86bcb9d1086a19afe95bd5333";
+    const SHA256_HEX: &str = "6c60f404f8167a38fc70eaf8aa17ac351023bef86bcb9d1086a19afe95bd5333";
 
     /// Collect the opcodes/pushes of a script into a printable token vector so
     /// that tests can assert on real structure rather than just "non-empty".
@@ -884,7 +883,9 @@ mod tests {
         // Threshold over keys uses OP_CHECKSIG / OP_CHECKSIGVERIFY accumulation
         // and a final OP_EQUAL against the required count.
         assert!(
-            tokens.iter().any(|t| t == "OP_EQUAL" || t == "OP_CHECKMULTISIG"),
+            tokens
+                .iter()
+                .any(|t| t == "OP_EQUAL" || t == "OP_CHECKMULTISIG"),
             "thresh must combine results: {tokens:?}"
         );
     }
@@ -986,9 +987,10 @@ mod tests {
         // The same policy compiles under the legacy (P2SH) context too, and is
         // still a real non-empty script.
         let policy = MiniscriptPolicy::PublicKey(KEY_A.to_string());
-        let script = MiniscriptDescriptor::new(policy, Network::Bitcoin, MiniscriptScriptType::P2SH)
-            .compile()
-            .expect("legacy pk must compile");
+        let script =
+            MiniscriptDescriptor::new(policy, Network::Bitcoin, MiniscriptScriptType::P2SH)
+                .compile()
+                .expect("legacy pk must compile");
         let tokens = script_tokens(&script);
         assert_eq!(
             tokens,

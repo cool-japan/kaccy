@@ -704,8 +704,8 @@ mod tests {
         let analyzer = TradeCostAnalyzer::new();
         let execution = make_execution_with_model_inputs(
             ExecutionSide::Buy,
-            dec!(1000),   // order quantity
-            0.05,         // 5 %/day volatility
+            dec!(1000),    // order quantity
+            0.05,          // 5 %/day volatility
             dec!(100_000), // ADV
         );
 
@@ -731,7 +731,7 @@ mod tests {
         let base_impact = {
             let exec = make_execution_with_model_inputs(
                 ExecutionSide::Buy,
-                dec!(1000),    // Q
+                dec!(1000), // Q
                 0.05,
                 dec!(100_000),
             );
@@ -744,7 +744,7 @@ mod tests {
         let quad_impact = {
             let exec = make_execution_with_model_inputs(
                 ExecutionSide::Buy,
-                dec!(4000),    // 4 × Q
+                dec!(4000), // 4 × Q
                 0.05,
                 dec!(100_000),
             );
@@ -770,7 +770,7 @@ mod tests {
             let exec = make_execution_with_model_inputs(
                 ExecutionSide::Buy,
                 dec!(1000),
-                0.05,           // σ
+                0.05, // σ
                 dec!(100_000),
             );
             analyzer
@@ -783,7 +783,7 @@ mod tests {
             let exec = make_execution_with_model_inputs(
                 ExecutionSide::Buy,
                 dec!(1000),
-                0.20,           // 4 × σ
+                0.20, // 4 × σ
                 dec!(100_000),
             );
             analyzer
@@ -810,12 +810,7 @@ mod tests {
         };
 
         let exec = || {
-            make_execution_with_model_inputs(
-                ExecutionSide::Buy,
-                dec!(1000),
-                0.05,
-                dec!(100_000),
-            )
+            make_execution_with_model_inputs(ExecutionSide::Buy, dec!(1000), 0.05, dec!(100_000))
         };
 
         let impact_half = TradeCostAnalyzer::with_config(config_half)

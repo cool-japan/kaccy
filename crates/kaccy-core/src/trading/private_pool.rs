@@ -289,11 +289,7 @@ impl PrivateOrder {
     ///
     /// The AEAD authentication tag is verified during decryption: a tampered ciphertext or a
     /// wrong key yields a [`CoreError::Validation`] error instead of corrupted plaintext.
-    fn decrypt_aead(
-        scheme: EncryptionScheme,
-        encrypted_hex: &str,
-        secret: &str,
-    ) -> Result<String> {
+    fn decrypt_aead(scheme: EncryptionScheme, encrypted_hex: &str, secret: &str) -> Result<String> {
         let blob = hex::decode(encrypted_hex)
             .map_err(|e| CoreError::Validation(format!("Invalid hex data: {e}")))?;
         if blob.len() <= AEAD_NONCE_LEN {
@@ -322,12 +318,14 @@ impl PrivateOrder {
                 let cipher = Aes256Gcm::new_from_slice(&key).map_err(|e| {
                     CoreError::Validation(format!("Failed to initialize AES-256-GCM: {e}"))
                 })?;
-                cipher.decrypt(nonce_bytes.into(), ciphertext).map_err(|_| {
-                    CoreError::Validation(
-                        "AES-256-GCM authentication failed (tampered data or wrong key)"
-                            .to_string(),
-                    )
-                })?
+                cipher
+                    .decrypt(nonce_bytes.into(), ciphertext)
+                    .map_err(|_| {
+                        CoreError::Validation(
+                            "AES-256-GCM authentication failed (tampered data or wrong key)"
+                                .to_string(),
+                        )
+                    })?
             }
         };
 
@@ -377,7 +375,12 @@ impl PrivateOrder {
         let key_hash = Self::hash_key(key);
 
         Ok(Self::new(
-            user_id, token_id, encrypted_data, scheme, key_hash, config,
+            user_id,
+            token_id,
+            encrypted_data,
+            scheme,
+            key_hash,
+            config,
         ))
     }
 }

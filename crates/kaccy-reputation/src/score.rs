@@ -900,8 +900,7 @@ impl ReputationEngine {
         .fetch_optional(&self.pool)
         .await?;
 
-        let (response_sample_count, response_total_hours) =
-            response_stats.unwrap_or((0, dec!(0)));
+        let (response_sample_count, response_total_hours) = response_stats.unwrap_or((0, dec!(0)));
 
         Ok(EventStats {
             total_commitments,
@@ -1946,7 +1945,10 @@ mod tests {
         // Fulfilling within ~1 hour (mean) is highly responsive: well above 50,
         // approaching but never exceeding 100.
         let (score, _) = response_time_score(3, dec!(3) * dec!(1));
-        assert!(score > dec!(95), "fast fulfilment should score high: {score}");
+        assert!(
+            score > dec!(95),
+            "fast fulfilment should score high: {score}"
+        );
         assert!(score <= dec!(100));
     }
 
@@ -1955,7 +1957,10 @@ mod tests {
         // A mean latency of ~10 weeks is poor responsiveness: well below 50.
         let weeks_10 = RESPONSE_TIME_HORIZON_HOURS * dec!(10);
         let (score, _) = response_time_score(2, weeks_10 * dec!(2));
-        assert!(score < dec!(15), "slow fulfilment should score low: {score}");
+        assert!(
+            score < dec!(15),
+            "slow fulfilment should score low: {score}"
+        );
         assert!(score >= dec!(0));
     }
 
@@ -1972,8 +1977,7 @@ mod tests {
     #[test]
     fn test_response_time_score_uses_mean_latency() {
         // Two samples summing to 2 weeks => 1-week mean => exactly 50.
-        let (score, data_points) =
-            response_time_score(2, RESPONSE_TIME_HORIZON_HOURS * dec!(2));
+        let (score, data_points) = response_time_score(2, RESPONSE_TIME_HORIZON_HOURS * dec!(2));
         assert_eq!(score, dec!(50));
         assert_eq!(data_points, 2);
     }

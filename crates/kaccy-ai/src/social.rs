@@ -722,9 +722,8 @@ impl SocialMediaVerifier {
 
         // Attempt real API verification when credentials are present.
         let Some(ref bearer) = self.credentials.twitter_bearer_token else {
-            notes.push(
-                "No Twitter API credentials configured — manual review required".to_string(),
-            );
+            notes
+                .push("No Twitter API credentials configured — manual review required".to_string());
             *needs_manual_review = true;
             return Ok(SocialVerificationResult {
                 platform: SocialPlatform::Twitter,
@@ -749,9 +748,7 @@ impl SocialMediaVerifier {
             .header("Authorization", format!("Bearer {bearer}"))
             .send()
             .await
-            .map_err(|e| {
-                AiError::VerificationFailed(format!("Twitter API request failed: {e}"))
-            })?;
+            .map_err(|e| AiError::VerificationFailed(format!("Twitter API request failed: {e}")))?;
 
         let http_status = response.status();
 
@@ -794,15 +791,9 @@ impl SocialMediaVerifier {
             )));
         }
 
-        let body: TwitterApiTweetResponse =
-            response
-                .json()
-                .await
-                .map_err(|e| {
-                    AiError::VerificationFailed(format!(
-                        "Failed to parse Twitter API response: {e}"
-                    ))
-                })?;
+        let body: TwitterApiTweetResponse = response.json().await.map_err(|e| {
+            AiError::VerificationFailed(format!("Failed to parse Twitter API response: {e}"))
+        })?;
 
         // The API may return 200 but with errors (e.g. protected tweets).
         if body.data.is_none() {
@@ -829,7 +820,9 @@ impl SocialMediaVerifier {
         // The is_none() early-return above guarantees Some here; propagate the
         // impossible None as an Internal error rather than panic.
         let tweet_data = body.data.as_ref().ok_or_else(|| {
-            AiError::Internal("Twitter API: response had no data field after validation".to_string())
+            AiError::Internal(
+                "Twitter API: response had no data field after validation".to_string(),
+            )
         })?;
         notes.push(format!(
             "Twitter API: tweet {} confirmed via API",
@@ -916,9 +909,8 @@ impl SocialMediaVerifier {
 
         // Attempt real API verification when credentials are present.
         let Some(ref api_key) = self.credentials.youtube_api_key else {
-            notes.push(
-                "No YouTube API credentials configured — manual review required".to_string(),
-            );
+            notes
+                .push("No YouTube API credentials configured — manual review required".to_string());
             *needs_manual_review = true;
             return Ok(SocialVerificationResult {
                 platform: SocialPlatform::YouTube,
@@ -937,12 +929,8 @@ impl SocialMediaVerifier {
             video.video_id, api_key
         );
 
-        let response = self
-            .http_client
-            .get(&api_url)
-            .send()
-            .await
-            .map_err(|e| {
+        let response =
+            self.http_client.get(&api_url).send().await.map_err(|e| {
                 AiError::VerificationFailed(format!("YouTube API request failed: {e}"))
             })?;
 
@@ -966,15 +954,9 @@ impl SocialMediaVerifier {
             )));
         }
 
-        let body: YouTubeApiVideosResponse =
-            response
-                .json()
-                .await
-                .map_err(|e| {
-                    AiError::VerificationFailed(format!(
-                        "Failed to parse YouTube API response: {e}"
-                    ))
-                })?;
+        let body: YouTubeApiVideosResponse = response.json().await.map_err(|e| {
+            AiError::VerificationFailed(format!("Failed to parse YouTube API response: {e}"))
+        })?;
 
         if body.items.is_empty() {
             // API returned 200 but no matching videos — video does not exist

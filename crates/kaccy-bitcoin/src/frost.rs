@@ -461,7 +461,12 @@ impl FrostSigner {
         let (r_xonly, _) = group_nonce.x_only_public_key();
 
         // This signer's binding factor ρ_i.
-        let rho_i = binding_factor(signing_commitments, group_pubkey, message, self.participant_id)?;
+        let rho_i = binding_factor(
+            signing_commitments,
+            group_pubkey,
+            message,
+            self.participant_id,
+        )?;
 
         // Effective nonce k_i = d_i + ρ_i·e_i (as a field element).
         let d_i = Fp::from_secret_key(&hiding_nonce);
@@ -479,8 +484,10 @@ impl FrostSigner {
         let e = bip340_challenge(&r_xonly, group_pubkey, message)?;
 
         // Lagrange coefficient over the active signer set.
-        let signer_ids: Vec<usize> =
-            signing_commitments.iter().map(|c| c.participant_id).collect();
+        let signer_ids: Vec<usize> = signing_commitments
+            .iter()
+            .map(|c| c.participant_id)
+            .collect();
         let lambda_i = lagrange_coefficient(self.participant_id, &signer_ids)?;
         let lambda = Fp::from_scalar(&lambda_i);
 
@@ -555,13 +562,18 @@ pub fn verify_partial_signature(
         gn.x_only_public_key()
     };
     let e = bip340_challenge(&r_xonly, group_pubkey, message)?;
-    let signer_ids: Vec<usize> = signing_commitments.iter().map(|c| c.participant_id).collect();
+    let signer_ids: Vec<usize> = signing_commitments
+        .iter()
+        .map(|c| c.participant_id)
+        .collect();
     let lambda_i = lagrange_coefficient(participant_id, &signer_ids)?;
     let e_lambda = e.mul(&Fp::from_scalar(&lambda_i));
     let e_lambda_scalar = e_lambda.to_scalar()?;
-    let challenge_term = verification_key.mul_tweak(secp, &e_lambda_scalar).map_err(|err| {
-        BitcoinError::InvalidAddress(format!("Failed to scale verification key: {err}"))
-    })?;
+    let challenge_term = verification_key
+        .mul_tweak(secp, &e_lambda_scalar)
+        .map_err(|err| {
+            BitcoinError::InvalidAddress(format!("Failed to scale verification key: {err}"))
+        })?;
 
     // Right-hand side: R_i + e·λ_i·Y_i.
     let rhs = r_i.combine(&challenge_term).map_err(|err| {
@@ -1233,7 +1245,11 @@ mod tests {
             let ok = coordinator
                 .verify_share(share, &keygen.commitments)
                 .unwrap();
-            assert!(ok, "share {} must verify against Feldman commitments", share.participant_id);
+            assert!(
+                ok,
+                "share {} must verify against Feldman commitments",
+                share.participant_id
+            );
         }
     }
 
@@ -1387,7 +1403,11 @@ mod tests {
             secp.verify_schnorr(&signature, &msg, &group_pubkey)
                 .unwrap_or_else(|e| panic!("2-of-3 subset {subset:?} must verify: {e}"));
             // The R component (first 32 bytes) must never be all zeros.
-            assert_ne!(&sig[..32], &[0u8; 32], "R must be a real point, not a placeholder");
+            assert_ne!(
+                &sig[..32],
+                &[0u8; 32],
+                "R must be a real point, not a placeholder"
+            );
         }
     }
 
@@ -1397,7 +1417,8 @@ mod tests {
         let (sig, group_pubkey, message) = run_signing_session(3, 5, &[0, 2, 4]).unwrap();
         let signature = schnorr::Signature::from_slice(&sig).unwrap();
         let msg = Message::from_digest(message);
-        secp.verify_schnorr(&signature, &msg, &group_pubkey).unwrap();
+        secp.verify_schnorr(&signature, &msg, &group_pubkey)
+            .unwrap();
     }
 
     #[test]
@@ -1406,7 +1427,8 @@ mod tests {
         let (sig, group_pubkey, message) = run_signing_session(1, 1, &[0]).unwrap();
         let signature = schnorr::Signature::from_slice(&sig).unwrap();
         let msg = Message::from_digest(message);
-        secp.verify_schnorr(&signature, &msg, &group_pubkey).unwrap();
+        secp.verify_schnorr(&signature, &msg, &group_pubkey)
+            .unwrap();
     }
 
     #[test]
@@ -1417,7 +1439,8 @@ mod tests {
             let (sig, group_pubkey, message) = run_signing_session(2, 3, &[0, 1]).unwrap();
             let signature = schnorr::Signature::from_slice(&sig).unwrap();
             let msg = Message::from_digest(message);
-            secp.verify_schnorr(&signature, &msg, &group_pubkey).unwrap();
+            secp.verify_schnorr(&signature, &msg, &group_pubkey)
+                .unwrap();
         }
     }
 
@@ -1438,7 +1461,10 @@ mod tests {
         // Coordinator enforces the threshold: fewer than t shares is rejected.
         let result =
             coordinator.aggregate_signatures(&message, &commitments, std::slice::from_ref(&share1));
-        assert!(result.is_err(), "t-1 signers must not aggregate a signature");
+        assert!(
+            result.is_err(),
+            "t-1 signers must not aggregate a signature"
+        );
 
         // Even constructing a raw (R.x, z) from a single share fails to verify,
         // because a single uncombined share is not a valid group signature.
@@ -1500,7 +1526,10 @@ mod tests {
             &message,
         )
         .unwrap();
-        assert!(!bad, "tampered share must be detected by per-share verification");
+        assert!(
+            !bad,
+            "tampered share must be detected by per-share verification"
+        );
 
         // ...and aggregation must reject the resulting signature.
         let agg = coordinator.aggregate_signatures(&message, &commitments, &[share1, share2]);

@@ -176,7 +176,13 @@ impl LinearQFunction {
         self.weights
             .iter()
             .zip(self.bias.iter())
-            .map(|(w, &b)| b + w.iter().zip(input.iter()).map(|(wi, xi)| wi * xi).sum::<f64>())
+            .map(|(w, &b)| {
+                b + w
+                    .iter()
+                    .zip(input.iter())
+                    .map(|(wi, xi)| wi * xi)
+                    .sum::<f64>()
+            })
             .collect()
     }
 
@@ -359,9 +365,9 @@ impl RLTradingAgent {
                 reward + gamma * self.q_function.max_q_value(&experience.next_state)
             };
 
-            let td_error =
-                self.q_function
-                    .td_update(&experience.state, action_index, target, lr);
+            let td_error = self
+                .q_function
+                .td_update(&experience.state, action_index, target, lr);
             total_abs_td += td_error.abs();
         }
 
@@ -777,19 +783,14 @@ mod tests {
         // Greedy policy BEFORE any learning.
         let pre_a = agent.greedy_action(&state_a);
         let pre_b = agent.greedy_action(&state_b);
-        let optimal_before =
-            pre_a == TradingAction::Buy && pre_b == TradingAction::Sell;
+        let optimal_before = pre_a == TradingAction::Buy && pre_b == TradingAction::Sell;
 
         // Generate the deterministic reward signal as replay experiences.
         let feat_a = state_a.to_feature_vector();
         let feat_b = state_b.to_feature_vector();
         let reward = |context_a: bool, action: TradingAction| -> f64 {
             let buy = action == TradingAction::Buy;
-            if context_a == buy {
-                1.0
-            } else {
-                -1.0
-            }
+            if context_a == buy { 1.0 } else { -1.0 }
         };
         for _ in 0..200 {
             for &action in &[TradingAction::Buy, TradingAction::Sell] {
@@ -864,13 +865,8 @@ mod tests {
         let feat_a = state_a.to_feature_vector();
         let feat_b = state_b.to_feature_vector();
 
-        let reward = |context_a: bool, buy: bool| -> f64 {
-            if context_a == buy {
-                1.0
-            } else {
-                -1.0
-            }
-        };
+        let reward =
+            |context_a: bool, buy: bool| -> f64 { if context_a == buy { 1.0 } else { -1.0 } };
         for _ in 0..200 {
             for &action in &[TradingAction::Buy, TradingAction::Sell] {
                 let buy = action == TradingAction::Buy;

@@ -48,10 +48,7 @@ fn leaky_relu(x: f64) -> f64 {
 
 /// In-place numerically-stable softmax over a slice of scores.
 fn softmax_in_place(scores: &mut [f64]) {
-    let max_score = scores
-        .iter()
-        .copied()
-        .fold(f64::NEG_INFINITY, f64::max);
+    let max_score = scores.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     if !max_score.is_finite() {
         // All-(-inf) (e.g. fully masked) -> uniform to avoid NaNs.
         let uniform = 1.0 / scores.len().max(1) as f64;
@@ -434,8 +431,8 @@ impl LSTMModel {
     pub fn new(config: LSTMConfig) -> Self {
         // Seed derived from the configuration so construction is deterministic
         // and reproducible while still varying with the architecture.
-        let seed = 0x4C53_544D_u64
-            ^ (config.hidden_size as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+        let seed =
+            0x4C53_544D_u64 ^ (config.hidden_size as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
         let params = LstmParams::new(config.hidden_size.max(1), seed);
         Self {
             config,
@@ -452,12 +449,7 @@ impl LSTMModel {
     /// `targets` value the network learns to predict. Every epoch performs a
     /// real forward pass, BPTT, and an SGD weight update, and the mean
     /// mean-squared-error over the dataset is recorded in [`Self::training_loss`].
-    pub fn train(
-        &mut self,
-        sequences: &[Vec<f64>],
-        targets: &[f64],
-        epochs: usize,
-    ) -> Result<()> {
+    pub fn train(&mut self, sequences: &[Vec<f64>], targets: &[f64], epochs: usize) -> Result<()> {
         if sequences.is_empty() || targets.is_empty() {
             anyhow::bail!("LSTM training requires at least one (sequence, target) pair");
         }
@@ -481,14 +473,13 @@ impl LSTMModel {
             let mut epoch_loss = 0.0;
             for (seq, &target) in sequences.iter().zip(targets.iter()) {
                 let (prediction, final_h, steps) = self.params.forward(seq);
-                epoch_loss +=
-                    self.params
-                        .backward(&steps, &final_h, prediction, target, &mut grads);
+                epoch_loss += self
+                    .params
+                    .backward(&steps, &final_h, prediction, target, &mut grads);
             }
             self.params
                 .sgd_step(&grads, self.learning_rate, sequences.len() as f64, 5.0);
-            self.training_loss
-                .push(epoch_loss / sequences.len() as f64);
+            self.training_loss.push(epoch_loss / sequences.len() as f64);
         }
 
         self.is_trained = true;
@@ -665,9 +656,18 @@ impl SelfAttentionBlock {
         let n = self.seq_len;
         let scale = 1.0 / (d as f64).sqrt();
         let embeds = self.embed(sequence);
-        let q: Vec<Vec<f64>> = embeds.iter().map(|e| Self::matvec(&self.w_q, e, d)).collect();
-        let k: Vec<Vec<f64>> = embeds.iter().map(|e| Self::matvec(&self.w_k, e, d)).collect();
-        let v: Vec<Vec<f64>> = embeds.iter().map(|e| Self::matvec(&self.w_v, e, d)).collect();
+        let q: Vec<Vec<f64>> = embeds
+            .iter()
+            .map(|e| Self::matvec(&self.w_q, e, d))
+            .collect();
+        let k: Vec<Vec<f64>> = embeds
+            .iter()
+            .map(|e| Self::matvec(&self.w_k, e, d))
+            .collect();
+        let v: Vec<Vec<f64>> = embeds
+            .iter()
+            .map(|e| Self::matvec(&self.w_v, e, d))
+            .collect();
 
         // Only the final query position drives the scalar prediction, so we
         // compute attention for that query against all keys/values.
@@ -895,11 +895,7 @@ impl TransformerModel {
     /// sequence (a next-value regression objective). The block runs a real
     /// scaled-dot-product self-attention forward pass and its projections are
     /// updated by back-propagation; the per-epoch mean MSE is recorded.
-    pub fn train(
-        &mut self,
-        src_sequences: &[Vec<f64>],
-        tgt_sequences: &[Vec<f64>],
-    ) -> Result<()> {
+    pub fn train(&mut self, src_sequences: &[Vec<f64>], tgt_sequences: &[Vec<f64>]) -> Result<()> {
         if src_sequences.is_empty() {
             anyhow::bail!("transformer training requires at least one source sequence");
         }
@@ -1176,11 +1172,14 @@ impl GANModel {
         // The output dimension defaults to the latent dimension and is refined
         // to the real-data width when training data is provided.
         let output_dim = config.latent_dim.max(1);
-        let generator =
-            Self::build_mlp(config.latent_dim.max(1), &config.generator_layers, output_dim, &mut rng);
+        let generator = Self::build_mlp(
+            config.latent_dim.max(1),
+            &config.generator_layers,
+            output_dim,
+            &mut rng,
+        );
         // Discriminator: output_dim -> discriminator_layers... -> 1 (logit).
-        let discriminator =
-            Self::build_mlp(output_dim, &config.discriminator_layers, 1, &mut rng);
+        let discriminator = Self::build_mlp(output_dim, &config.discriminator_layers, 1, &mut rng);
         Self {
             config,
             is_trained: false,
@@ -1772,7 +1771,12 @@ mod tests {
             let sum = e0 + e1;
             (e0 / sum) * 10.0 + (e1 / sum) * 20.0
         };
-        assert!((out2[0] - expected).abs() < 1e-9, "got {} want {}", out2[0], expected);
+        assert!(
+            (out2[0] - expected).abs() < 1e-9,
+            "got {} want {}",
+            out2[0],
+            expected
+        );
     }
 
     /// Masking must zero out the contribution of masked keys.

@@ -29,8 +29,8 @@ use ml_kem::{
     kem::{Decapsulate, Key as KemKey, KeyExport as KemKeyExport},
 };
 use secp256k1::{Message, PublicKey, Secp256k1, SecretKey, ecdsa::Signature as EcdsaSignature};
-use sha2::{Digest, Sha256};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::fmt;
 use thiserror::Error;
 
@@ -220,8 +220,8 @@ impl PQKeyPair {
         if !self.algorithm.has_signature_backend() {
             return Err(PqcError::UnsupportedAlgorithm(self.algorithm).into());
         }
-        let encoded =
-            EncodedVerifyingKey::<SigParams>::try_from(self.public_key.as_slice()).map_err(|_| {
+        let encoded = EncodedVerifyingKey::<SigParams>::try_from(self.public_key.as_slice())
+            .map_err(|_| {
                 PqcError::malformed(
                     "ML-DSA public key",
                     format!(
@@ -337,16 +337,14 @@ impl PQKemKeyPair {
     }
 
     fn decode_encapsulation_key(&self) -> Result<EncapsulationKey<KemParams>> {
-        let key = KemKey::<EncapsulationKey<KemParams>>::try_from(self.encapsulation_key.as_slice())
-            .map_err(|_| {
-                PqcError::malformed(
-                    "ML-KEM encapsulation key",
-                    format!(
-                        "unexpected encoded length {}",
-                        self.encapsulation_key.len()
-                    ),
-                )
-            })?;
+        let key =
+            KemKey::<EncapsulationKey<KemParams>>::try_from(self.encapsulation_key.as_slice())
+                .map_err(|_| {
+                    PqcError::malformed(
+                        "ML-KEM encapsulation key",
+                        format!("unexpected encoded length {}", self.encapsulation_key.len()),
+                    )
+                })?;
         EncapsulationKey::<KemParams>::new(&key).map_err(|_| {
             PqcError::malformed(
                 "ML-KEM encapsulation key",
@@ -457,18 +455,19 @@ impl HybridCrypto {
 
     /// Produce a real classical secp256k1 ECDSA signature over `data`.
     fn classical_sign(&self, data: &[u8]) -> Result<Vec<u8>> {
-        let secret_key = SecretKey::from_byte_array(
-            self.classical_private_key
-                .as_slice()
-                .try_into()
-                .map_err(|_| {
+        let secret_key =
+            SecretKey::from_byte_array(self.classical_private_key.as_slice().try_into().map_err(
+                |_| {
                     PqcError::malformed(
                         "secp256k1 private key",
-                        format!("expected 32 bytes, got {}", self.classical_private_key.len()),
+                        format!(
+                            "expected 32 bytes, got {}",
+                            self.classical_private_key.len()
+                        ),
                     )
-                })?,
-        )
-        .map_err(PqcError::Classical)?;
+                },
+            )?)
+            .map_err(PqcError::Classical)?;
         let secp = Secp256k1::signing_only();
         let signature = secp.sign_ecdsa(Self::classical_message(data), &secret_key);
         Ok(signature.serialize_compact().to_vec())
@@ -822,7 +821,9 @@ mod tests {
         assert_eq!(encapsulation.ciphertext.len(), 1088);
         assert_eq!(encapsulation.shared_secret.len(), 32);
 
-        let recovered = kp.decapsulate(&encapsulation.ciphertext).expect("decapsulate");
+        let recovered = kp
+            .decapsulate(&encapsulation.ciphertext)
+            .expect("decapsulate");
         assert_eq!(encapsulation.shared_secret, recovered);
     }
 
@@ -848,7 +849,9 @@ mod tests {
 
         // A secret encapsulated to `a` decapsulates correctly with `b` (same key).
         let encapsulation = a.encapsulate().expect("encapsulate");
-        let recovered = b.decapsulate(&encapsulation.ciphertext).expect("decapsulate");
+        let recovered = b
+            .decapsulate(&encapsulation.ciphertext)
+            .expect("decapsulate");
         assert_eq!(encapsulation.shared_secret, recovered);
     }
 
@@ -933,7 +936,10 @@ mod tests {
 
         plan.advance_phase();
         assert_eq!(plan.current_phase, MigrationPhase::Phase2HybridDeploy);
-        assert_eq!(plan.get_recommended_hybrid_mode(), HybridMode::DualSignature);
+        assert_eq!(
+            plan.get_recommended_hybrid_mode(),
+            HybridMode::DualSignature
+        );
 
         plan.advance_phase();
         assert_eq!(plan.current_phase, MigrationPhase::Phase3GradualRollout);

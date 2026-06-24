@@ -228,8 +228,7 @@ impl JobWorker {
             smtp_password: std::env::var("SMTP_PASSWORD").unwrap_or_default(),
             from_address: std::env::var("EMAIL_FROM")
                 .unwrap_or_else(|_| "noreply@kaccy.io".to_string()),
-            from_name: std::env::var("EMAIL_FROM_NAME")
-                .unwrap_or_else(|_| "Kaccy".to_string()),
+            from_name: std::env::var("EMAIL_FROM_NAME").unwrap_or_else(|_| "Kaccy".to_string()),
             use_tls,
             enabled,
         }
@@ -249,8 +248,7 @@ impl JobWorker {
             .unwrap_or(false);
 
         SmsConfig {
-            provider: std::env::var("SMS_PROVIDER")
-                .unwrap_or_else(|_| "twilio".to_string()),
+            provider: std::env::var("SMS_PROVIDER").unwrap_or_else(|_| "twilio".to_string()),
             api_key: std::env::var("SMS_API_KEY").unwrap_or_default(),
             api_secret: std::env::var("SMS_API_SECRET").unwrap_or_default(),
             from_number: std::env::var("SMS_FROM_NUMBER").unwrap_or_default(),
@@ -285,8 +283,7 @@ impl JobWorker {
             .unwrap_or(false);
 
         PushConfig {
-            provider: std::env::var("PUSH_PROVIDER")
-                .unwrap_or_else(|_| "fcm".to_string()),
+            provider: std::env::var("PUSH_PROVIDER").unwrap_or_else(|_| "fcm".to_string()),
             api_key: std::env::var("PUSH_API_KEY").unwrap_or_default(),
             api_secret: String::new(),
             enabled,
@@ -329,7 +326,12 @@ impl JobWorker {
                 }
             }
             Err(e) => {
-                tracing::error!("Email job failed for {} (subject: '{}'): {}", to, subject, e);
+                tracing::error!(
+                    "Email job failed for {} (subject: '{}'): {}",
+                    to,
+                    subject,
+                    e
+                );
                 JobResult::Failure {
                     error: format!("email send failed: {}", e),
                 }
@@ -354,7 +356,10 @@ impl JobWorker {
         match result {
             Ok(_id) if !sms_enabled => {
                 // SmsNotifier returns Ok when disabled but does not send.
-                tracing::warn!("SMS job for {} produced no delivery: SMS provider disabled", to);
+                tracing::warn!(
+                    "SMS job for {} produced no delivery: SMS provider disabled",
+                    to
+                );
                 JobResult::Failure {
                     error: "SMS notifications disabled — no message delivered".to_string(),
                 }
@@ -441,11 +446,8 @@ impl JobWorker {
         let config = Self::build_email_config();
         let notifier = EmailNotifier::new(config);
 
-        let notification = Notification::email(
-            to.to_string(),
-            subject.to_string(),
-            body.to_string(),
-        );
+        let notification =
+            Notification::email(to.to_string(), subject.to_string(), body.to_string());
 
         let result = notifier.send(notification).await;
         Self::map_email_send_result(to, subject, result)
@@ -481,11 +483,7 @@ impl JobWorker {
         let push_enabled = config.enabled;
         let notifier = PushNotifier::new(config);
 
-        let notification = Notification::push(
-            user_id,
-            title.to_string(),
-            body.to_string(),
-        );
+        let notification = Notification::push(user_id, title.to_string(), body.to_string());
 
         let result = notifier.send(notification).await;
         Self::map_push_send_result(user_id, push_enabled, result)
@@ -712,7 +710,9 @@ mod tests {
             "SMTP_PASSWORD",
         ] {
             // SAFETY: test-only env setup
-            unsafe { std::env::remove_var(var); }
+            unsafe {
+                std::env::remove_var(var);
+            }
         }
 
         let job = Job::new(JobType::SendEmail {
@@ -731,10 +731,7 @@ mod tests {
 
         // Verify the error message is meaningful (not a fake success message).
         if let JobResult::Failure { error } = result {
-            assert!(
-                !error.is_empty(),
-                "Failure error message must not be empty"
-            );
+            assert!(!error.is_empty(), "Failure error message must not be empty");
         }
     }
 
@@ -770,7 +767,9 @@ mod tests {
     async fn test_sms_job_unconfigured_yields_failure() {
         for var in &["SMS_ENABLED", "SMS_API_KEY", "SMS_API_SECRET"] {
             // SAFETY: test-only env setup
-            unsafe { std::env::remove_var(var); }
+            unsafe {
+                std::env::remove_var(var);
+            }
         }
 
         let job = Job::new(JobType::SendSms {
@@ -819,9 +818,16 @@ mod tests {
     /// with internal Failed status → `map_push_send_result` converts to Failure.
     #[tokio::test]
     async fn test_push_job_unconfigured_yields_failure() {
-        for var in &["PUSH_ENABLED", "PUSH_API_KEY", "FCM_PROJECT_ID", "FCM_OAUTH2_BEARER"] {
+        for var in &[
+            "PUSH_ENABLED",
+            "PUSH_API_KEY",
+            "FCM_PROJECT_ID",
+            "FCM_OAUTH2_BEARER",
+        ] {
             // SAFETY: test-only env setup
-            unsafe { std::env::remove_var(var); }
+            unsafe {
+                std::env::remove_var(var);
+            }
         }
 
         let job = Job::new(JobType::SendPush {
@@ -854,7 +860,9 @@ mod tests {
             "PUSH_API_KEY",
         ] {
             // SAFETY: test-only env setup
-            unsafe { std::env::remove_var(var); }
+            unsafe {
+                std::env::remove_var(var);
+            }
         }
         let _guard = EnvGuard(vec!["PUSH_ENABLED", "PUSH_PROVIDER"]);
 
@@ -877,9 +885,16 @@ mod tests {
     /// Default (no env vars set) email config must have `enabled = false`.
     #[test]
     fn test_build_email_config_defaults_to_disabled() {
-        for var in &["EMAIL_ENABLED", "SMTP_HOST", "SMTP_USERNAME", "SMTP_PASSWORD"] {
+        for var in &[
+            "EMAIL_ENABLED",
+            "SMTP_HOST",
+            "SMTP_USERNAME",
+            "SMTP_PASSWORD",
+        ] {
             // SAFETY: test-only env setup
-            unsafe { std::env::remove_var(var); }
+            unsafe {
+                std::env::remove_var(var);
+            }
         }
         let config = JobWorker::build_email_config();
         assert!(
@@ -896,7 +911,9 @@ mod tests {
     #[test]
     fn test_build_email_config_reads_enabled_flag() {
         // SAFETY: test-only env setup
-        unsafe { std::env::set_var("EMAIL_ENABLED", "true"); }
+        unsafe {
+            std::env::set_var("EMAIL_ENABLED", "true");
+        }
         let _guard = EnvGuard(vec!["EMAIL_ENABLED"]);
         let config = JobWorker::build_email_config();
         assert!(config.enabled);
@@ -907,7 +924,9 @@ mod tests {
     fn test_build_sms_config_defaults_to_disabled() {
         for var in &["SMS_ENABLED", "SMS_API_KEY", "SMS_API_SECRET"] {
             // SAFETY: test-only env setup
-            unsafe { std::env::remove_var(var); }
+            unsafe {
+                std::env::remove_var(var);
+            }
         }
         let config = JobWorker::build_sms_config();
         assert!(!config.enabled, "SMS config must be disabled by default");
@@ -919,7 +938,9 @@ mod tests {
     fn test_build_push_config_defaults_to_disabled() {
         for var in &["PUSH_ENABLED", "PUSH_API_KEY", "FCM_PROJECT_ID"] {
             // SAFETY: test-only env setup
-            unsafe { std::env::remove_var(var); }
+            unsafe {
+                std::env::remove_var(var);
+            }
         }
         let config = JobWorker::build_push_config();
         assert!(!config.enabled, "push config must be disabled by default");
@@ -1054,7 +1075,9 @@ mod tests {
         fn drop(&mut self) {
             for var in &self.0 {
                 // SAFETY: test-only env setup
-                unsafe { std::env::remove_var(var); }
+                unsafe {
+                    std::env::remove_var(var);
+                }
             }
         }
     }

@@ -132,11 +132,7 @@ fn aead_encrypt(
 ///
 /// The AEAD authentication tag is verified as part of decryption: a tampered ciphertext or a
 /// wrong key yields a [`CoreError::Validation`] error instead of corrupted plaintext.
-fn aead_decrypt(
-    scheme: AeadScheme,
-    blob: &[u8],
-    reveal_key: &[u8],
-) -> Result<Vec<u8>, CoreError> {
+fn aead_decrypt(scheme: AeadScheme, blob: &[u8], reveal_key: &[u8]) -> Result<Vec<u8>, CoreError> {
     // A valid blob must contain at least a nonce and a full authentication tag.
     if blob.len() < AEAD_NONCE_LEN + AEAD_TAG_LEN {
         return Err(CoreError::Validation(
@@ -664,10 +660,7 @@ impl PrivateExecutionEngine {
     /// Returns a `nonce || ciphertext || tag` blob suitable for
     /// [`Self::submit_encrypted_transaction`]. Each call uses a fresh random 96-bit nonce, so
     /// encrypting identical plaintexts yields distinct ciphertexts.
-    pub fn encrypt_transaction(
-        tx_bytes: &[u8],
-        reveal_key: &[u8],
-    ) -> Result<Vec<u8>, CoreError> {
+    pub fn encrypt_transaction(tx_bytes: &[u8], reveal_key: &[u8]) -> Result<Vec<u8>, CoreError> {
         aead_encrypt(AeadScheme::DEFAULT, tx_bytes, reveal_key)
     }
 
@@ -1018,7 +1011,9 @@ mod tests {
         assert_eq!(engine.pool_size(), 1);
 
         // The correct key still works afterwards.
-        let decrypted = engine.decrypt_and_execute("tx-wrongkey", reveal_key).unwrap();
+        let decrypted = engine
+            .decrypt_and_execute("tx-wrongkey", reveal_key)
+            .unwrap();
         assert_eq!(decrypted, tx_plaintext);
         assert_eq!(engine.pool_size(), 0);
     }
@@ -1065,7 +1060,9 @@ mod tests {
             )
             .unwrap();
 
-        let decrypted = engine.decrypt_and_execute("tx-unlocked", reveal_key).unwrap();
+        let decrypted = engine
+            .decrypt_and_execute("tx-unlocked", reveal_key)
+            .unwrap();
         assert_eq!(decrypted, tx_plaintext);
     }
 

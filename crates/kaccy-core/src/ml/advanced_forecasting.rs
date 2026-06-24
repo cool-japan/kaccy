@@ -154,9 +154,7 @@ impl BaseForecaster {
                 slope,
                 last_index,
             } => intercept + slope * (last_index + h),
-            BaseForecaster::MeanReversion { mean, last, phi } => {
-                mean + (last - mean) * phi.powf(h)
-            }
+            BaseForecaster::MeanReversion { mean, last, phi } => mean + (last - mean) * phi.powf(h),
         }
     }
 
@@ -443,10 +441,7 @@ impl MultiHorizonForecaster {
 
         if residuals.len() > 1 {
             let mean_r = residuals.iter().sum::<f64>() / residuals.len() as f64;
-            let var = residuals
-                .iter()
-                .map(|r| (r - mean_r).powi(2))
-                .sum::<f64>()
+            let var = residuals.iter().map(|r| (r - mean_r).powi(2)).sum::<f64>()
                 / (residuals.len() - 1) as f64;
             var.sqrt()
         } else {
@@ -653,7 +648,11 @@ impl ProbabilisticForecaster {
             .map(|w| {
                 let prev = w[0].close.to_f64().unwrap_or(0.0);
                 let curr = w[1].close.to_f64().unwrap_or(0.0);
-                if prev > 0.0 { (curr - prev) / prev } else { 0.0 }
+                if prev > 0.0 {
+                    (curr - prev) / prev
+                } else {
+                    0.0
+                }
             })
             .collect();
 
@@ -775,7 +774,11 @@ impl ProbabilisticForecaster {
             .map(|w| {
                 let prev = w[0].close.to_f64().unwrap_or(0.0);
                 let curr = w[1].close.to_f64().unwrap_or(0.0);
-                if prev > 0.0 { (curr - prev) / prev } else { 0.0 }
+                if prev > 0.0 {
+                    (curr - prev) / prev
+                } else {
+                    0.0
+                }
             })
             .collect();
 
