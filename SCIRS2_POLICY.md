@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-23
 **Decision:** Keep `rand`, `rand_distr`, and `statrs` in this workspace.
-**Scope:** This repository only (`/notebooks/kaccy`).
+**Scope:** This repository only (`kaccy`).
 
 ---
 
