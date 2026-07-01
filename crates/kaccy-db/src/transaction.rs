@@ -79,7 +79,9 @@ impl TransactionBuilder {
             "SET TRANSACTION ISOLATION LEVEL {}",
             self.isolation_level.as_sql()
         );
-        sqlx::query(&query).execute(&mut *tx).await?;
+        sqlx::query(sqlx::AssertSqlSafe(query))
+            .execute(&mut *tx)
+            .await?;
 
         Ok(tx)
     }
@@ -101,19 +103,25 @@ where
 {
     // Create savepoint
     let create_query = format!("SAVEPOINT {}", name);
-    sqlx::query(&create_query).execute(&mut **tx).await?;
+    sqlx::query(sqlx::AssertSqlSafe(create_query))
+        .execute(&mut **tx)
+        .await?;
 
     match f(tx).await {
         Ok(result) => {
             // Release savepoint on success
             let release_query = format!("RELEASE SAVEPOINT {}", name);
-            sqlx::query(&release_query).execute(&mut **tx).await?;
+            sqlx::query(sqlx::AssertSqlSafe(release_query))
+                .execute(&mut **tx)
+                .await?;
             Ok(result)
         }
         Err(e) => {
             // Rollback to savepoint on failure
             let rollback_query = format!("ROLLBACK TO SAVEPOINT {}", name);
-            sqlx::query(&rollback_query).execute(&mut **tx).await?;
+            sqlx::query(sqlx::AssertSqlSafe(rollback_query))
+                .execute(&mut **tx)
+                .await?;
             Err(e)
         }
     }
@@ -129,7 +137,9 @@ impl SavepointGuard {
     /// Create a new savepoint within a transaction
     pub async fn new(tx: &mut Transaction<'_, Postgres>, name: &str) -> Result<Self> {
         let create_query = format!("SAVEPOINT {}", name);
-        sqlx::query(&create_query).execute(&mut **tx).await?;
+        sqlx::query(sqlx::AssertSqlSafe(create_query))
+            .execute(&mut **tx)
+            .await?;
 
         Ok(Self {
             name: name.to_string(),
@@ -140,7 +150,9 @@ impl SavepointGuard {
     /// Release the savepoint (commit the nested transaction)
     pub async fn release(mut self, tx: &mut Transaction<'_, Postgres>) -> Result<()> {
         let release_query = format!("RELEASE SAVEPOINT {}", self.name);
-        sqlx::query(&release_query).execute(&mut **tx).await?;
+        sqlx::query(sqlx::AssertSqlSafe(release_query))
+            .execute(&mut **tx)
+            .await?;
         self.committed = true;
         Ok(())
     }
@@ -148,7 +160,9 @@ impl SavepointGuard {
     /// Rollback to the savepoint
     pub async fn rollback(mut self, tx: &mut Transaction<'_, Postgres>) -> Result<()> {
         let rollback_query = format!("ROLLBACK TO SAVEPOINT {}", self.name);
-        sqlx::query(&rollback_query).execute(&mut **tx).await?;
+        sqlx::query(sqlx::AssertSqlSafe(rollback_query))
+            .execute(&mut **tx)
+            .await?;
         self.committed = true;
         Ok(())
     }
@@ -192,19 +206,25 @@ pub trait TransactionExt {
 impl TransactionExt for Transaction<'_, Postgres> {
     async fn create_savepoint(&mut self, name: &str) -> Result<()> {
         let query = format!("SAVEPOINT {}", name);
-        sqlx::query(&query).execute(&mut **self).await?;
+        sqlx::query(sqlx::AssertSqlSafe(query))
+            .execute(&mut **self)
+            .await?;
         Ok(())
     }
 
     async fn release_savepoint(&mut self, name: &str) -> Result<()> {
         let query = format!("RELEASE SAVEPOINT {}", name);
-        sqlx::query(&query).execute(&mut **self).await?;
+        sqlx::query(sqlx::AssertSqlSafe(query))
+            .execute(&mut **self)
+            .await?;
         Ok(())
     }
 
     async fn rollback_to_savepoint(&mut self, name: &str) -> Result<()> {
         let query = format!("ROLLBACK TO SAVEPOINT {}", name);
-        sqlx::query(&query).execute(&mut **self).await?;
+        sqlx::query(sqlx::AssertSqlSafe(query))
+            .execute(&mut **self)
+            .await?;
         Ok(())
     }
 }

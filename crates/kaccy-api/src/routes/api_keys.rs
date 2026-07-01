@@ -106,9 +106,13 @@ async fn hash_api_key(api_key: &str) -> Result<String> {
     tokio::task::spawn_blocking(move || {
         use argon2::{
             Argon2,
-            password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
+            password_hash::{PasswordHasher, Salt, SaltString},
         };
-        let salt = SaltString::generate(&mut OsRng);
+        let mut salt_bytes = [0u8; Salt::RECOMMENDED_LENGTH];
+        rand::fill(&mut salt_bytes);
+        let salt = SaltString::encode_b64(&salt_bytes).map_err(|e| {
+            ApiError::InternalWithMessage(format!("Failed to generate salt: {}", e))
+        })?;
         let argon2 = Argon2::default();
         argon2
             .hash_password(api_key.as_bytes(), &salt)

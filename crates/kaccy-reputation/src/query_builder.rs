@@ -202,7 +202,7 @@ impl<'a> EventQueryBuilder<'a> {
 
         // For now, execute a simplified query
         // In production, you'd use sqlx::query! macro with proper parameter binding
-        let events = sqlx::query_as::<_, ReputationEvent>(&query)
+        let events = sqlx::query_as::<_, ReputationEvent>(sqlx::AssertSqlSafe(query))
             .fetch_all(self.pool)
             .await?;
 
@@ -263,7 +263,9 @@ impl<'a> EventQueryBuilder<'a> {
             query.push_str(" AND created_at <= $3");
         }
 
-        let count: (i64,) = sqlx::query_as(&query).fetch_one(self.pool).await?;
+        let count: (i64,) = sqlx::query_as(sqlx::AssertSqlSafe(query))
+            .fetch_one(self.pool)
+            .await?;
 
         Ok(count.0)
     }
@@ -395,7 +397,9 @@ impl<'a> CommitmentQueryBuilder<'a> {
             query.push_str(" AND token_id = $2");
         }
 
-        let count: (i64,) = sqlx::query_as(&query).fetch_one(self.pool).await?;
+        let count: (i64,) = sqlx::query_as(sqlx::AssertSqlSafe(query))
+            .fetch_one(self.pool)
+            .await?;
 
         Ok(count.0)
     }
@@ -486,7 +490,9 @@ impl<'a> LeaderboardQueryBuilder<'a> {
             query.push_str(" AND reputation_score >= 200"); // Bronze tier minimum
         }
 
-        let count: (i64,) = sqlx::query_as(&query).fetch_one(self.pool).await?;
+        let count: (i64,) = sqlx::query_as(sqlx::AssertSqlSafe(query))
+            .fetch_one(self.pool)
+            .await?;
 
         Ok(count.0)
     }

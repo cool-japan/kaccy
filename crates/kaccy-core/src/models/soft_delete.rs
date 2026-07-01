@@ -168,7 +168,10 @@ impl SoftDeleteHelper {
             table
         );
 
-        let result = sqlx::query(&sql).bind(id).execute(pool).await?;
+        let result = sqlx::query(sqlx::AssertSqlSafe(sql))
+            .bind(id)
+            .execute(pool)
+            .await?;
 
         Ok(result.rows_affected())
     }
@@ -180,7 +183,10 @@ impl SoftDeleteHelper {
             table
         );
 
-        let result = sqlx::query(&sql).bind(id).execute(pool).await?;
+        let result = sqlx::query(sqlx::AssertSqlSafe(sql))
+            .bind(id)
+            .execute(pool)
+            .await?;
 
         Ok(result.rows_affected())
     }
@@ -189,7 +195,10 @@ impl SoftDeleteHelper {
     pub async fn force_delete_by_id(table: &str, id: Uuid, pool: &PgPool) -> Result<u64> {
         let sql = format!("DELETE FROM {} WHERE id = $1", table);
 
-        let result = sqlx::query(&sql).bind(id).execute(pool).await?;
+        let result = sqlx::query(sqlx::AssertSqlSafe(sql))
+            .bind(id)
+            .execute(pool)
+            .await?;
 
         Ok(result.rows_affected())
     }
@@ -201,7 +210,7 @@ impl SoftDeleteHelper {
             table, days
         );
 
-        let result = sqlx::query(&sql).execute(pool).await?;
+        let result = sqlx::query(sqlx::AssertSqlSafe(sql)).execute(pool).await?;
 
         Ok(result.rows_affected())
     }
@@ -213,7 +222,9 @@ impl SoftDeleteHelper {
             table
         );
 
-        let count: i64 = sqlx::query_scalar(&sql).fetch_one(pool).await?;
+        let count: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(sql))
+            .fetch_one(pool)
+            .await?;
 
         Ok(count)
     }
@@ -222,7 +233,9 @@ impl SoftDeleteHelper {
     pub async fn count_active(table: &str, pool: &PgPool) -> Result<i64> {
         let sql = format!("SELECT COUNT(*) FROM {} WHERE deleted_at IS NULL", table);
 
-        let count: i64 = sqlx::query_scalar(&sql).fetch_one(pool).await?;
+        let count: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(sql))
+            .fetch_one(pool)
+            .await?;
 
         Ok(count)
     }

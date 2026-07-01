@@ -310,7 +310,7 @@ impl EventListener {
     pub async fn notify(&self, event: &DatabaseEvent) -> Result<()> {
         let payload = event.to_json_string()?;
 
-        sqlx::query(&format!("NOTIFY {}, $1", event.channel))
+        sqlx::query(sqlx::AssertSqlSafe(format!("NOTIFY {}, $1", event.channel)))
             .bind(&payload)
             .execute(&self.pool)
             .await?;

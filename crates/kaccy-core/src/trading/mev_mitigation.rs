@@ -6,7 +6,7 @@
 use crate::error::CoreError;
 use aes_gcm::{
     Aes256Gcm,
-    aead::{Aead, KeyInit, OsRng, rand_core::RngCore},
+    aead::{Aead, KeyInit, Nonce},
 };
 use chacha20poly1305::ChaCha20Poly1305;
 use rust_decimal::Decimal;
@@ -84,7 +84,7 @@ pub fn commitment_hash(reveal_key: &[u8]) -> String {
 /// Generate a fresh random 96-bit nonce from the operating-system CSPRNG.
 fn random_nonce() -> [u8; AEAD_NONCE_LEN] {
     let mut nonce = [0u8; AEAD_NONCE_LEN];
-    OsRng.fill_bytes(&mut nonce);
+    rand::fill(&mut nonce);
     nonce
 }
 
@@ -107,7 +107,7 @@ fn aead_encrypt(
                 CoreError::Validation(format!("Failed to initialize ChaCha20-Poly1305: {e}"))
             })?;
             cipher
-                .encrypt(nonce_bytes.as_slice().into(), plaintext)
+                .encrypt(&Nonce::<ChaCha20Poly1305>::from(nonce_bytes), plaintext)
                 .map_err(|_| {
                     CoreError::Validation("ChaCha20-Poly1305 encryption failed".to_string())
                 })?
@@ -117,7 +117,7 @@ fn aead_encrypt(
                 CoreError::Validation(format!("Failed to initialize AES-256-GCM: {e}"))
             })?;
             cipher
-                .encrypt(nonce_bytes.as_slice().into(), plaintext)
+                .encrypt(&Nonce::<Aes256Gcm>::from(nonce_bytes), plaintext)
                 .map_err(|_| CoreError::Validation("AES-256-GCM encryption failed".to_string()))?
         }
     };
@@ -147,7 +147,9 @@ fn aead_decrypt(scheme: AeadScheme, blob: &[u8], reveal_key: &[u8]) -> Result<Ve
             let cipher = ChaCha20Poly1305::new_from_slice(&key).map_err(|e| {
                 CoreError::Validation(format!("Failed to initialize ChaCha20-Poly1305: {e}"))
             })?;
-            cipher.decrypt(nonce_bytes.into(), ciphertext).map_err(|_| {
+            let nonce = Nonce::<ChaCha20Poly1305>::try_from(nonce_bytes)
+                .map_err(|_| CoreError::Validation("Invalid nonce length".to_string()))?;
+            cipher.decrypt(&nonce, ciphertext).map_err(|_| {
                 CoreError::Validation(
                     "ChaCha20-Poly1305 authentication failed (tampered data or wrong key)"
                         .to_string(),
@@ -158,7 +160,9 @@ fn aead_decrypt(scheme: AeadScheme, blob: &[u8], reveal_key: &[u8]) -> Result<Ve
             let cipher = Aes256Gcm::new_from_slice(&key).map_err(|e| {
                 CoreError::Validation(format!("Failed to initialize AES-256-GCM: {e}"))
             })?;
-            cipher.decrypt(nonce_bytes.into(), ciphertext).map_err(|_| {
+            let nonce = Nonce::<Aes256Gcm>::try_from(nonce_bytes)
+                .map_err(|_| CoreError::Validation("Invalid nonce length".to_string()))?;
+            cipher.decrypt(&nonce, ciphertext).map_err(|_| {
                 CoreError::Validation(
                     "AES-256-GCM authentication failed (tampered data or wrong key)".to_string(),
                 )

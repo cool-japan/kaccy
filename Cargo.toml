@@ -23,26 +23,26 @@ documentation = "https://docs.rs/kaccy"
 
 [workspace.dependencies]
 # Async runtime
-tokio = { version = "1.51", features = ["full"] }
+tokio = { version = "1.52", features = ["full"] }
 
 # Web framework
 axum = { version = "0.8", features = ["ws"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip"] }
+tower-http = { version = "0.7", features = ["cors", "trace", "compression-gzip"] }
 
 # WebSocket support
 futures = "0.3"
 tokio-stream = "0.1"
 
 # HTTP body utilities
-bytes = "1.11"
+bytes = "1.12"
 http-body-util = "0.1"
 
 # Database
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate", "rust_decimal"] }
+sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls-ring", "postgres", "uuid", "chrono", "migrate", "rust_decimal"] }
 
 # Redis cache
-redis = { version = "1.2", features = ["aio", "tokio-comp", "connection-manager"] }
+redis = { version = "1.3", features = ["aio", "tokio-comp", "connection-manager"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -60,7 +60,7 @@ statrs = "0.18"
 # Utilities
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-rust_decimal = { version = "1.41", features = ["serde"] }
+rust_decimal = { version = "1.42", features = ["serde"] }
 rust_decimal_macros = "1.40"
 thiserror = "2"
 anyhow = "1"
@@ -84,7 +84,7 @@ reqwest = { version = "0.13", features = ["json", "stream"] }
 urlencoding = "2"
 
 # PDF parsing
-lopdf = "0.40"
+lopdf = "0.43"
 
 # Image handling
 image = "0.25"
@@ -110,8 +110,8 @@ qrcode = "0.14"
 # Hashing and crypto
 sha2 = "0.11"
 md5 = "0.8"
-aes-gcm = "0.10"
-chacha20poly1305 = "0.10"
+aes-gcm = "0.11"
+chacha20poly1305 = "0.11"
 pbkdf2 = "0.13"
 hmac = "0.13"
 hkdf = "0.13"
@@ -119,25 +119,26 @@ hkdf = "0.13"
 ml-dsa = "0.1"
 ml-kem = { version = "0.3", features = ["getrandom"] }
 # Bitcoin output-descriptor / miniscript policy compilation
-# NOTE: pinned to 12.x because this workspace targets `bitcoin 0.32`;
-# miniscript 13.x targets a newer `bitcoin` release and is incompatible.
+# NOTE: miniscript 13.1+ re-aligned its `bitcoin` requirement back to `0.32.x`
+# (verified via `cargo update` + a full workspace build/test/clippy pass on
+# 2026-07-02), so it is compatible with this workspace's `bitcoin = "0.32"`.
 # The `compiler` feature enables `Concrete::compile`, the real policy compiler.
-miniscript = { version = "12.3", features = ["compiler"] }
+miniscript = { version = "13.1", features = ["compiler"] }
 
 # Metrics
 prometheus = { version = "0.14", features = ["process"] }
 lazy_static = "1.5"
 
 # OpenTelemetry and distributed tracing
-opentelemetry = "0.31"
-opentelemetry_sdk = { version = "0.31", features = ["rt-tokio"] }
-opentelemetry-otlp = { version = "0.31", features = ["tokio", "grpc-tonic"] }
-opentelemetry-semantic-conventions = "0.31"
-tracing-opentelemetry = "0.32"
+opentelemetry = "0.32"
+opentelemetry_sdk = { version = "0.32", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.32", features = ["tokio", "grpc-tonic"] }
+opentelemetry-semantic-conventions = "0.32"
+tracing-opentelemetry = "0.33"
 
 # Testing
 tokio-test = "0.4"
-mockall = "0.14"
+mockall = "0.15"
 proptest = "1.11"
 criterion = { version = "0.8", features = ["async_tokio"] }
 

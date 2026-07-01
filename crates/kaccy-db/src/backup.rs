@@ -355,10 +355,10 @@ pub async fn verify_database_integrity(pool: &PgPool) -> Result<bool> {
         "audit_logs",
     ];
     for table in tables {
-        let count: (i64,) = sqlx::query_as(&format!(
+        let count: (i64,) = sqlx::query_as(sqlx::AssertSqlSafe(format!(
             "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '{}'",
             table
-        ))
+        )))
         .fetch_one(pool)
         .await?;
 

@@ -229,19 +229,19 @@ fn aead_seal(
     nonce: &[u8; NONCE_LEN],
     plaintext: &[u8],
 ) -> Result<Vec<u8>> {
-    let nonce = AesNonce::from_slice(nonce);
+    let nonce = AesNonce::from(*nonce);
     match algorithm {
         EncryptionAlgorithm::Aes256 => {
             let cipher = Aes256Gcm::new_from_slice(key)
                 .map_err(|e| CoreError::Configuration(format!("Invalid AES-256 key: {e}")))?;
             cipher
-                .encrypt(nonce, plaintext)
+                .encrypt(&nonce, plaintext)
                 .map_err(|_| CoreError::Calculation("AES-256-GCM encryption failed".to_string()))
         }
         EncryptionAlgorithm::ChaCha20 => {
             let cipher = ChaCha20Poly1305::new_from_slice(key)
                 .map_err(|e| CoreError::Configuration(format!("Invalid ChaCha20 key: {e}")))?;
-            cipher.encrypt(nonce, plaintext).map_err(|_| {
+            cipher.encrypt(&nonce, plaintext).map_err(|_| {
                 CoreError::Calculation("ChaCha20-Poly1305 encryption failed".to_string())
             })
         }
@@ -256,12 +256,12 @@ fn aead_open(
     nonce: &[u8; NONCE_LEN],
     ciphertext_with_tag: &[u8],
 ) -> Result<Vec<u8>> {
-    let nonce = AesNonce::from_slice(nonce);
+    let nonce = AesNonce::from(*nonce);
     match algorithm {
         EncryptionAlgorithm::Aes256 => {
             let cipher = Aes256Gcm::new_from_slice(key)
                 .map_err(|e| CoreError::Configuration(format!("Invalid AES-256 key: {e}")))?;
-            cipher.decrypt(nonce, ciphertext_with_tag).map_err(|_| {
+            cipher.decrypt(&nonce, ciphertext_with_tag).map_err(|_| {
                 CoreError::Validation(
                     "AES-256-GCM authentication failed (tampered data or wrong key)".to_string(),
                 )
@@ -270,7 +270,7 @@ fn aead_open(
         EncryptionAlgorithm::ChaCha20 => {
             let cipher = ChaCha20Poly1305::new_from_slice(key)
                 .map_err(|e| CoreError::Configuration(format!("Invalid ChaCha20 key: {e}")))?;
-            cipher.decrypt(nonce, ciphertext_with_tag).map_err(|_| {
+            cipher.decrypt(&nonce, ciphertext_with_tag).map_err(|_| {
                 CoreError::Validation(
                     "ChaCha20-Poly1305 authentication failed (tampered data or wrong key)"
                         .to_string(),

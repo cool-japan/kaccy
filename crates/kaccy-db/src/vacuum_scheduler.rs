@@ -344,7 +344,7 @@ impl VacuumScheduler {
 
         let sql = strategy.to_sql(table_name);
 
-        match sqlx::query(&sql).execute(pool).await {
+        match sqlx::query(sqlx::AssertSqlSafe(sql)).execute(pool).await {
             Ok(_) => {
                 let execution_time_ms = start_time.elapsed().as_millis() as u64;
 

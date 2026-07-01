@@ -4,7 +4,7 @@ use std::net::SocketAddr;
 
 use argon2::{
     Argon2,
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, Salt, SaltString},
 };
 use axum::{
     Json,
@@ -37,7 +37,12 @@ pub async fn register(
     }
 
     // Hash password
-    let salt = SaltString::generate(&mut OsRng);
+    let mut salt_bytes = [0u8; Salt::RECOMMENDED_LENGTH];
+    rand::fill(&mut salt_bytes);
+    let salt = SaltString::encode_b64(&salt_bytes).map_err(|e| {
+        tracing::error!("Salt generation error: {:?}", e);
+        ApiError::Internal
+    })?;
     let argon2 = Argon2::default();
     let password_hash = argon2
         .hash_password(payload.password.as_bytes(), &salt)

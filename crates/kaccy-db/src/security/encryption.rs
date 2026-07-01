@@ -1,8 +1,8 @@
 use aes_gcm::{
-    aead::{Aead, KeyInit, OsRng},
-    Aes256Gcm, Key, Nonce,
+    aead::{Aead, KeyInit},
+    Aes256Gcm, Nonce,
 };
-use argon2::password_hash::{rand_core::RngCore, SaltString};
+use argon2::password_hash::{Salt, SaltString};
 use argon2::{Argon2, PasswordHash, PasswordHasher as Argon2Hasher, PasswordVerifier};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use std::collections::HashMap;
@@ -40,7 +40,7 @@ impl EncryptionProvider {
     /// Generate a new random encryption key
     pub fn generate_key() -> Vec<u8> {
         let mut key = vec![0u8; 32];
-        OsRng.fill_bytes(&mut key);
+        rand::fill(key.as_mut_slice());
         key
     }
 
@@ -95,14 +95,17 @@ impl EncryptionProvider {
 
         // Generate random nonce
         let mut nonce_bytes = [0u8; 12];
-        OsRng.fill_bytes(&mut nonce_bytes);
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        rand::fill(&mut nonce_bytes);
+        let nonce = Nonce::from(nonce_bytes);
 
         // Encrypt
-        let key_obj = Key::<Aes256Gcm>::from_slice(key);
-        let cipher = Aes256Gcm::new(key_obj);
+        let cipher =
+            Aes256Gcm::new_from_slice(key).map_err(|_| EncryptionError::InvalidKeySize {
+                expected: 32,
+                actual: key.len(),
+            })?;
         let ciphertext = cipher
-            .encrypt(nonce, plaintext)
+            .encrypt(&nonce, plaintext)
             .map_err(|e| EncryptionError::EncryptionFailed(e.to_string()))?;
 
         Ok(EncryptedData {
@@ -126,12 +129,20 @@ impl EncryptionProvider {
             });
         }
 
-        let nonce = Nonce::from_slice(&encrypted.nonce);
-        let key_obj = Key::<Aes256Gcm>::from_slice(key);
-        let cipher = Aes256Gcm::new(key_obj);
+        let nonce = Nonce::try_from(encrypted.nonce.as_slice()).map_err(|_| {
+            EncryptionError::InvalidNonceSize {
+                expected: 12,
+                actual: encrypted.nonce.len(),
+            }
+        })?;
+        let cipher =
+            Aes256Gcm::new_from_slice(key).map_err(|_| EncryptionError::InvalidKeySize {
+                expected: 32,
+                actual: key.len(),
+            })?;
 
         cipher
-            .decrypt(nonce, encrypted.ciphertext.as_ref())
+            .decrypt(&nonce, encrypted.ciphertext.as_ref())
             .map_err(|e| EncryptionError::DecryptionFailed(e.to_string()))
     }
 
@@ -263,7 +274,10 @@ impl PasswordHashingService {
 
     /// Hash a password
     pub fn hash_password(&self, password: &str) -> Result<String, EncryptionError> {
-        let salt = SaltString::generate(&mut OsRng);
+        let mut salt_bytes = [0u8; Salt::RECOMMENDED_LENGTH];
+        rand::fill(&mut salt_bytes);
+        let salt = SaltString::encode_b64(&salt_bytes)
+            .map_err(|e| EncryptionError::HashingFailed(e.to_string()))?;
 
         let password_hash = self
             .argon2

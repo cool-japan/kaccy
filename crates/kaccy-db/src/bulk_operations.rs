@@ -54,7 +54,9 @@ impl BulkInserter {
                 sql.push_str(&format!("({})", values));
             }
 
-            let result = sqlx::query(&sql).execute(&self.pool).await?;
+            let result = sqlx::query(sqlx::AssertSqlSafe(sql))
+                .execute(&self.pool)
+                .await?;
             total_inserted += result.rows_affected();
         }
 
@@ -177,7 +179,9 @@ impl BulkUpdater {
         }
         sql.push(')');
 
-        let result = sqlx::query(&sql).execute(&self.pool).await?;
+        let result = sqlx::query(sqlx::AssertSqlSafe(sql))
+            .execute(&self.pool)
+            .await?;
         Ok(result.rows_affected())
     }
 }
@@ -217,7 +221,9 @@ impl BulkDeleter {
                 placeholders.join(", ")
             );
 
-            let result = sqlx::query(&sql).execute(&self.pool).await?;
+            let result = sqlx::query(sqlx::AssertSqlSafe(sql))
+                .execute(&self.pool)
+                .await?;
             total_deleted += result.rows_affected();
         }
 
@@ -227,7 +233,9 @@ impl BulkDeleter {
     /// Delete rows matching a condition
     pub async fn batch_delete_where(&self, table: &str, condition: &str) -> Result<u64> {
         let sql = format!("DELETE FROM {} WHERE {}", table, condition);
-        let result = sqlx::query(&sql).execute(&self.pool).await?;
+        let result = sqlx::query(sqlx::AssertSqlSafe(sql))
+            .execute(&self.pool)
+            .await?;
         Ok(result.rows_affected())
     }
 }

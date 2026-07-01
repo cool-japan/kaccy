@@ -106,7 +106,7 @@ pub async fn list_tokens(
         order_column, order_dir
     );
 
-    let rows = sqlx::query_as::<_, TokenWithIssuerRow>(&sql)
+    let rows = sqlx::query_as::<_, TokenWithIssuerRow>(sqlx::AssertSqlSafe(sql))
         .bind(&status_filter)
         .bind(&query.search)
         .bind(query.min_price)

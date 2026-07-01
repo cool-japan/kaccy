@@ -241,7 +241,7 @@ impl AuditService {
 
         query.push_str(" ORDER BY created_at DESC LIMIT 100");
 
-        let mut q = sqlx::query(&query);
+        let mut q = sqlx::query(sqlx::AssertSqlSafe(query));
 
         if let Some(uid) = search.user_id {
             q = q.bind(uid);

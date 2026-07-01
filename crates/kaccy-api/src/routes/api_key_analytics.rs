@@ -224,7 +224,7 @@ pub async fn get_api_key_usage(
         GroupByInterval::Week => "1 week",
     };
 
-    let hourly_distribution: Vec<AggregatedUsage> = sqlx::query_as(&format!(
+    let hourly_distribution: Vec<AggregatedUsage> = sqlx::query_as(sqlx::AssertSqlSafe(format!(
         "SELECT
             DATE_TRUNC('{}', timestamp) as time_bucket,
             COUNT(*) as request_count,
@@ -235,7 +235,7 @@ pub async fn get_api_key_usage(
          AND timestamp >= $2
          AND timestamp <= $3
          GROUP BY time_bucket
-         ORDER BY time_bucket", interval))
+         ORDER BY time_bucket", interval)))
     .bind(api_key_id)
     .bind(start_date)
     .bind(end_date)

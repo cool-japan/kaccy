@@ -268,7 +268,7 @@ impl PartitionManager {
 
         let sql = format!("{} {}", create_table_sql, partition_clause);
 
-        sqlx::query(&sql)
+        sqlx::query(sqlx::AssertSqlSafe(sql))
             .execute(&self.pool)
             .await
             .map_err(DbError::from)?;
@@ -289,7 +289,7 @@ impl PartitionManager {
             partition_name, table_name, from_value, to_value
         );
 
-        sqlx::query(&sql)
+        sqlx::query(sqlx::AssertSqlSafe(sql))
             .execute(&self.pool)
             .await
             .map_err(DbError::from)?;
@@ -331,7 +331,7 @@ impl PartitionManager {
             partition_name, table_name, modulus, partition_index
         );
 
-        sqlx::query(&sql)
+        sqlx::query(sqlx::AssertSqlSafe(sql))
             .execute(&self.pool)
             .await
             .map_err(DbError::from)?;
@@ -343,7 +343,7 @@ impl PartitionManager {
     pub async fn drop_partition(&self, partition_name: &str) -> Result<()> {
         let sql = format!("DROP TABLE IF EXISTS {}", partition_name);
 
-        sqlx::query(&sql)
+        sqlx::query(sqlx::AssertSqlSafe(sql))
             .execute(&self.pool)
             .await
             .map_err(DbError::from)?;
@@ -375,10 +375,13 @@ impl PartitionManager {
 
         for partition in &partitions {
             // Get row count
-            let row = sqlx::query_as::<_, (i64,)>(&format!("SELECT COUNT(*) FROM {}", partition))
-                .fetch_one(&self.pool)
-                .await
-                .map_err(DbError::from)?;
+            let row = sqlx::query_as::<_, (i64,)>(sqlx::AssertSqlSafe(format!(
+                "SELECT COUNT(*) FROM {}",
+                partition
+            )))
+            .fetch_one(&self.pool)
+            .await
+            .map_err(DbError::from)?;
             total_rows += row.0;
 
             // Get size
@@ -406,7 +409,7 @@ impl PartitionManager {
             table_name, partition_name
         );
 
-        sqlx::query(&sql)
+        sqlx::query(sqlx::AssertSqlSafe(sql))
             .execute(&self.pool)
             .await
             .map_err(DbError::from)?;
@@ -427,7 +430,7 @@ impl PartitionManager {
             table_name, partition_name, from_value, to_value
         );
 
-        sqlx::query(&sql)
+        sqlx::query(sqlx::AssertSqlSafe(sql))
             .execute(&self.pool)
             .await
             .map_err(DbError::from)?;

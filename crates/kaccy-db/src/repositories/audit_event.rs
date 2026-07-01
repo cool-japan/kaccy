@@ -189,7 +189,7 @@ impl AuditEventRepository {
         query.push_str(" RETURNING id, timestamp, event_type, event_data, source, correlation_id, user_id, created_at");
 
         // Build the query with all bindings
-        let mut query_builder = sqlx::query_as::<_, AuditEvent>(&query);
+        let mut query_builder = sqlx::query_as::<_, AuditEvent>(sqlx::AssertSqlSafe(query));
         for binding in bindings {
             query_builder = query_builder
                 .bind(binding.0)

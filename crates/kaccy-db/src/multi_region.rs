@@ -264,7 +264,9 @@ impl MultiRegionPoolManager {
             replica_lsn.0.unwrap_or_else(|| "0/0".to_string())
         );
 
-        let lag_mb: (f64,) = sqlx::query_as(&lag_query).fetch_one(&source_pool).await?;
+        let lag_mb: (f64,) = sqlx::query_as(sqlx::AssertSqlSafe(lag_query))
+            .fetch_one(&source_pool)
+            .await?;
 
         // Estimate lag in seconds (assuming ~10MB/s replication speed)
         let lag_seconds = lag_mb.0 / 10.0;

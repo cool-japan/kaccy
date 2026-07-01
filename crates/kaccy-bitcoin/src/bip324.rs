@@ -339,7 +339,7 @@ impl V2Transport {
 
         // Advance send counter and get the nonce for this packet.
         let nonce_bytes = keys.next_send_nonce();
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        let nonce = Nonce::from(nonce_bytes);
 
         // Append zero-byte padding to the plaintext for traffic-analysis resistance.
         let mut padded_plaintext = plaintext.to_vec();
@@ -348,7 +348,7 @@ impl V2Transport {
         // AEAD encrypt: produces ciphertext || Poly1305 tag (16 bytes).
         let aead_output = keys
             .send_cipher
-            .encrypt(nonce, padded_plaintext.as_ref())
+            .encrypt(&nonce, padded_plaintext.as_ref())
             .map_err(|e| BitcoinError::InvalidAddress(format!("Encryption failed: {}", e)))?;
 
         // Wire packet: nonce prefix followed by AEAD output.
@@ -413,7 +413,8 @@ impl V2Transport {
             ));
         }
 
-        let nonce = Nonce::from_slice(wire_nonce);
+        let nonce = Nonce::try_from(wire_nonce)
+            .map_err(|_| BitcoinError::InvalidAddress("Invalid nonce length".to_string()))?;
 
         // Step 2 — AEAD decryption with tag verification.
         //
@@ -422,7 +423,7 @@ impl V2Transport {
         // the opaque internal error.
         let plaintext = keys
             .recv_cipher
-            .decrypt(nonce, &packet[12..])
+            .decrypt(&nonce, &packet[12..])
             .map_err(|_| {
                 BitcoinError::InvalidAddress(
                     "AEAD authentication failed — ciphertext or Poly1305 tag is corrupt"

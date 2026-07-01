@@ -171,7 +171,9 @@ pub async fn detect_orphaned_records(
         table_name, column_name, referenced_table, referenced_column, column_name
     );
 
-    let row: (i64,) = sqlx::query_as(&query).fetch_one(pool).await?;
+    let row: (i64,) = sqlx::query_as(sqlx::AssertSqlSafe(query))
+        .fetch_one(pool)
+        .await?;
     Ok(row.0)
 }
 

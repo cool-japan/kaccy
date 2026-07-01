@@ -243,7 +243,7 @@ impl MaintenanceService {
 
         for table in tables {
             let vacuum_query = format!("VACUUM ANALYZE {}", table);
-            sqlx::query(&vacuum_query)
+            sqlx::query(sqlx::AssertSqlSafe(vacuum_query))
                 .execute(&self.pool)
                 .await
                 .map_err(ReputationError::Database)?;

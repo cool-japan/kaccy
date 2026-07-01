@@ -329,7 +329,7 @@ impl QueryPerformanceAnalyzer {
         // Try to get explain plan
         let explain_query = format!("EXPLAIN (FORMAT JSON) {}", query);
 
-        match sqlx::query_scalar::<_, serde_json::Value>(&explain_query)
+        match sqlx::query_scalar::<_, serde_json::Value>(sqlx::AssertSqlSafe(explain_query))
             .fetch_one(pool)
             .await
         {

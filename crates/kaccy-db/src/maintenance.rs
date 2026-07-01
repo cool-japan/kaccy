@@ -51,7 +51,7 @@ pub async fn vacuum_table(pool: &PgPool, table_name: &str) -> Result<Maintenance
     let sanitized_table = crate::helpers::sanitize_table_name(table_name)?;
 
     let query = format!("VACUUM {}", sanitized_table);
-    let result = sqlx::query(&query).execute(pool).await;
+    let result = sqlx::query(sqlx::AssertSqlSafe(query)).execute(pool).await;
 
     let duration_ms = start.elapsed().as_millis() as u64;
 
@@ -85,7 +85,7 @@ pub async fn vacuum_analyze_table(pool: &PgPool, table_name: &str) -> Result<Mai
     let sanitized_table = crate::helpers::sanitize_table_name(table_name)?;
 
     let query = format!("VACUUM ANALYZE {}", sanitized_table);
-    let result = sqlx::query(&query).execute(pool).await;
+    let result = sqlx::query(sqlx::AssertSqlSafe(query)).execute(pool).await;
 
     let duration_ms = start.elapsed().as_millis() as u64;
 
@@ -119,7 +119,7 @@ pub async fn analyze_table(pool: &PgPool, table_name: &str) -> Result<Maintenanc
     let sanitized_table = crate::helpers::sanitize_table_name(table_name)?;
 
     let query = format!("ANALYZE {}", sanitized_table);
-    let result = sqlx::query(&query).execute(pool).await;
+    let result = sqlx::query(sqlx::AssertSqlSafe(query)).execute(pool).await;
 
     let duration_ms = start.elapsed().as_millis() as u64;
 
@@ -154,7 +154,7 @@ pub async fn reindex_table(pool: &PgPool, table_name: &str) -> Result<Maintenanc
     let sanitized_table = crate::helpers::sanitize_table_name(table_name)?;
 
     let query = format!("REINDEX TABLE {}", sanitized_table);
-    let result = sqlx::query(&query).execute(pool).await;
+    let result = sqlx::query(sqlx::AssertSqlSafe(query)).execute(pool).await;
 
     let duration_ms = start.elapsed().as_millis() as u64;
 

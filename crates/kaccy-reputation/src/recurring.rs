@@ -424,7 +424,7 @@ impl RecurringCommitmentService {
             "instances_failed"
         };
 
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             r#"
             UPDATE recurring_commitments rc
             SET {} = {} + 1
@@ -433,7 +433,7 @@ impl RecurringCommitmentService {
             AND ri.commitment_id = $1
             "#,
             column, column
-        ))
+        )))
         .bind(commitment_id)
         .execute(&self.pool)
         .await?;

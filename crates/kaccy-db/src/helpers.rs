@@ -127,7 +127,7 @@ pub async fn get_database_time(pool: &PgPool) -> Result<DateTime<Utc>> {
 
 /// Execute a raw SQL query and return the number of affected rows
 pub async fn execute_raw(pool: &PgPool, sql: &str) -> Result<u64> {
-    let result = sqlx::query(sql).execute(pool).await?;
+    let result = sqlx::query(sqlx::AssertSqlSafe(sql)).execute(pool).await?;
 
     Ok(result.rows_affected())
 }

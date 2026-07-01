@@ -365,7 +365,10 @@ impl MigrationRunner {
         let mut tx = self.pool.begin().await?;
 
         // Execute the migration SQL
-        match sqlx::query(&migration.sql).execute(&mut *tx).await {
+        match sqlx::query(sqlx::AssertSqlSafe(migration.sql.as_str()))
+            .execute(&mut *tx)
+            .await
+        {
             Ok(_) => {
                 let execution_time_ms = start_time.elapsed().as_millis() as i64;
 

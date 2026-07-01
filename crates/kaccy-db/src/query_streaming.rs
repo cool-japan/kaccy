@@ -62,7 +62,7 @@ where
     {
         use futures::TryStreamExt;
 
-        let results: Vec<T> = sqlx::query_as(&self.query)
+        let results: Vec<T> = sqlx::query_as(sqlx::AssertSqlSafe(self.query))
             .fetch(&self.pool)
             .try_collect()
             .await?;
@@ -79,7 +79,7 @@ where
         F: FnMut(T) -> Fut,
         Fut: std::future::Future<Output = Result<()>>,
     {
-        let mut stream = sqlx::query_as::<_, T>(&self.query).fetch(&self.pool);
+        let mut stream = sqlx::query_as::<_, T>(sqlx::AssertSqlSafe(self.query)).fetch(&self.pool);
         let mut count = 0u64;
 
         while let Some(row) = FuturesStreamExt::next(&mut stream).await {

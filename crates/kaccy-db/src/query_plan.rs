@@ -56,7 +56,9 @@ pub struct QueryPlan {
 pub async fn explain_query(pool: &PgPool, query: &str) -> Result<QueryPlan> {
     let explain_query = format!("EXPLAIN (FORMAT JSON, VERBOSE) {}", query);
 
-    let plan_json: serde_json::Value = sqlx::query_scalar(&explain_query).fetch_one(pool).await?;
+    let plan_json: serde_json::Value = sqlx::query_scalar(sqlx::AssertSqlSafe(explain_query))
+        .fetch_one(pool)
+        .await?;
 
     parse_plan(query, &plan_json, false)
 }
@@ -70,7 +72,9 @@ pub async fn explain_query(pool: &PgPool, query: &str) -> Result<QueryPlan> {
 pub async fn explain_analyze_query(pool: &PgPool, query: &str) -> Result<QueryPlan> {
     let explain_query = format!("EXPLAIN (ANALYZE, FORMAT JSON, VERBOSE, BUFFERS) {}", query);
 
-    let plan_json: serde_json::Value = sqlx::query_scalar(&explain_query).fetch_one(pool).await?;
+    let plan_json: serde_json::Value = sqlx::query_scalar(sqlx::AssertSqlSafe(explain_query))
+        .fetch_one(pool)
+        .await?;
 
     parse_plan(query, &plan_json, true)
 }
