@@ -257,7 +257,7 @@ This project is currently in private development. Contribution guidelines will b
 
 ## Sponsorship
 
-Kaccy is developed and maintained by **COOLJAPAN OU (Team Kitasan)**.
+Kaccy is developed and maintained by **COOLJAPAN OU (Team KitaSan)**.
 
 If you find Kaccy useful, please consider sponsoring the project to support continued development of the Pure Rust ecosystem.
 

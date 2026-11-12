@@ -44,11 +44,11 @@ All documents are now in **English** (translated from original Japanese/English 
 
 ## License
 
-Proprietary - COOLJAPAN OU (Team Kitasan)
+Proprietary - COOLJAPAN OU (Team KitaSan)
 
 ## Contact
 
 For questions about this documentation:
 - **Project:** Kaccy Protocol
 - **Repository:** https://github.com/cool-japan/kaccy
-- **Author:** COOLJAPAN OU (Team Kitasan)
+- **Author:** COOLJAPAN OU (Team KitaSan)

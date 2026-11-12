@@ -1,6 +1,6 @@
 #!/bin/bash
 # A simple script to publish a single crate for Kaccy
-# Author: COOLJAPAN OU (Team Kitasan)
+# Author: COOLJAPAN OU (Team KitaSan)
 
 if [ -z "$1" ]; then
     echo "Usage: $0 <crate-directory>"
